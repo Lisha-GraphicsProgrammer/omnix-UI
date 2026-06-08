@@ -78,8 +78,8 @@ function transformIncident(inc: ApiIncident): DashboardAlert {
 const mockCameras = [
   {
     id: 1,
-    name: "Camera 1 — Entry Gate",
-    location: "Main entrance",
+    name: "Camera 1 — Loading Zone",
+    location: "Loading zone entrance",
     status: "online",
     alerts: 2,
     fps: 25,
@@ -150,10 +150,7 @@ const mockCameras = [
   },
 ];
 
-const severityConfig: Record<
-  string,
-  { color: string; bg: string; border: string }
-> = {
+const severityConfig = {
   critical: {
     color: "#fca5a5",
     bg: "rgba(239,68,68,0.1)",
@@ -252,6 +249,32 @@ function LiveDot() {
 }
 
 function CamerasPage() {
+  const [cam1Data, setCam1Data] = useState<{
+    thumbnail: string | null;
+    lastDetection: string | null;
+  }>({ thumbnail: null, lastDetection: null });
+
+  useEffect(() => {
+    const fetchCam1 = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/incidents`);
+        const data: ApiIncident[] = await res.json();
+        if (data && data.length > 0) {
+          const latest = data[0];
+          setCam1Data({
+            thumbnail: latest.screenshot_url || null,
+            lastDetection: latest.timestamp || null,
+          });
+        }
+      } catch {
+        // API not available yet — use placeholder
+      }
+    };
+    fetchCam1();
+    const t = setInterval(fetchCam1, 5000);
+    return () => clearInterval(t);
+  }, []);
+
   return (
     <Box>
       <TopBar
@@ -388,22 +411,40 @@ function CamerasPage() {
                   justifyContent: "center",
                   position: "relative",
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  overflow: "hidden",
                 }}
               >
                 {cam.status === "online" ? (
                   <>
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        inset: 0,
-                        backgroundImage:
-                          "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-                        backgroundSize: "20px 20px",
-                      }}
-                    />
-                    <VideocamIcon
-                      sx={{ color: "rgba(99,102,241,0.3)", fontSize: 28 }}
-                    />
+                    {/* Camera 1 real thumbnail */}
+                    {cam.id === 1 && cam1Data.thumbnail ? (
+                      <img
+                        src={cam1Data.thumbnail}
+                        alt="Camera 1 latest"
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            backgroundImage:
+                              "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
+                            backgroundSize: "20px 20px",
+                          }}
+                        />
+                        <VideocamIcon
+                          sx={{ color: "rgba(99,102,241,0.3)", fontSize: 28 }}
+                        />
+                      </>
+                    )}
                     <Box
                       sx={{
                         position: "absolute",
@@ -417,6 +458,7 @@ function CamerasPage() {
                         borderRadius: "4px",
                         background: "rgba(239,68,68,0.15)",
                         border: "1px solid rgba(239,68,68,0.3)",
+                        zIndex: 2,
                       }}
                     >
                       <Box
@@ -456,6 +498,7 @@ function CamerasPage() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          zIndex: 2,
                         }}
                       >
                         <Typography
@@ -517,11 +560,24 @@ function CamerasPage() {
                   sx={{
                     color: "rgba(255,255,255,0.25)",
                     fontSize: ".7rem",
-                    mb: 1,
+                    mb: 0.5,
                   }}
                 >
                   {cam.location}
                 </Typography>
+                {/* Camera 1 last detection time */}
+                {cam.id === 1 && cam1Data.lastDetection && (
+                  <Typography
+                    sx={{
+                      color: "rgba(239,68,68,0.6)",
+                      fontSize: ".65rem",
+                      mb: 0.5,
+                    }}
+                  >
+                    Last:{" "}
+                    {new Date(cam1Data.lastDetection).toLocaleTimeString()}
+                  </Typography>
+                )}
                 <Box sx={{ display: "flex", gap: 0.8 }}>
                   <Box
                     sx={{
@@ -533,10 +589,7 @@ function CamerasPage() {
                     }}
                   >
                     <Typography
-                      sx={{
-                        color: "rgba(255,255,255,0.3)",
-                        fontSize: ".58rem",
-                      }}
+                      sx={{ color: "rgba(255,255,255,0.3)", fontSize: ".58rem" }}
                     >
                       {cam.res}
                     </Typography>
@@ -580,6 +633,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
   });
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [filter, setFilter] = useState('All');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -788,33 +842,32 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
               </Box>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>
-              {["All", "Critical", "High", "Medium"].map((f, i) => (
-                <Box
-                  key={f}
-                  sx={{
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: "6px",
-                    background:
-                      i === 0 ? "rgba(99,102,241,0.12)" : "transparent",
-                    border:
-                      i === 0
-                        ? "1px solid rgba(99,102,241,0.2)"
-                        : "1px solid rgba(255,255,255,0.06)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color: i === 0 ? "#818cf8" : "rgba(255,255,255,0.3)",
-                      fontSize: ".72rem",
-                      fontWeight: i === 0 ? 600 : 400,
-                    }}
-                  >
-                    {f}
-                  </Typography>
-                </Box>
-              ))}
+              {["All", "Critical", "High", "Medium"].map((f) => (
+  <Box
+    key={f}
+    onClick={() => setFilter(f)}
+    sx={{
+      px: 1.5,
+      py: 0.5,
+      borderRadius: "6px",
+      background: filter === f ? "rgba(99,102,241,0.12)" : "transparent",
+      border: filter === f ? "1px solid rgba(99,102,241,0.2)" : "1px solid rgba(255,255,255,0.06)",
+      cursor: "pointer",
+      transition: "all .2s",
+      "&:hover": { background: "rgba(99,102,241,0.08)" }
+    }}
+  >
+    <Typography
+      sx={{
+        color: filter === f ? "#818cf8" : "rgba(255,255,255,0.3)",
+        fontSize: ".72rem",
+        fontWeight: filter === f ? 600 : 400,
+      }}
+    >
+      {f}
+    </Typography>
+  </Box>
+))}
             </Box>
           </Box>
           {loading ? (
@@ -866,7 +919,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {alerts.map((alert, idx) => {
+                {alerts.filter(a => filter === 'All' || a.severity === filter.toLowerCase()).map((alert, idx) => {
                   const sev = severityConfig[alert.severity];
                   return (
                     <TableRow
@@ -1245,7 +1298,9 @@ function SettingsPage() {
           ))}
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2.5 }}>
+        <Box
+          sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2.5 }}
+        >
           {sections.map((section, si) => (
             <Box
               key={si}
@@ -1277,7 +1332,10 @@ function SettingsPage() {
                     {section.title}
                   </Typography>
                   <Typography
-                    sx={{ color: "rgba(255,255,255,0.22)", fontSize: ".72rem" }}
+                    sx={{
+                      color: "rgba(255,255,255,0.22)",
+                      fontSize: ".72rem",
+                    }}
                   >
                     {section.desc}
                   </Typography>
@@ -1609,7 +1667,10 @@ export default function Dashboard() {
             </Box>
           </Box>
           <Box
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              localStorage.removeItem("omnix_auth");
+              navigate("/login");
+            }}
             sx={{
               display: "flex",
               alignItems: "center",

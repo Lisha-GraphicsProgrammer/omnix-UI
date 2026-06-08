@@ -223,13 +223,18 @@ export default function Login() {
   useEffect(() => { setTimeout(() => setMounted(true), 80) }, [])
 
   const login = () => {
-    if (!email || !pw) { setErr('Please enter your credentials'); return }
-    setLoading(true); setTimeout(() => nav('/dashboard'), 900)
+  if (!email || !pw) { setErr('Please enter your credentials'); return }
+  if (email !== 'admin' || pw !== 'omnix2026') {
+    setErr('Invalid credentials — use admin / omnix2026')
+    return
   }
+  setLoading(true)
+  localStorage.setItem('omnix_auth', 'true')
+  setTimeout(() => nav('/dashboard', { replace: true }), 900)
+}
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', background: '#08080a' }}>
-
       {/* LEFT */}
       <Box sx={{
         flex: 1, display: { xs: 'none', md: 'flex' },

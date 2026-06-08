@@ -4,15 +4,25 @@ import Dashboard from './pages/Dashboard'
 import Rules from './pages/Rules'
 import AlertDetail from './pages/AlertDetail'
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuth = localStorage.getItem('omnix_auth') === 'true'
+  return isAuth ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const isAuth = localStorage.getItem('omnix_auth') === 'true'
+  return isAuth ? <Navigate to="/dashboard" replace /> : <>{children}</>
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/alert/:id" element={<AlertDetail />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
+        <Route path="/alert/:id" element={<ProtectedRoute><AlertDetail /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )
