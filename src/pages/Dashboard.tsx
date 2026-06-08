@@ -22,7 +22,6 @@ import VideocamIcon from "@mui/icons-material/Videocam";
 
 const DRAWER = 220;
 const API_BASE = "http://localhost:8000";
-
 interface ApiIncident {
   id: string;
   timestamp: string;
