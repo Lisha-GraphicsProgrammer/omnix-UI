@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { ThemeProvider as OmnixThemeProvider } from './pages/ThemeContext'
 import App from './App.tsx'
 
 const theme = createTheme({
@@ -21,9 +22,11 @@ const theme = createTheme({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
+    <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
-    </ThemeProvider>
+      <OmnixThemeProvider>
+        <App />
+      </OmnixThemeProvider>
+    </MuiThemeProvider>
   </StrictMode>
 )

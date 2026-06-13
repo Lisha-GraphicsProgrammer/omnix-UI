@@ -15,10 +15,14 @@ import {
   Tooltip,
   IconButton,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleIcon from "@mui/icons-material/Rule";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -36,17 +40,20 @@ import SaveIcon from "@mui/icons-material/Save";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MemoryIcon from "@mui/icons-material/Memory";
 import RestoreIcon from "@mui/icons-material/Restore";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import { useTheme } from "./ThemeContext";
 
-const DRAWER = 220;
+const DRAWER_OPEN = 220;
 const API_BASE = "http://localhost:8000";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
 const AMBER = "#FFB300";
-const CARD_BG = "rgba(255,255,255,0.03)";
-const CARD_BORDER = "1px solid rgba(255,255,255,0.07)";
 
 interface ApiIncident {
   id: string;
@@ -59,7 +66,6 @@ interface ApiIncident {
   bbox: number[];
   screenshot_url: string;
 }
-
 interface DashboardAlert {
   id: number;
   camera: string;
@@ -71,27 +77,35 @@ interface DashboardAlert {
   zone: string;
   screenshotUrl: string;
 }
-
 interface ApiStats {
   total: number;
   unique_persons: number;
   zones_affected: string[];
 }
+interface ApiCamera {
+  id: number;
+  name: string;
+  location: string;
+  status: string;
+  stream_url: string | null;
+  snapshot_url: string | null;
+  fps: number;
+  resolution: string;
+  source: string;
+}
 
-function titleCase(s: string): string {
+function titleCase(s: string) {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function transformIncident(inc: ApiIncident): DashboardAlert {
-  const idNum = parseInt(inc.id.replace("inc_", ""), 10);
-  const time = new Date(inc.timestamp).toLocaleTimeString("en-GB", {
-    hour12: false,
-  });
   return {
-    id: idNum,
+    id: parseInt(inc.id.replace("inc_", ""), 10),
     camera: `Camera 1 — ${titleCase(inc.zone)}`,
     rule: titleCase(inc.violation),
-    time,
+    time: new Date(inc.timestamp).toLocaleTimeString("en-GB", {
+      hour12: false,
+    }),
     severity: "high",
     status: "active",
     personId: inc.person_id,
@@ -193,64 +207,314 @@ const severityConfig = {
   },
 };
 
-const menuItems = [
-  { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} /> },
-  { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} /> },
-  { text: "Alerts", icon: <NotificationsIcon sx={{ fontSize: 18 }} /> },
-  { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} /> },
-];
-
-function TopBar({
-  title,
-  subtitle,
-  children,
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar({
+  selected,
+  onSelect,
+  open,
+  onToggle,
+  onSignOut,
+  t,
 }: {
-  title: string;
-  subtitle: string;
-  children?: React.ReactNode;
+  selected: string;
+  onSelect: (s: string) => void;
+  open: boolean;
+  onToggle: () => void;
+  onSignOut: () => void;
+  t: ReturnType<typeof useTheme>["t"];
 }) {
+  const menuItems = [
+    { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} /> },
+    { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} /> },
+    { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} /> },
+    { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} /> },
+  ];
+
   return (
     <Box
       sx={{
-        px: 4,
-        py: 2.5,
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        width: open ? DRAWER_OPEN : 56,
+        flexShrink: 0,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "rgba(13,13,16,0.8)",
-        backdropFilter: "blur(12px)",
-        position: "sticky",
+        flexDirection: "column",
+        background: t.sidebarBg,
+        borderRight: `1px solid ${t.border}`,
+        position: "fixed",
         top: 0,
-        zIndex: 50,
+        left: 0,
+        bottom: 0,
+        zIndex: 100,
+        transition: "width .25s cubic-bezier(.4,0,.2,1)",
+        overflow: "hidden",
       }}
     >
-      <Box>
-        <Typography
+      <Box
+        sx={{
+          px: open ? 3 : 1.5,
+          py: 3,
+          borderBottom: `1px solid ${t.border}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          minHeight: 72,
+        }}
+      >
+        <Box
           sx={{
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: "1.1rem",
-            letterSpacing: "-.3px",
+            width: 30,
+            height: 30,
+            borderRadius: "8px",
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 0 16px rgba(99,102,241,0.4)",
+            flexShrink: 0,
           }}
         >
-          {title}
-        </Typography>
-        <Typography
-          sx={{ color: "rgba(255,255,255,0.25)", fontSize: ".78rem", mt: 0.2 }}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <ellipse
+              cx="12"
+              cy="12"
+              rx="10"
+              ry="6.5"
+              stroke="white"
+              strokeWidth="1.5"
+            />
+            <circle cx="12" cy="12" r="3.5" fill="white" />
+            <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
+          </svg>
+        </Box>
+        {open && (
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                color: t.text,
+                fontWeight: 700,
+                fontSize: ".95rem",
+                letterSpacing: "-.2px",
+                lineHeight: 1,
+              }}
+            >
+              OMNIX
+            </Typography>
+            <Typography
+              sx={{
+                color: t.textMuted,
+                fontSize: ".58rem",
+                letterSpacing: ".06em",
+              }}
+            >
+              ENTERPRISE
+            </Typography>
+          </Box>
+        )}
+        <IconButton
+          size="small"
+          onClick={onToggle}
+          sx={{
+            color: t.textMuted,
+            ml: open ? 0 : "-4px",
+            "&:hover": { color: t.text },
+          }}
         >
-          {subtitle}
-        </Typography>
+          {open ? (
+            <ChevronLeftIcon fontSize="small" />
+          ) : (
+            <MenuIcon fontSize="small" />
+          )}
+        </IconButton>
       </Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        {children}
+
+      <Box sx={{ flex: 1, py: 2, overflowX: "hidden" }}>
+        {open && (
+          <Typography
+            sx={{
+              color: t.textMuted,
+              fontSize: ".6rem",
+              fontWeight: 600,
+              letterSpacing: ".1em",
+              textTransform: "uppercase",
+              px: 3,
+              mb: 1,
+              opacity: 0.6,
+            }}
+          >
+            Navigation
+          </Typography>
+        )}
+        {menuItems.map((item) => {
+          const isSel = selected === item.text;
+          return (
+            <Tooltip
+              key={item.text}
+              title={!open ? item.text : ""}
+              placement="right"
+            >
+              <Box
+                onClick={() => onSelect(item.text)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  px: open ? 3 : 1.5,
+                  py: 1.4,
+                  mx: 1,
+                  mb: 0.5,
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  position: "relative",
+                  background: isSel ? "rgba(99,102,241,0.12)" : "transparent",
+                  border: isSel
+                    ? "1px solid rgba(99,102,241,0.2)"
+                    : "1px solid transparent",
+                  transition: "all .2s",
+                  "&:hover": {
+                    background: isSel
+                      ? "rgba(99,102,241,0.12)"
+                      : t.surfaceHover,
+                  },
+                }}
+              >
+                {isSel && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      left: 0,
+                      top: "25%",
+                      bottom: "25%",
+                      width: 3,
+                      borderRadius: "0 3px 3px 0",
+                      background: "#6366f1",
+                      boxShadow: "0 0 8px #6366f1",
+                    }}
+                  />
+                )}
+                <Box
+                  sx={{
+                    color: isSel ? "#818cf8" : t.textMuted,
+                    display: "flex",
+                    transition: "color .2s",
+                    flexShrink: 0,
+                  }}
+                >
+                  {item.icon}
+                </Box>
+                {open && (
+                  <Typography
+                    sx={{
+                      color: isSel ? t.text : t.textSecondary,
+                      fontSize: ".85rem",
+                      fontWeight: isSel ? 600 : 400,
+                      transition: "all .2s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {item.text}
+                  </Typography>
+                )}
+              </Box>
+            </Tooltip>
+          );
+        })}
+      </Box>
+
+      <Box sx={{ p: open ? 2 : 1, borderTop: `1px solid ${t.border}` }}>
+        {open ? (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                p: "10px 12px",
+                borderRadius: "10px",
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                mb: 1.5,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  sx={{ color: "#fff", fontSize: ".72rem", fontWeight: 700 }}
+                >
+                  A
+                </Typography>
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    color: t.text,
+                    fontSize: ".78rem",
+                    fontWeight: 600,
+                    lineHeight: 1,
+                  }}
+                >
+                  Admin
+                </Typography>
+                <Typography
+                  sx={{ color: t.textMuted, fontSize: ".65rem", mt: 0.2 }}
+                  noWrap
+                >
+                  admin@omnix.ai
+                </Typography>
+              </Box>
+            </Box>
+            <Box
+              onClick={onSignOut}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 1,
+                borderRadius: "8px",
+                cursor: "pointer",
+                "&:hover": { background: t.surfaceHover },
+                transition: "all .2s",
+              }}
+            >
+              <LogoutIcon sx={{ color: t.textMuted, fontSize: 15 }} />
+              <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>
+                Sign out
+              </Typography>
+            </Box>
+          </>
+        ) : (
+          <Tooltip title="Sign out" placement="right">
+            <Box
+              onClick={onSignOut}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                p: 1,
+                borderRadius: "8px",
+                cursor: "pointer",
+                "&:hover": { background: t.surfaceHover },
+              }}
+            >
+              <LogoutIcon sx={{ color: t.textMuted, fontSize: 18 }} />
+            </Box>
+          </Tooltip>
+        )}
       </Box>
     </Box>
   );
 }
 
 // ─── Settings sub-components ──────────────────────────────────────────────────
-
 function MetricTile({
   icon,
   value,
@@ -264,13 +528,14 @@ function MetricTile({
   color: string;
   pulse?: boolean;
 }) {
+  const { t } = useTheme();
   return (
     <Box
       sx={{
         flex: 1,
         minWidth: 0,
-        background: CARD_BG,
-        border: CARD_BORDER,
+        background: t.surface,
+        border: `1px solid ${t.border}`,
         borderRadius: "14px",
         p: "20px 24px",
         display: "flex",
@@ -320,10 +585,9 @@ function MetricTile({
         <Typography
           sx={{
             fontSize: "0.72rem",
-            color: "rgba(255,255,255,0.4)",
+            color: t.textMuted,
             mt: "2px",
             letterSpacing: "0.04em",
-            textTransform: "uppercase",
           }}
         >
           {label}
@@ -346,11 +610,12 @@ function SectionCard({
   accentColor: string;
   children: React.ReactNode;
 }) {
+  const { t } = useTheme();
   return (
     <Box
       sx={{
-        background: CARD_BG,
-        border: CARD_BORDER,
+        background: t.surface,
+        border: `1px solid ${t.border}`,
         borderRadius: "16px",
         overflow: "hidden",
         height: "100%",
@@ -386,16 +651,12 @@ function SectionCard({
         </Box>
         <Box>
           <Typography
-            sx={{ fontWeight: 600, fontSize: "0.95rem", color: "#fff" }}
+            sx={{ fontWeight: 600, fontSize: "0.95rem", color: t.text }}
           >
             {title}
           </Typography>
           <Typography
-            sx={{
-              fontSize: "0.73rem",
-              color: "rgba(255,255,255,0.4)",
-              mt: "1px",
-            }}
+            sx={{ fontSize: "0.73rem", color: t.textMuted, mt: "1px" }}
           >
             {subtitle}
           </Typography>
@@ -421,6 +682,7 @@ function SettingRow({
   children: React.ReactNode;
   tooltip?: string;
 }) {
+  const { t } = useTheme();
   return (
     <Box
       sx={{
@@ -429,41 +691,25 @@ function SettingRow({
         justifyContent: "space-between",
         py: "14px",
         gap: 2,
-        "&:not(:last-child)": {
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-        },
+        "&:not(:last-child)": { borderBottom: `1px solid ${t.border}` },
       }}
     >
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography
-            sx={{
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              color: "rgba(255,255,255,0.88)",
-            }}
+            sx={{ fontSize: "0.875rem", fontWeight: 500, color: t.text }}
           >
             {label}
           </Typography>
           {tooltip && (
             <Tooltip title={tooltip} arrow placement="top">
               <InfoOutlinedIcon
-                sx={{
-                  fontSize: 14,
-                  color: "rgba(255,255,255,0.25)",
-                  cursor: "help",
-                }}
+                sx={{ fontSize: 14, color: t.textMuted, cursor: "help" }}
               />
             </Tooltip>
           )}
         </Box>
-        <Typography
-          sx={{
-            fontSize: "0.73rem",
-            color: "rgba(255,255,255,0.35)",
-            mt: "2px",
-          }}
-        >
+        <Typography sx={{ fontSize: "0.73rem", color: t.textMuted, mt: "2px" }}>
           {description}
         </Typography>
       </Box>
@@ -504,18 +750,19 @@ function ValuePill({
   value: string;
   highlight?: boolean;
 }) {
+  const { t } = useTheme();
   return (
     <Box
       sx={{
         px: "14px",
         py: "5px",
         borderRadius: "8px",
-        background: highlight ? `${CYAN}15` : "rgba(255,255,255,0.06)",
-        border: `1px solid ${highlight ? CYAN + "35" : "rgba(255,255,255,0.1)"}`,
-        color: highlight ? CYAN : "rgba(255,255,255,0.75)",
+        background: highlight ? `${CYAN}15` : t.surface,
+        border: `1px solid ${highlight ? CYAN + "35" : t.border}`,
+        color: highlight ? CYAN : t.textSecondary,
         fontSize: "0.82rem",
         fontWeight: 600,
-        fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+        fontFamily: '"JetBrains Mono", monospace',
         whiteSpace: "nowrap",
       }}
     >
@@ -526,31 +773,71 @@ function ValuePill({
 
 // ─── CamerasPage ──────────────────────────────────────────────────────────────
 function CamerasPage() {
-  const [cam1Data, setCam1Data] = useState<{
-    thumbnail: string | null;
-    lastDetection: string | null;
-  }>({ thumbnail: null, lastDetection: null });
+  const { t } = useTheme();
+  const [cameras, setCameras] = useState<ApiCamera[]>([]);
+  const [lastDetection, setLastDetection] = useState<string | null>(null);
+  const [apiError, setApiError] = useState(false);
+  const [selectedCam, setSelectedCam] = useState<ApiCamera | null>(null);
 
   useEffect(() => {
-    const fetchCam1 = async () => {
+    const fetchCameras = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/incidents`);
-        const data: ApiIncident[] = await res.json();
-        if (data && data.length > 0) {
-          const latest = data[0];
-          setCam1Data({
-            thumbnail: latest.screenshot_url || null,
-            lastDetection: latest.timestamp || null,
-          });
+        const [camRes, incRes] = await Promise.all([
+          fetch(`${API_BASE}/api/cameras`),
+          fetch(`${API_BASE}/api/incidents`),
+        ]);
+        if (camRes.ok) {
+          const camData: ApiCamera[] = await camRes.json();
+          setCameras(camData);
         }
+        const incData: ApiIncident[] = await incRes.json();
+        if (incData?.length > 0) setLastDetection(incData[0].timestamp);
+        setApiError(false);
       } catch {
-        /* API not available */
+        setApiError(true);
       }
     };
-    fetchCam1();
-    const t = setInterval(fetchCam1, 5000);
-    return () => clearInterval(t);
+    fetchCameras();
+    const ti = setInterval(fetchCameras, 5000);
+    return () => clearInterval(ti);
   }, []);
+
+  const mockMeta: Record<number, { alerts: number; res: string }> = {
+    1: { alerts: 2, res: "1080p" },
+    2: { alerts: 1, res: "1080p" },
+    3: { alerts: 1, res: "720p" },
+    4: { alerts: 0, res: "1080p" },
+    5: { alerts: 0, res: "1080p" },
+    6: { alerts: 0, res: "720p" },
+    7: { alerts: 0, res: "4K" },
+    8: { alerts: 0, res: "720p" },
+  };
+
+  const displayCameras =
+    cameras.length > 0
+      ? cameras
+      : mockCameras.map((c) => ({
+          id: c.id,
+          name: c.name,
+          location: c.location,
+          status: c.status,
+          stream_url: null,
+          snapshot_url: null,
+          fps: c.fps,
+          resolution: c.res,
+          source: "none",
+        }));
+
+  const onlineCount = displayCameras.filter(
+    (c) => c.status === "online",
+  ).length;
+  const offlineCount = displayCameras.filter(
+    (c) => c.status === "offline",
+  ).length;
+  const alertCount = displayCameras.reduce(
+    (a, c) => a + (mockMeta[c.id]?.alerts || 0),
+    0,
+  );
 
   return (
     <Box>
@@ -558,11 +845,11 @@ function CamerasPage() {
         sx={{
           px: 4,
           py: 2.5,
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: `1px solid ${t.border}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "rgba(13,13,16,0.9)",
+          background: t.topbarBg,
           backdropFilter: "blur(12px)",
           position: "sticky",
           top: 0,
@@ -572,7 +859,7 @@ function CamerasPage() {
         <Box>
           <Typography
             sx={{
-              color: "#fff",
+              color: t.text,
               fontWeight: 700,
               fontSize: "1.1rem",
               letterSpacing: "-.3px",
@@ -582,12 +869,14 @@ function CamerasPage() {
           </Typography>
           <Typography
             sx={{
-              color: "rgba(255,255,255,0.25)",
+              color: apiError ? "#fca5a5" : t.textMuted,
               fontSize: ".78rem",
               mt: 0.2,
             }}
           >
-            8 cameras configured · 7 online · Site A
+            {apiError
+              ? "⚠️ API offline — showing mock data"
+              : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -597,8 +886,8 @@ function CamerasPage() {
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: "#22c55e",
-                boxShadow: "0 0 8px rgba(34,197,94,0.6)",
+                background: apiError ? "#ef4444" : "#22c55e",
+                boxShadow: `0 0 8px ${apiError ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)"}`,
                 animation: "pg 2s infinite",
                 "@keyframes pg": {
                   "0%,100%": { opacity: 1 },
@@ -606,10 +895,8 @@ function CamerasPage() {
                 },
               }}
             />
-            <Typography
-              sx={{ color: "rgba(255,255,255,0.25)", fontSize: ".75rem" }}
-            >
-              Live
+            <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>
+              {apiError ? "Offline" : "Live"}
             </Typography>
           </Box>
           <Tooltip title="Coming in V2" arrow>
@@ -646,31 +933,31 @@ function CamerasPage() {
         >
           {[
             {
-              val: "8",
+              val: String(displayCameras.length),
               label: "Total Cameras",
               sub: "Configured on site",
               c: "#818cf8",
               icon: <VideocamIcon sx={{ fontSize: 20 }} />,
             },
             {
-              val: "7",
+              val: String(onlineCount),
               label: "Online",
               sub: "Streaming live",
-              c: "#00E676",
+              c: GREEN,
               icon: <CheckCircleIcon sx={{ fontSize: 20 }} />,
             },
             {
-              val: "1",
+              val: String(offlineCount),
               label: "Offline",
               sub: "Needs attention",
               c: "#FF4444",
               icon: <WifiIcon sx={{ fontSize: 20 }} />,
             },
             {
-              val: "4",
+              val: String(alertCount),
               label: "Active Alerts",
               sub: "Violations detected",
-              c: "#FFB300",
+              c: AMBER,
               icon: <WarningAmberIcon sx={{ fontSize: 20 }} />,
             },
           ].map((s, i) => (
@@ -679,8 +966,8 @@ function CamerasPage() {
               sx={{
                 p: "20px 24px",
                 borderRadius: "14px",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: t.surface,
+                border: `1px solid ${t.border}`,
                 display: "flex",
                 alignItems: "center",
                 gap: 2,
@@ -732,7 +1019,7 @@ function CamerasPage() {
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#fff",
+                    color: t.text,
                     fontSize: ".82rem",
                     fontWeight: 600,
                     mt: ".2rem",
@@ -741,11 +1028,7 @@ function CamerasPage() {
                   {s.label}
                 </Typography>
                 <Typography
-                  sx={{
-                    color: "rgba(255,255,255,0.28)",
-                    fontSize: ".68rem",
-                    mt: ".1rem",
-                  }}
+                  sx={{ color: t.textMuted, fontSize: ".68rem", mt: ".1rem" }}
                 >
                   {s.sub}
                 </Typography>
@@ -754,6 +1037,146 @@ function CamerasPage() {
           ))}
         </Box>
 
+        {/* Live stream modal */}
+        {selectedCam && (
+          <Box
+            onClick={() => setSelectedCam(null)}
+            sx={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 200,
+              background: "rgba(0,0,0,0.85)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                width: "min(900px, 90vw)",
+                borderRadius: "20px",
+                overflow: "hidden",
+                border: `1px solid ${t.border}`,
+                boxShadow: "0 40px 80px rgba(0,0,0,0.6)",
+              }}
+            >
+              <Box
+                sx={{
+                  px: 3,
+                  py: 2,
+                  background: t.sidebarBg,
+                  borderBottom: `1px solid ${t.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#ef4444",
+                      boxShadow: "0 0 8px #ef4444",
+                      animation: "blink 1s infinite",
+                    }}
+                  />
+                  <Typography
+                    sx={{ color: t.text, fontWeight: 600, fontSize: ".9rem" }}
+                  >
+                    {selectedCam.name}
+                  </Typography>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.2,
+                      borderRadius: "4px",
+                      background: "rgba(239,68,68,0.15)",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: "#fca5a5",
+                        fontSize: ".6rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      LIVE
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box
+                  onClick={() => setSelectedCam(null)}
+                  sx={{
+                    cursor: "pointer",
+                    color: t.textMuted,
+                    fontSize: "1.2rem",
+                    px: 1,
+                    "&:hover": { color: t.text },
+                  }}
+                >
+                  ✕
+                </Box>
+              </Box>
+              {selectedCam.stream_url ? (
+                <img
+                  src={selectedCam.stream_url}
+                  alt="Live stream"
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    maxHeight: "70vh",
+                    objectFit: "contain",
+                    background: "#000",
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    height: 400,
+                    background: "#000",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "column",
+                    gap: 2,
+                  }}
+                >
+                  <VideocamIcon
+                    sx={{ fontSize: 48, color: "rgba(255,255,255,0.1)" }}
+                  />
+                  <Typography sx={{ color: "rgba(255,255,255,0.3)" }}>
+                    No stream available
+                  </Typography>
+                </Box>
+              )}
+              <Box
+                sx={{
+                  px: 3,
+                  py: 1.5,
+                  background: t.sidebarBg,
+                  display: "flex",
+                  gap: 3,
+                }}
+              >
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>
+                  📍 {selectedCam.location}
+                </Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>
+                  🎞️ {selectedCam.fps}fps
+                </Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>
+                  📐 {selectedCam.resolution}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        )}
+
         <Box
           sx={{
             display: "grid",
@@ -761,62 +1184,63 @@ function CamerasPage() {
             gap: 2.5,
           }}
         >
-          {mockCameras.map((cam) => (
-            <Box
-              key={cam.id}
-              sx={{
-                borderRadius: "20px",
-                overflow: "hidden",
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${cam.status === "offline" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.07)"}`,
-                transition: "all .25s",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
-                "&:hover": {
-                  border: `1px solid ${cam.status === "offline" ? "rgba(239,68,68,0.35)" : "rgba(99,102,241,0.3)"}`,
-                  transform: "translateY(-3px)",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
-                },
-              }}
-            >
+          {displayCameras.map((cam) => {
+            const meta = mockMeta[cam.id] || { alerts: 0, res: cam.resolution };
+            const isOnline = cam.status === "online";
+            const hasStream = !!cam.stream_url;
+            return (
               <Box
+                key={cam.id}
+                onClick={() => isOnline && setSelectedCam(cam)}
                 sx={{
-                  aspectRatio: "16/9",
-                  background:
-                    cam.status === "offline"
-                      ? "linear-gradient(135deg, #1a0a0a, #2a0f0f)"
-                      : "linear-gradient(135deg, #0d1117, #161b22)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative",
+                  borderRadius: "20px",
                   overflow: "hidden",
+                  background: t.surface,
+                  border: `1px solid ${!isOnline ? "rgba(239,68,68,0.2)" : t.border}`,
+                  transition: "all .25s",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                  cursor: isOnline ? "pointer" : "default",
+                  "&:hover": isOnline
+                    ? {
+                        transform: "translateY(-3px)",
+                        boxShadow: `0 12px 32px ${hasStream ? "rgba(0,212,255,0.15)" : "rgba(0,0,0,0.2)"}`,
+                        borderColor: hasStream ? `${CYAN}40` : t.border,
+                      }
+                    : {},
                 }}
               >
-                {cam.status === "online" ? (
-                  <>
-                    {cam.id === 1 && cam1Data.thumbnail ? (
-                      <img
-                        src={cam1Data.thumbnail}
-                        alt="Camera 1"
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <Box
-                          sx={{
+                <Box
+                  sx={{
+                    aspectRatio: "16/9",
+                    background: !isOnline
+                      ? "linear-gradient(135deg, #1a0a0a, #2a0f0f)"
+                      : "linear-gradient(135deg, #0d1117, #161b22)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  {isOnline ? (
+                    <>
+                      {hasStream ? (
+                        <img
+                          src={cam.stream_url || ""}
+                          alt={cam.name}
+                          style={{
                             position: "absolute",
                             inset: 0,
-                            backgroundImage:
-                              "linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px)",
-                            backgroundSize: "24px 24px",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                           }}
                         />
+                      ) : (
                         <Box
                           sx={{
                             display: "flex",
@@ -838,58 +1262,17 @@ function CamerasPage() {
                             NO SIGNAL
                           </Typography>
                         </Box>
-                      </>
-                    )}
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        top: 10,
-                        left: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.6,
-                        px: 1,
-                        py: 0.4,
-                        borderRadius: "6px",
-                        background: "rgba(239,68,68,0.2)",
-                        border: "1px solid rgba(239,68,68,0.4)",
-                        backdropFilter: "blur(8px)",
-                        zIndex: 2,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: "50%",
-                          background: "#ef4444",
-                          boxShadow: "0 0 6px #ef4444",
-                          animation: "blink 1s infinite",
-                          "@keyframes blink": {
-                            "0%,100%": { opacity: 1 },
-                            "50%": { opacity: 0.2 },
-                          },
-                        }}
-                      />
-                      <Typography
-                        sx={{
-                          color: "#fca5a5",
-                          fontSize: ".55rem",
-                          fontWeight: 800,
-                          letterSpacing: ".05em",
-                        }}
-                      >
-                        LIVE
-                      </Typography>
-                    </Box>
-                    {cam.alerts > 0 && (
+                      )}
                       <Box
                         sx={{
                           position: "absolute",
                           top: 10,
-                          right: 10,
+                          left: 10,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.6,
                           px: 1,
-                          py: 0.3,
+                          py: 0.4,
                           borderRadius: "6px",
                           background: "rgba(239,68,68,0.2)",
                           border: "1px solid rgba(239,68,68,0.4)",
@@ -897,202 +1280,264 @@ function CamerasPage() {
                           zIndex: 2,
                         }}
                       >
+                        <Box
+                          sx={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: "50%",
+                            background: "#ef4444",
+                            boxShadow: "0 0 6px #ef4444",
+                            animation: "blink 1s infinite",
+                            "@keyframes blink": {
+                              "0%,100%": { opacity: 1 },
+                              "50%": { opacity: 0.2 },
+                            },
+                          }}
+                        />
                         <Typography
                           sx={{
                             color: "#fca5a5",
-                            fontSize: ".6rem",
+                            fontSize: ".55rem",
                             fontWeight: 800,
+                            letterSpacing: ".05em",
                           }}
                         >
-                          ⚠ {cam.alerts}
+                          {hasStream ? "LIVE" : "ONLINE"}
                         </Typography>
                       </Box>
-                    )}
+                      {hasStream && (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            bottom: 10,
+                            left: 10,
+                            px: 1,
+                            py: 0.3,
+                            borderRadius: "6px",
+                            background: `${CYAN}20`,
+                            border: `1px solid ${CYAN}40`,
+                            backdropFilter: "blur(8px)",
+                            zIndex: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: CYAN,
+                              fontSize: ".55rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ▶️ Click to expand
+                          </Typography>
+                        </Box>
+                      )}
+                      {meta.alerts > 0 && (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 10,
+                            right: 10,
+                            px: 1,
+                            py: 0.3,
+                            borderRadius: "6px",
+                            background: "rgba(239,68,68,0.2)",
+                            border: "1px solid rgba(239,68,68,0.4)",
+                            backdropFilter: "blur(8px)",
+                            zIndex: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "#fca5a5",
+                              fontSize: ".6rem",
+                              fontWeight: 800,
+                            }}
+                          >
+                            ⚠️ {meta.alerts}
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  ) : (
                     <Box
                       sx={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: "40%",
-                        background:
-                          "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
-                        zIndex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 1.5,
                       }}
-                    />
-                  </>
-                ) : (
+                    >
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "50%",
+                          background: "rgba(239,68,68,0.1)",
+                          border: "1px solid rgba(239,68,68,0.2)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <VideocamIcon
+                          sx={{ color: "rgba(239,68,68,0.5)", fontSize: 20 }}
+                        />
+                      </Box>
+                      <Typography
+                        sx={{
+                          color: "rgba(239,68,68,0.5)",
+                          fontSize: ".68rem",
+                          fontWeight: 600,
+                          letterSpacing: ".04em",
+                        }}
+                      >
+                        OFFLINE
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+                <Box sx={{ p: "14px 16px" }}>
                   <Box
                     sx={{
                       display: "flex",
-                      flexDirection: "column",
                       alignItems: "center",
-                      gap: 1.5,
+                      justifyContent: "space-between",
+                      mb: 0.6,
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "50%",
-                        background: "rgba(239,68,68,0.1)",
-                        border: "1px solid rgba(239,68,68,0.2)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <VideocamIcon
-                        sx={{ color: "rgba(239,68,68,0.5)", fontSize: 20 }}
-                      />
-                    </Box>
                     <Typography
-                      sx={{
-                        color: "rgba(239,68,68,0.5)",
-                        fontSize: ".68rem",
-                        fontWeight: 600,
-                        letterSpacing: ".04em",
-                      }}
+                      sx={{ color: t.text, fontSize: ".8rem", fontWeight: 600 }}
+                      noWrap
                     >
-                      OFFLINE
+                      {cam.name}
                     </Typography>
-                  </Box>
-                )}
-              </Box>
-              <Box sx={{ p: "14px 16px" }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    mb: 0.6,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color: "#fff",
-                      fontSize: ".8rem",
-                      fontWeight: 600,
-                      letterSpacing: "-.2px",
-                    }}
-                    noWrap
-                  >
-                    {cam.name}
-                  </Typography>
-                  <WifiIcon
-                    sx={{
-                      fontSize: 13,
-                      color: cam.status === "online" ? "#6ee7b7" : "#fca5a5",
-                      flexShrink: 0,
-                      ml: 1,
-                    }}
-                  />
-                </Box>
-                <Typography
-                  sx={{
-                    color: "rgba(255,255,255,0.22)",
-                    fontSize: ".7rem",
-                    mb: 0.8,
-                  }}
-                >
-                  {cam.location}
-                </Typography>
-                {cam.id === 1 && cam1Data.lastDetection && (
-                  <Box
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.6,
-                      mb: 1,
-                      px: 1,
-                      py: 0.35,
-                      borderRadius: "6px",
-                      background: "rgba(239,68,68,0.07)",
-                      border: "1px solid rgba(239,68,68,0.15)",
-                    }}
-                  >
-                    <Box
+                    <WifiIcon
                       sx={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: "50%",
-                        background: "#ef4444",
+                        fontSize: 13,
+                        color: isOnline ? "#6ee7b7" : "#fca5a5",
                         flexShrink: 0,
+                        ml: 1,
                       }}
                     />
-                    <Typography
-                      sx={{ color: "rgba(239,68,68,0.7)", fontSize: ".62rem" }}
-                    >
-                      Last:{" "}
-                      {new Date(cam1Data.lastDetection).toLocaleTimeString()}
-                    </Typography>
                   </Box>
-                )}
-                <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap" }}>
-                  <Box
-                    sx={{
-                      px: 1,
-                      py: 0.3,
-                      borderRadius: "5px",
-                      background:
-                        cam.status === "online"
-                          ? "rgba(110,231,183,0.08)"
-                          : "rgba(239,68,68,0.08)",
-                      border: `1px solid ${cam.status === "online" ? "rgba(110,231,183,0.15)" : "rgba(239,68,68,0.15)"}`,
-                    }}
+                  <Typography
+                    sx={{ color: t.textMuted, fontSize: ".7rem", mb: 0.8 }}
                   >
-                    <Typography
+                    {cam.location}
+                  </Typography>
+                  {cam.id === 1 && lastDetection && (
+                    <Box
                       sx={{
-                        color: cam.status === "online" ? "#6ee7b7" : "#fca5a5",
-                        fontSize: ".58rem",
-                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.6,
+                        mb: 1,
+                        px: 1,
+                        py: 0.35,
+                        borderRadius: "6px",
+                        background: "rgba(239,68,68,0.07)",
+                        border: "1px solid rgba(239,68,68,0.15)",
                       }}
                     >
-                      {cam.status === "online" ? "● Online" : "● Offline"}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      px: 1,
-                      py: 0.3,
-                      borderRadius: "5px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        color: "rgba(255,255,255,0.3)",
-                        fontSize: ".58rem",
-                      }}
-                    >
-                      {cam.res}
-                    </Typography>
-                  </Box>
-                  {cam.fps > 0 && (
+                      <Box
+                        sx={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: "#ef4444",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography
+                        sx={{
+                          color: "rgba(239,68,68,0.7)",
+                          fontSize: ".62rem",
+                        }}
+                      >
+                        Last: {new Date(lastDetection).toLocaleTimeString()}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap" }}>
                     <Box
                       sx={{
                         px: 1,
                         py: 0.3,
                         borderRadius: "5px",
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
+                        background: isOnline
+                          ? "rgba(110,231,183,0.08)"
+                          : "rgba(239,68,68,0.08)",
+                        border: `1px solid ${isOnline ? "rgba(110,231,183,0.15)" : "rgba(239,68,68,0.15)"}`,
                       }}
                     >
                       <Typography
                         sx={{
-                          color: "rgba(255,255,255,0.3)",
+                          color: isOnline ? "#6ee7b7" : "#fca5a5",
                           fontSize: ".58rem",
+                          fontWeight: 600,
                         }}
                       >
-                        {cam.fps}fps
+                        {isOnline ? "● Online" : "● Offline"}
                       </Typography>
                     </Box>
-                  )}
+                    <Box
+                      sx={{
+                        px: 1,
+                        py: 0.3,
+                        borderRadius: "5px",
+                        background: t.surface,
+                        border: `1px solid ${t.border}`,
+                      }}
+                    >
+                      <Typography
+                        sx={{ color: t.textMuted, fontSize: ".58rem" }}
+                      >
+                        {meta.res}
+                      </Typography>
+                    </Box>
+                    {cam.fps > 0 && (
+                      <Box
+                        sx={{
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: "5px",
+                          background: t.surface,
+                          border: `1px solid ${t.border}`,
+                        }}
+                      >
+                        <Typography
+                          sx={{ color: t.textMuted, fontSize: ".58rem" }}
+                        >
+                          {cam.fps}fps
+                        </Typography>
+                      </Box>
+                    )}
+                    {hasStream && (
+                      <Box
+                        sx={{
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: "5px",
+                          background: `${CYAN}10`,
+                          border: `1px solid ${CYAN}25`,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: CYAN,
+                            fontSize: ".58rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          STREAM
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                 </Box>
               </Box>
-            </Box>
-          ))}
+            );
+          })}
         </Box>
       </Box>
     </Box>
@@ -1100,7 +1545,8 @@ function CamerasPage() {
 }
 
 // ─── AlertsPage ───────────────────────────────────────────────────────────────
-function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
+function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
+  const { t } = useTheme();
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [stats, setStats] = useState<ApiStats>({
     total: 0,
@@ -1118,10 +1564,10 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
           fetch(`${API_BASE}/api/incidents`),
           fetch(`${API_BASE}/api/stats`),
         ]);
-        const incidents: ApiIncident[] = await incRes.json();
-        const statsData: ApiStats = await statsRes.json();
-        setAlerts(incidents.map(transformIncident));
-        setStats(statsData);
+        setAlerts(
+          ((await incRes.json()) as ApiIncident[]).map(transformIncident),
+        );
+        setStats(await statsRes.json());
         setApiError(false);
       } catch {
         setApiError(true);
@@ -1129,14 +1575,13 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
       setLoading(false);
     };
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    const iv = setInterval(fetchData, 5000);
+    return () => clearInterval(iv);
   }, []);
 
   const filtered = alerts.filter(
     (a) => filter === "All" || a.severity === filter.toLowerCase(),
   );
-
   const statCards = [
     {
       val: stats.total.toString(),
@@ -1150,20 +1595,20 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
       label: "Active Cameras",
       sub: "100% online",
       c: "#818cf8",
-      icon: <CameraAltIcon sx={{ fontSize: 20 }} />,
+      icon: <VideocamIcon sx={{ fontSize: 20 }} />,
     },
     {
       val: stats.zones_affected.length.toString(),
       label: "Zones Affected",
       sub: "With active violations",
-      c: "#00E676",
+      c: GREEN,
       icon: <CheckCircleIcon sx={{ fontSize: 20 }} />,
     },
     {
       val: stats.unique_persons.toString(),
       label: "Unique Persons",
       sub: "ByteTrack deduplicated",
-      c: "#FFB300",
+      c: AMBER,
       icon: <PersonIcon sx={{ fontSize: 20 }} />,
     },
   ];
@@ -1174,11 +1619,11 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
         sx={{
           px: 4,
           py: 2.5,
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: `1px solid ${t.border}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "rgba(13,13,16,0.9)",
+          background: t.topbarBg,
           backdropFilter: "blur(12px)",
           position: "sticky",
           top: 0,
@@ -1188,23 +1633,23 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
         <Box>
           <Typography
             sx={{
-              color: "#fff",
+              color: t.text,
               fontWeight: 700,
               fontSize: "1.1rem",
               letterSpacing: "-.3px",
             }}
           >
-            Active Alerts
+            Alert Dashboard
           </Typography>
           <Typography
             sx={{
-              color: apiError ? "#fca5a5" : "rgba(255,255,255,0.25)",
+              color: apiError ? "#fca5a5" : t.textMuted,
               fontSize: ".78rem",
               mt: 0.2,
             }}
           >
             {apiError
-              ? "⚠ API offline — showing cached state"
+              ? "⚠️ API offline — showing cached state"
               : `Real-time violation monitoring — ${alerts.length} events`}
           </Typography>
         </Box>
@@ -1218,15 +1663,9 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                 background: apiError ? "#ef4444" : "#22c55e",
                 boxShadow: `0 0 8px ${apiError ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)"}`,
                 animation: "pg 2s infinite",
-                "@keyframes pg": {
-                  "0%,100%": { opacity: 1 },
-                  "50%": { opacity: 0.3 },
-                },
               }}
             />
-            <Typography
-              sx={{ color: "rgba(255,255,255,0.25)", fontSize: ".75rem" }}
-            >
+            <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>
               {apiError ? "Offline" : "Live"}
             </Typography>
           </Box>
@@ -1241,10 +1680,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
               cursor: "pointer",
               boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
               transition: "all .2s",
-              "&:hover": {
-                transform: "translateY(-1px)",
-                boxShadow: "0 6px 20px rgba(99,102,241,0.35)",
-              },
+              "&:hover": { transform: "translateY(-1px)" },
             }}
           >
             <Typography
@@ -1255,7 +1691,6 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
           </Box>
         </Box>
       </Box>
-
       <Box sx={{ p: 4 }}>
         <Box
           sx={{
@@ -1271,15 +1706,14 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
               sx={{
                 p: "20px 24px",
                 borderRadius: "14px",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: t.surface,
+                border: `1px solid ${t.border}`,
                 display: "flex",
                 alignItems: "center",
                 gap: 2,
                 position: "relative",
                 overflow: "hidden",
                 transition: "all .25s",
-                cursor: "default",
                 "&:hover": {
                   transform: "translateY(-2px)",
                   boxShadow: `0 12px 32px ${s.c}18`,
@@ -1325,7 +1759,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#fff",
+                    color: t.text,
                     fontSize: ".82rem",
                     fontWeight: 600,
                     mt: ".2rem",
@@ -1334,11 +1768,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                   {s.label}
                 </Typography>
                 <Typography
-                  sx={{
-                    color: "rgba(255,255,255,0.28)",
-                    fontSize: ".68rem",
-                    mt: ".1rem",
-                  }}
+                  sx={{ color: t.textMuted, fontSize: ".68rem", mt: ".1rem" }}
                 >
                   {s.sub}
                 </Typography>
@@ -1346,36 +1776,28 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
             </Box>
           ))}
         </Box>
-
         <Box
           sx={{
             borderRadius: "20px",
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.07)",
+            background: t.surface,
+            border: `1px solid ${t.border}`,
             overflow: "hidden",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
           }}
         >
           <Box
             sx={{
               px: 3,
               py: 2.5,
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              borderBottom: `1px solid ${t.border}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              background:
-                "linear-gradient(135deg, rgba(99,102,241,0.04), rgba(139,92,246,0.02))",
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography
-                sx={{
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: ".92rem",
-                  letterSpacing: "-.2px",
-                }}
+                sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}
               >
                 Violation Log
               </Typography>
@@ -1409,15 +1831,14 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                     border:
                       filter === f
                         ? "1px solid rgba(99,102,241,0.3)"
-                        : "1px solid rgba(255,255,255,0.06)",
+                        : `1px solid ${t.border}`,
                     cursor: "pointer",
                     transition: "all .2s",
-                    "&:hover": { background: "rgba(99,102,241,0.08)" },
                   }}
                 >
                   <Typography
                     sx={{
-                      color: filter === f ? "#818cf8" : "rgba(255,255,255,0.3)",
+                      color: filter === f ? "#818cf8" : t.textMuted,
                       fontSize: ".72rem",
                       fontWeight: filter === f ? 700 : 400,
                     }}
@@ -1428,7 +1849,6 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
               ))}
             </Box>
           </Box>
-
           {loading ? (
             <Box sx={{ p: 8, textAlign: "center" }}>
               <Box
@@ -1444,40 +1864,18 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                   mb: 2,
                 }}
               />
-              <Typography
-                sx={{ color: "rgba(255,255,255,0.25)", fontSize: ".85rem" }}
-              >
+              <Typography sx={{ color: t.textMuted, fontSize: ".85rem" }}>
                 Loading incidents...
               </Typography>
             </Box>
           ) : filtered.length === 0 ? (
             <Box sx={{ p: 8, textAlign: "center" }}>
               <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.15)",
-                  fontSize: "2rem",
-                  mb: 1,
-                }}
-              >
-                🔍
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.3)",
-                  fontSize: ".9rem",
-                  mb: 0.5,
-                }}
+                sx={{ color: t.textMuted, fontSize: ".9rem", mb: 0.5 }}
               >
                 {apiError
                   ? "Cannot reach API at localhost:8000"
                   : "No violations match this filter"}
-              </Typography>
-              <Typography
-                sx={{ color: "rgba(255,255,255,0.15)", fontSize: ".78rem" }}
-              >
-                {apiError
-                  ? "Start the uvicorn server to see live data"
-                  : "Try selecting a different filter"}
               </Typography>
             </Box>
           ) : (
@@ -1488,8 +1886,8 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                   gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 0.7fr",
                   px: 3,
                   py: 1.5,
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  background: "rgba(255,255,255,0.01)",
+                  borderBottom: `1px solid ${t.border}`,
+                  background: t.surface,
                 }}
               >
                 {[
@@ -1503,7 +1901,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                   <Typography
                     key={h}
                     sx={{
-                      color: "rgba(255,255,255,0.18)",
+                      color: t.textMuted,
                       fontSize: ".65rem",
                       fontWeight: 700,
                       textTransform: "uppercase",
@@ -1528,11 +1926,11 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                       alignItems: "center",
                       borderBottom:
                         idx < filtered.length - 1
-                          ? "1px solid rgba(255,255,255,0.04)"
+                          ? `1px solid ${t.border}`
                           : "none",
                       cursor: "pointer",
                       transition: "all .15s",
-                      "&:hover": { background: "rgba(99,102,241,0.05)" },
+                      "&:hover": { background: t.surfaceHover },
                     }}
                   >
                     <Box
@@ -1547,15 +1945,11 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                           flexShrink: 0,
                           boxShadow: "0 0 6px #ef4444",
                           animation: "blink 1s infinite",
-                          "@keyframes blink": {
-                            "0%,100%": { opacity: 1 },
-                            "50%": { opacity: 0.2 },
-                          },
                         }}
                       />
                       <Typography
                         sx={{
-                          color: "#fff",
+                          color: t.text,
                           fontSize: ".84rem",
                           fontWeight: 500,
                         }}
@@ -1564,16 +1958,13 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                       </Typography>
                     </Box>
                     <Typography
-                      sx={{
-                        color: "rgba(255,255,255,0.55)",
-                        fontSize: ".82rem",
-                      }}
+                      sx={{ color: t.textSecondary, fontSize: ".82rem" }}
                     >
                       {alert.rule}
                     </Typography>
                     <Typography
                       sx={{
-                        color: "rgba(255,255,255,0.3)",
+                        color: t.textMuted,
                         fontSize: ".8rem",
                         fontFamily: "monospace",
                       }}
@@ -1629,12 +2020,7 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
                       </Typography>
                     </Box>
                     <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        color: "#6366f1",
-                      }}
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
                     >
                       <Typography
                         sx={{
@@ -1662,32 +2048,24 @@ function AlertsPage({ navigate }: { navigate: (path: string) => void }) {
 
 // ─── SettingsPage ─────────────────────────────────────────────────────────────
 function SettingsPage() {
+  const { t, mode, toggleMode } = useTheme();
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // Detection Engine
   const [cooldown, setCooldown] = useState(150);
   const [confidence, setConfidence] = useState(0.5);
   const [bytetrackBuffer, setBytetrackBuffer] = useState(30);
-
-  // Alert System
   const [dedup, setDedup] = useState(true);
   const [alertChannel, setAlertChannel] = useState("dashboard");
   const [emailAlerts, setEmailAlerts] = useState(false);
-
-  // AI Model
   const [frameSampling, setFrameSampling] = useState("every");
   const [modelPrecision, setModelPrecision] = useState("balanced");
-
-  // Platform
   const [siteName, setSiteName] = useState("Site A — Construction");
   const [apiEndpoint, setApiEndpoint] = useState("http://localhost:8000");
   const [llmModel, setLlmModel] = useState("claude-haiku");
 
   const mark = () => setDirty(true);
 
-  // Load settings from API on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -1713,9 +2091,7 @@ function SettingsPage() {
           setSiteName(data.platform.site_name ?? "Site A — Construction");
           setApiEndpoint(data.platform.api_endpoint ?? "http://localhost:8000");
         }
-      } catch {
-        /* API offline, use defaults */
-      }
+      } catch {}
     };
     loadSettings();
   }, []);
@@ -1723,7 +2099,7 @@ function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/api/settings`, {
+      await fetch(`${API_BASE}/api/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1748,15 +2124,11 @@ function SettingsPage() {
           },
         }),
       });
-      if (!res.ok) throw new Error("Save failed");
-      setDirty(false);
-      setSaved(true);
     } catch {
-      // Silently fail — API might be offline, still show success for demo
-      setDirty(false);
-      setSaved(true);
     } finally {
       setSaving(false);
+      setDirty(false);
+      setSaved(true);
     }
   };
 
@@ -1778,17 +2150,16 @@ function SettingsPage() {
   const selectSx = {
     minWidth: 160,
     fontSize: "0.82rem",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: t.surface,
+    border: `1px solid ${t.border}`,
     borderRadius: "8px",
-    color: "rgba(255,255,255,0.8)",
+    color: t.text,
     "& fieldset": { border: "none" },
-    "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.4)" },
+    "& .MuiSvgIcon-root": { color: t.textMuted },
   };
 
   return (
     <Box sx={{ p: "32px 36px", minHeight: "100vh" }}>
-      {/* Page header */}
       <Box
         sx={{
           display: "flex",
@@ -1802,18 +2173,14 @@ function SettingsPage() {
             sx={{
               fontSize: "1.5rem",
               fontWeight: 700,
-              color: "#fff",
+              color: t.text,
               letterSpacing: "-0.02em",
             }}
           >
             Settings
           </Typography>
           <Typography
-            sx={{
-              fontSize: "0.8rem",
-              color: "rgba(255,255,255,0.35)",
-              mt: "4px",
-            }}
+            sx={{ fontSize: "0.8rem", color: t.textMuted, mt: "4px" }}
           >
             Platform configuration — OMNIX POC v0.1
           </Typography>
@@ -1837,18 +2204,37 @@ function SettingsPage() {
               </Typography>
             </Box>
           )}
+          <Tooltip
+            title={
+              mode === "dark" ? "Switch to Light mode" : "Switch to Dark mode"
+            }
+          >
+            <IconButton
+              onClick={toggleMode}
+              size="small"
+              sx={{
+                border: `1px solid ${t.border}`,
+                borderRadius: "10px",
+                color: t.textMuted,
+                "&:hover": { borderColor: t.borderStrong, color: t.text },
+              }}
+            >
+              {mode === "dark" ? (
+                <LightModeIcon fontSize="small" />
+              ) : (
+                <DarkModeIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Reset to defaults">
             <IconButton
               onClick={handleReset}
               size="small"
               sx={{
-                border: "1px solid rgba(255,255,255,0.1)",
+                border: `1px solid ${t.border}`,
                 borderRadius: "10px",
-                color: "rgba(255,255,255,0.4)",
-                "&:hover": {
-                  borderColor: "rgba(255,255,255,0.25)",
-                  color: "#fff",
-                },
+                color: t.textMuted,
+                "&:hover": { borderColor: t.borderStrong, color: t.text },
               }}
             >
               <RestoreIcon fontSize="small" />
@@ -1865,31 +2251,28 @@ function SettingsPage() {
               borderRadius: "10px",
               background: dirty
                 ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)`
-                : "rgba(255,255,255,0.06)",
-              border: `1px solid ${dirty ? PURPLE + "80" : "rgba(255,255,255,0.1)"}`,
+                : t.surface,
+              border: `1px solid ${dirty ? PURPLE + "80" : t.border}`,
               cursor: dirty && !saving ? "pointer" : "default",
               opacity: saving ? 0.7 : 1,
               transition: "all .25s",
               "&:hover":
                 dirty && !saving
                   ? {
-                      background: "linear-gradient(135deg, #8B5CF6, #7C3AED)",
+                      background: `linear-gradient(135deg, #8B5CF6, ${PURPLE})`,
                       boxShadow: `0 0 20px ${PURPLE}50`,
                     }
                   : {},
             }}
           >
             <SaveIcon
-              sx={{
-                fontSize: 16,
-                color: dirty ? "#fff" : "rgba(255,255,255,0.3)",
-              }}
+              sx={{ fontSize: 16, color: dirty ? "#fff" : t.textMuted }}
             />
             <Typography
               sx={{
                 fontSize: "0.82rem",
                 fontWeight: 600,
-                color: dirty ? "#fff" : "rgba(255,255,255,0.3)",
+                color: dirty ? "#fff" : t.textMuted,
               }}
             >
               {saving ? "Saving…" : "Save Changes"}
@@ -1904,7 +2287,7 @@ function SettingsPage() {
             mb: 3,
             borderRadius: 2,
             height: 2,
-            background: "rgba(255,255,255,0.05)",
+            background: t.surface,
             "& .MuiLinearProgress-bar": {
               background: `linear-gradient(90deg, ${PURPLE}, ${CYAN})`,
             },
@@ -1912,7 +2295,6 @@ function SettingsPage() {
         />
       )}
 
-      {/* Metric tiles */}
       <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
         <MetricTile
           icon={<RocketLaunchIcon sx={{ fontSize: 20 }} />}
@@ -1941,9 +2323,7 @@ function SettingsPage() {
         />
       </Box>
 
-      {/* 2-column section grid */}
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
-        {/* Detection Engine */}
         <SectionCard
           icon={<TuneIcon fontSize="small" />}
           title="Detection Engine"
@@ -1954,7 +2334,7 @@ function SettingsPage() {
             label="Alert Cooldown"
             description="Minimum frames between alerts for same person ID"
             tag="ByteTrack"
-            tooltip="Prevents alert flooding — one person triggers one alert per N frames"
+            tooltip="Prevents alert flooding per person"
           >
             <Box
               sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}
@@ -2010,7 +2390,7 @@ function SettingsPage() {
             label="ByteTrack Buffer"
             description="Frames to retain lost track IDs"
             tag="Tracking"
-            tooltip="How long to keep a person's ID alive after they leave frame"
+            tooltip="How long to keep a person's ID alive after leaving frame"
           >
             <Box
               sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}
@@ -2036,7 +2416,6 @@ function SettingsPage() {
           </SettingRow>
         </SectionCard>
 
-        {/* Alert System */}
         <SectionCard
           icon={<NotificationsActiveIcon fontSize="small" />}
           title="Alert System"
@@ -2069,7 +2448,7 @@ function SettingsPage() {
             label="Alert Deduplication"
             description="Prevent duplicate alerts for the same event"
             tag="ByteTrack"
-            tooltip="Uses ByteTrack IDs to suppress repeated alerts per individual"
+            tooltip="Uses ByteTrack IDs to suppress repeated alerts"
           >
             <Switch
               checked={dedup}
@@ -2109,7 +2488,6 @@ function SettingsPage() {
           </SettingRow>
         </SectionCard>
 
-        {/* AI Model */}
         <SectionCard
           icon={<PsychologyIcon fontSize="small" />}
           title="AI Model"
@@ -2176,7 +2554,6 @@ function SettingsPage() {
           </SettingRow>
         </SectionCard>
 
-        {/* Platform */}
         <SectionCard
           icon={<SettingsIcon fontSize="small" />}
           title="Platform"
@@ -2186,7 +2563,7 @@ function SettingsPage() {
           <SettingRow
             label="LLM Model"
             description="AI model for natural language rule parsing"
-            tag="Anthropic"
+            tag="Ollama"
             tagColor={PURPLE}
           >
             <FormControl size="small">
@@ -2200,7 +2577,7 @@ function SettingsPage() {
               >
                 <MenuItem value="claude-haiku">Claude Haiku (planned)</MenuItem>
                 <MenuItem value="claude-sonnet">Claude Sonnet</MenuItem>
-                <MenuItem value="gpt-4o-mini">GPT-4o Mini</MenuItem>
+                <MenuItem value="ollama-local">Ollama (local)</MenuItem>
               </Select>
             </FormControl>
           </SettingRow>
@@ -2221,11 +2598,11 @@ function SettingsPage() {
                 width: 220,
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.82rem",
-                  background: "rgba(255,255,255,0.04)",
+                  background: t.surface,
                   borderRadius: "8px",
-                  color: "rgba(255,255,255,0.8)",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
-                  "&:hover fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                  color: t.text,
+                  "& fieldset": { borderColor: t.border },
+                  "&:hover fieldset": { borderColor: t.borderStrong },
                   "&.Mui-focused fieldset": { borderColor: CYAN },
                 },
               }}
@@ -2249,20 +2626,49 @@ function SettingsPage() {
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.78rem",
                   fontFamily: "monospace",
-                  background: "rgba(255,255,255,0.04)",
+                  background: t.surface,
                   borderRadius: "8px",
                   color: CYAN,
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
-                  "&:hover fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                  "& fieldset": { borderColor: t.border },
+                  "&:hover fieldset": { borderColor: t.borderStrong },
                   "&.Mui-focused fieldset": { borderColor: CYAN },
                 },
               }}
             />
           </SettingRow>
+          <SettingRow
+            label="Interface Theme"
+            description="Switch between dark and light mode"
+          >
+            <Box
+              onClick={toggleMode}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: "14px",
+                py: "6px",
+                borderRadius: "8px",
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                cursor: "pointer",
+                transition: "all .2s",
+                "&:hover": { borderColor: PURPLE, background: `${PURPLE}10` },
+              }}
+            >
+              {mode === "dark" ? (
+                <LightModeIcon sx={{ fontSize: 15, color: AMBER }} />
+              ) : (
+                <DarkModeIcon sx={{ fontSize: 15, color: PURPLE }} />
+              )}
+              <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary }}>
+                {mode === "dark" ? "Light Mode" : "Dark Mode"}
+              </Typography>
+            </Box>
+          </SettingRow>
         </SectionCard>
       </Box>
 
-      {/* Danger zone */}
       <Box
         sx={{
           mt: 3,
@@ -2286,11 +2692,7 @@ function SettingsPage() {
               Danger Zone
             </Typography>
             <Typography
-              sx={{
-                fontSize: "0.73rem",
-                color: "rgba(255,255,255,0.3)",
-                mt: "2px",
-              }}
+              sx={{ fontSize: "0.73rem", color: t.textMuted, mt: "2px" }}
             >
               Clear pipeline data, reset stored tracks, and flush the alert
               queue
@@ -2318,9 +2720,7 @@ function SettingsPage() {
                     return;
                   try {
                     await fetch(`${API_BASE}${endpoint}`, { method: "POST" });
-                  } catch {
-                    /* API offline */
-                  }
+                  } catch {}
                 }}
                 sx={{
                   px: "16px",
@@ -2332,10 +2732,7 @@ function SettingsPage() {
                   fontSize: "0.8rem",
                   fontWeight: 500,
                   transition: "all .2s",
-                  "&:hover": {
-                    background: "rgba(255,68,68,0.1)",
-                    borderColor: "rgba(255,68,68,0.5)",
-                  },
+                  "&:hover": { background: "rgba(255,68,68,0.1)" },
                 }}
               >
                 {label}
@@ -2345,7 +2742,6 @@ function SettingsPage() {
         </Box>
       </Box>
 
-      {/* Success snackbar */}
       <Snackbar
         open={saved}
         autoHideDuration={3000}
@@ -2356,8 +2752,8 @@ function SettingsPage() {
           severity="success"
           onClose={() => setSaved(false)}
           sx={{
-            background: "rgba(0,230,118,0.12)",
-            border: "1px solid rgba(0,230,118,0.3)",
+            background: `${GREEN}12`,
+            border: `1px solid ${GREEN}30`,
             color: GREEN,
             "& .MuiAlert-icon": { color: GREEN },
           }}
@@ -2371,274 +2767,114 @@ function SettingsPage() {
 
 // ─── Dashboard shell ──────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [selected, setSelected] = useState("Alerts");
+  const [selected, setSelected] = useState("Alert Dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTheme();
+
+  const drawerWidth = sidebarOpen ? DRAWER_OPEN : 56;
+
+  const handleSelect = (item: string) => {
+    setSelected(item);
+    if (item === "Rules") navigate("/rules");
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("omnix_auth");
+    navigate("/login");
+  };
 
   return (
     <Box
       sx={{
         display: "flex",
         minHeight: "100vh",
-        background: "#08080a",
+        background: t.bg,
         fontFamily: '"Inter", system-ui, sans-serif',
       }}
     >
-      <Box
-        sx={{
-          width: DRAWER,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          background: "#0d0d10",
-          borderRight: "1px solid rgba(255,255,255,0.05)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          zIndex: 100,
-        }}
-      >
-        <Box
-          sx={{
-            px: 3,
-            py: 3,
-            borderBottom: "1px solid rgba(255,255,255,0.05)",
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-          }}
-        >
-          <Box
-            sx={{
-              width: 30,
-              height: 30,
-              borderRadius: "8px",
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 16px rgba(99,102,241,0.4)",
-              flexShrink: 0,
-            }}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <ellipse
-                cx="12"
-                cy="12"
-                rx="10"
-                ry="6.5"
-                stroke="white"
-                strokeWidth="1.5"
-              />
-              <circle cx="12" cy="12" r="3.5" fill="white" />
-              <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
-            </svg>
-          </Box>
-          <Box>
-            <Typography
-              sx={{
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: ".95rem",
-                letterSpacing: "-.2px",
-                lineHeight: 1,
-              }}
-            >
-              OMNIX
-            </Typography>
-            <Typography
-              sx={{
-                color: "rgba(255,255,255,0.25)",
-                fontSize: ".58rem",
-                letterSpacing: ".06em",
-              }}
-            >
-              ENTERPRISE
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ flex: 1, py: 2 }}>
-          <Typography
-            sx={{
-              color: "rgba(255,255,255,0.18)",
-              fontSize: ".6rem",
-              fontWeight: 600,
-              letterSpacing: ".1em",
-              textTransform: "uppercase",
-              px: 3,
-              mb: 1,
-            }}
-          >
-            Navigation
-          </Typography>
-          {menuItems.map((item) => {
-            const isSelected = selected === item.text;
-            return (
-              <Box
-                key={item.text}
-                onClick={() => {
-                  setSelected(item.text);
-                  if (item.text === "Rules") navigate("/rules");
-                }}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  px: 3,
-                  py: 1.4,
-                  mx: 1.5,
-                  mb: 0.5,
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  position: "relative",
-                  background: isSelected
-                    ? "rgba(99,102,241,0.12)"
-                    : "transparent",
-                  border: isSelected
-                    ? "1px solid rgba(99,102,241,0.2)"
-                    : "1px solid transparent",
-                  transition: "all .2s",
-                  "&:hover": {
-                    background: isSelected
-                      ? "rgba(99,102,241,0.12)"
-                      : "rgba(255,255,255,0.04)",
-                  },
-                }}
-              >
-                {isSelected && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      left: 0,
-                      top: "25%",
-                      bottom: "25%",
-                      width: 3,
-                      borderRadius: "0 3px 3px 0",
-                      background: "#6366f1",
-                      boxShadow: "0 0 8px #6366f1",
-                    }}
-                  />
-                )}
-                <Box
-                  sx={{
-                    color: isSelected ? "#818cf8" : "rgba(255,255,255,0.3)",
-                    display: "flex",
-                    transition: "color .2s",
-                  }}
-                >
-                  {item.icon}
-                </Box>
-                <Typography
-                  sx={{
-                    color: isSelected ? "#fff" : "rgba(255,255,255,0.4)",
-                    fontSize: ".85rem",
-                    fontWeight: isSelected ? 600 : 400,
-                    transition: "all .2s",
-                  }}
-                >
-                  {item.text}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-
-        <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              p: "10px 12px",
-              borderRadius: "10px",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              mb: 1.5,
-            }}
-          >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{ color: "#fff", fontSize: ".72rem", fontWeight: 700 }}
-              >
-                A
-              </Typography>
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                sx={{
-                  color: "#fff",
-                  fontSize: ".78rem",
-                  fontWeight: 600,
-                  lineHeight: 1,
-                }}
-              >
-                Admin
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.25)",
-                  fontSize: ".65rem",
-                  mt: 0.2,
-                }}
-                noWrap
-              >
-                admin@omnix.ai
-              </Typography>
-            </Box>
-          </Box>
-          <Box
-            onClick={() => {
-              localStorage.removeItem("omnix_auth");
-              navigate("/login");
-            }}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 1.5,
-              py: 1,
-              borderRadius: "8px",
-              cursor: "pointer",
-              "&:hover": { background: "rgba(255,255,255,0.04)" },
-              transition: "all .2s",
-            }}
-          >
-            <LogoutIcon sx={{ color: "rgba(255,255,255,0.2)", fontSize: 15 }} />
-            <Typography
-              sx={{ color: "rgba(255,255,255,0.25)", fontSize: ".75rem" }}
-            >
-              Sign out
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+      <Sidebar
+        selected={selected}
+        onSelect={handleSelect}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((o) => !o)}
+        onSignOut={() => setSignOutOpen(true)}
+        t={t}
+      />
 
       <Box
         sx={{
           flex: 1,
-          ml: `${DRAWER}px`,
+          ml: `${drawerWidth}px`,
           display: "flex",
           flexDirection: "column",
           minHeight: "100vh",
+          transition: "margin-left .25s cubic-bezier(.4,0,.2,1)",
         }}
       >
-        {selected === "Alerts" && <AlertsPage navigate={navigate} />}
+        {selected === "Alert Dashboard" && <AlertsPage navigate={navigate} />}
         {selected === "Cameras" && <CamerasPage />}
         {selected === "Settings" && <SettingsPage />}
-        {selected === "Rules" && <AlertsPage navigate={navigate} />}
       </Box>
+
+      <Dialog
+        open={signOutOpen}
+        onClose={() => setSignOutOpen(false)}
+        sx={{
+          "& .MuiDialog-paper": {
+            background: t.bgSecondary,
+            border: `1px solid ${t.border}`,
+            borderRadius: "16px",
+            minWidth: 360,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
+        >
+          Sign out of OMNIX?
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}
+          >
+            You'll be returned to the login screen. Any unsaved settings will be
+            lost.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setSignOutOpen(false)}
+            sx={{
+              color: t.textSecondary,
+              borderRadius: "9px",
+              textTransform: "none",
+              border: `1px solid ${t.border}`,
+              px: 2.5,
+              "&:hover": { background: t.surfaceHover },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSignOut}
+            variant="contained"
+            sx={{
+              borderRadius: "9px",
+              textTransform: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
+              px: 2.5,
+              "&:hover": {
+                background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+              },
+            }}
+          >
+            Sign Out
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
