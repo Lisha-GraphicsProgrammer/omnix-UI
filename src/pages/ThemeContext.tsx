@@ -40,18 +40,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     topbarBg: 'rgba(13,13,16,0.95)',
   }
 
+  // ── Softer, more professional light theme ──
   const light = {
-    bg: '#f0f2f8',
+    bg: '#f4f5f7',           // warm grey — not pure white
     bgSecondary: '#ffffff',
-    surface: 'rgba(0,0,0,0.04)',
-    surfaceHover: 'rgba(0,0,0,0.07)',
-    border: 'rgba(0,0,0,0.1)',
-    borderStrong: 'rgba(0,0,0,0.18)',
-    text: '#0f0f14',
-    textSecondary: 'rgba(0,0,0,0.6)',
-    textMuted: 'rgba(0,0,0,0.38)',
+    surface: 'rgba(0,0,0,0.03)',
+    surfaceHover: 'rgba(0,0,0,0.055)',
+    border: 'rgba(0,0,0,0.08)',
+    borderStrong: 'rgba(0,0,0,0.15)',
+    text: '#1a1a2e',         // dark navy — softer than pure black
+    textSecondary: 'rgba(26,26,46,0.65)',
+    textMuted: 'rgba(26,26,46,0.38)',
     sidebarBg: '#ffffff',
-    topbarBg: 'rgba(255,255,255,0.95)',
+    topbarBg: 'rgba(255,255,255,0.92)',
   }
 
   return (
