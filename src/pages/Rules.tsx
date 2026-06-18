@@ -346,7 +346,16 @@ export default function Rules() {
     }
   });
 
-  const [history, setHistory] = useState<RuleHistoryItem[]>([]);
+  // Lisha's pattern: load persisted rule history on init
+  const [history, setHistory] = useState<RuleHistoryItem[]>(() => {
+    try {
+      const s = localStorage.getItem(HISTORY_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -355,6 +364,7 @@ export default function Rules() {
     new Set(),
   );
   const [appliedToast, setAppliedToast] = useState<string | null>(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -362,7 +372,6 @@ export default function Rules() {
 
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED;
 
-  // Find pending assistant (the last message that's awaiting reply)
   const lastMsg = chatHistory[chatHistory.length - 1];
   const hasPending = lastMsg?.role === "assistant" && !!lastMsg.config;
 
@@ -378,12 +387,6 @@ export default function Rules() {
   }, [chatHistory]);
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(HISTORY_KEY);
-      if (stored) setHistory(JSON.parse(stored));
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     } catch {}
   }, [history]);
@@ -391,7 +394,6 @@ export default function Rules() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, processing]);
 
-  // Clear isNew flag after highlight animation
   useEffect(() => {
     const newOnes = history.filter((h) => h.isNew);
     if (newOnes.length === 0) return;
@@ -403,7 +405,6 @@ export default function Rules() {
     return () => clearTimeout(tm);
   }, [history]);
 
-  // Refocus input after processing finishes (so user can keep typing)
   useEffect(() => {
     if (!processing) inputRef.current?.focus();
   }, [processing]);
@@ -476,9 +477,14 @@ export default function Rules() {
         config,
         isNew: true,
       };
-      setHistory((prev) => [newRule, ...prev]);
+      setHistory((prev) => {
+        const updated = [newRule, ...prev];
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
-      // Graduate the rule — clear the scratchpad
       setChatHistory([]);
       try {
         localStorage.removeItem(CHAT_HISTORY_KEY);
@@ -510,12 +516,11 @@ export default function Rules() {
 
     const intent = classifyIntent(userMsg, hasPending);
 
-    // Guard: confirm/negate with no pending makes no sense
     if (!hasPending && (intent === "confirm" || intent === "negate")) {
       setError(
         'Type a complete rule to begin — e.g. "Alert when a worker without a helmet enters the loading zone".',
       );
-      setInstruction(userMsg); // keep their text so they can edit
+      setInstruction(userMsg);
       return;
     }
 
@@ -526,29 +531,44 @@ export default function Rules() {
     }
 
     if (intent === "negate" && hasPending) {
-      // Mark pending discarded, drop the user "no" into chat for visibility
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
-      return; // no LLM call
+      return;
     }
 
     if (intent === "fresh" && hasPending) {
-      // Brand-new rule while pending — discard the old, treat fresh
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
       await callLLM(userMsg, userMsg);
       return;
     }
 
     if (intent === "refine" && hasPending) {
-      // Merge previous instruction with refinement
       const combined = `${lastMsg.instruction}, ${userMsg}`;
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
       await callLLM(combined, combined);
       return;
     }
 
-    // No pending — fresh rule (intent will be refine for non-positive, non-negative inputs)
     setChatHistory((prev) => [...prev, userChatMsg]);
     await callLLM(userMsg, userMsg);
+  };
+
+  // Lisha's Reset functionality — wired through confirmation dialog
+  const handleResetRules = async () => {
+    try {
+      await fetch(`${API_BASE}/api/rules/reset`, { method: "POST" });
+    } catch (e) {
+      console.error("Reset API call failed", e);
+    }
+    setHistory([]);
+    setChatHistory([]);
+    setInstruction("");
+    setError(null);
+    setExpandedTechIds(new Set());
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+      localStorage.removeItem(CHAT_HISTORY_KEY);
+    } catch {}
+    setResetConfirmOpen(false);
   };
 
   const handleSignOut = () => {
@@ -557,7 +577,6 @@ export default function Rules() {
   };
   const canSend = !!instruction.trim() && !processing;
 
-  // Input styling based on pending state
   const inputBorder = processing
     ? t.border
     : hasPending
@@ -880,7 +899,6 @@ export default function Rules() {
           height: "100vh",
         }}
       >
-        {/* Top bar */}
         <Box
           sx={{
             px: 4,
@@ -1047,7 +1065,6 @@ export default function Rules() {
             }}
           >
             <Box sx={{ p: "40px 48px" }}>
-              {/* Header */}
               <Box sx={{ mb: 4 }}>
                 <Box
                   sx={{
@@ -1101,7 +1118,6 @@ export default function Rules() {
                 </Typography>
               </Box>
 
-              {/* Quick examples — always visible */}
               <Box sx={{ mb: 4 }}>
                 <Typography
                   sx={{
@@ -1195,7 +1211,6 @@ export default function Rules() {
                 </Box>
               </Box>
 
-              {/* ── CHAT ── */}
               {chatHistory.length > 0 && (
                 <Box
                   sx={{
@@ -1207,7 +1222,6 @@ export default function Rules() {
                 >
                   {chatHistory.map((msg) => (
                     <Box key={msg.id}>
-                      {/* User bubble */}
                       {msg.role === "user" && (
                         <Box
                           sx={{
@@ -1264,7 +1278,6 @@ export default function Rules() {
                         </Box>
                       )}
 
-                      {/* Assistant / Discarded card */}
                       {(msg.role === "assistant" || msg.role === "discarded") &&
                         msg.config && (
                           <Box sx={{ display: "flex", gap: 1.5 }}>
@@ -1418,8 +1431,6 @@ export default function Rules() {
                                         color={t.text}
                                       />
                                     </Box>
-
-                                    {/* Conversational prompt */}
                                     <Box
                                       sx={{
                                         display: "flex",
@@ -1451,8 +1462,6 @@ export default function Rules() {
                                         to apply, or describe what to change.
                                       </Typography>
                                     </Box>
-
-                                    {/* Tech details toggle (per card) */}
                                     <Box
                                       onClick={() => toggleTech(msg.id)}
                                       sx={{
@@ -1528,13 +1537,11 @@ export default function Rules() {
                         )}
                     </Box>
                   ))}
-
                   {processing && <SkeletonLoader t={t} />}
                   <div ref={chatBottomRef} />
                 </Box>
               )}
 
-              {/* Error */}
               {error && (
                 <Box
                   sx={{
@@ -1582,7 +1589,6 @@ export default function Rules() {
                 </Box>
               )}
 
-              {/* ── INPUT (highlighted when pending) ── */}
               <Box
                 sx={{
                   borderRadius: "16px",
@@ -1774,7 +1780,6 @@ export default function Rules() {
             }}
           >
             <Box sx={{ p: "40px 28px" }}>
-              {/* Active Rules */}
               <Box
                 sx={{
                   borderRadius: "16px",
@@ -1815,20 +1820,56 @@ export default function Rules() {
                       Applied to pipeline
                     </Typography>
                   </Box>
-                  <Box
-                    sx={{
-                      px: 1.5,
-                      py: 0.4,
-                      borderRadius: "20px",
-                      background: `${GREEN}12`,
-                      border: `1px solid ${GREEN}25`,
-                    }}
-                  >
-                    <Typography
-                      sx={{ color: GREEN, fontSize: ".65rem", fontWeight: 700 }}
+                  {/* Lisha's Reset control — now with confirmation dialog */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box
+                      sx={{
+                        px: 1.5,
+                        py: 0.4,
+                        borderRadius: "20px",
+                        background: `${GREEN}12`,
+                        border: `1px solid ${GREEN}25`,
+                      }}
                     >
-                      {history.length} rules
-                    </Typography>
+                      <Typography
+                        sx={{
+                          color: GREEN,
+                          fontSize: ".65rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {history.length} rules
+                      </Typography>
+                    </Box>
+                    {history.length > 0 && (
+                      <Tooltip title="Clear all rules and start fresh">
+                        <Box
+                          onClick={() => setResetConfirmOpen(true)}
+                          sx={{
+                            px: 1,
+                            py: 0.3,
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                            "&:hover": {
+                              background: "rgba(239,68,68,0.08)",
+                              borderColor: "rgba(239,68,68,0.4)",
+                            },
+                            transition: "all .2s",
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "rgba(239,68,68,0.8)",
+                              fontSize: ".6rem",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Reset
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    )}
                   </Box>
                 </Box>
                 <Box sx={{ p: "8px 12px 12px" }}>
@@ -1965,7 +2006,6 @@ export default function Rules() {
                 </Box>
               </Box>
 
-              {/* How It Works */}
               <Box
                 sx={{
                   borderRadius: "16px",
@@ -2076,7 +2116,6 @@ export default function Rules() {
         </Box>
       </Box>
 
-      {/* Applied toast */}
       <Snackbar
         open={!!appliedToast}
         autoHideDuration={3000}
@@ -2098,7 +2137,61 @@ export default function Rules() {
         </MuiAlert>
       </Snackbar>
 
-      {/* Sign out dialog */}
+      {/* Reset confirmation dialog */}
+      <Dialog
+        open={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        sx={{
+          "& .MuiDialog-paper": {
+            background: t.bgSecondary,
+            border: `1px solid ${t.border}`,
+            borderRadius: "16px",
+            minWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
+        >
+          Reset all rules?
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}
+          >
+            This will clear all active rules from the pipeline and reset the
+            chat. Detection will stop until you create a new rule. This action
+            cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setResetConfirmOpen(false)}
+            sx={{
+              color: t.textSecondary,
+              borderRadius: "9px",
+              textTransform: "none",
+              border: `1px solid ${t.border}`,
+              px: 2.5,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleResetRules}
+            variant="contained"
+            sx={{
+              borderRadius: "9px",
+              textTransform: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              px: 2.5,
+            }}
+          >
+            Reset Everything
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={signOutOpen}
         onClose={() => setSignOutOpen(false)}
