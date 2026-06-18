@@ -175,7 +175,13 @@ export default function Rules() {
     } catch { return []; }
   });
 
-  const [history, setHistory]               = useState<RuleHistoryItem[]>([]);
+  // ── Persisted rule history — load directly on init ────────────────────────────
+  const [history, setHistory] = useState<RuleHistoryItem[]>(() => {
+    try {
+      const s = localStorage.getItem(HISTORY_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
   const [processing, setProcessing]         = useState(false);
   const [applying, setApplying]             = useState(false);
   const [lastSent, setLastSent]             = useState("");
@@ -200,14 +206,7 @@ export default function Rules() {
     try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); } catch {}
   }, [chatHistory]);
 
-  // Load rule history
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(HISTORY_KEY);
-      if (stored) setHistory(JSON.parse(stored));
-    } catch {}
-  }, []);
-
+  // Persist rule history whenever it changes
   useEffect(() => {
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch {}
   }, [history]);
@@ -280,15 +279,26 @@ export default function Rules() {
         pipeline: config.pipeline_id || "YOLOv8 + ByteTrack",
         alerts: 0, config,
       };
-      setHistory(prev => [newRule, ...prev]);
+
+      // Update state AND write to localStorage immediately
+      setHistory(prev => {
+        const updated = [newRule, ...prev];
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+
       setGeneratedConfig(null);
       setLastSent("");
       setShowTechDetails(false);
 
       // Mark chat message as applied
-      setChatHistory(prev => prev.map(m =>
-        m.config === config ? { ...m, role: "applied" as const } : m
-      ));
+      setChatHistory(prev => {
+        const updated = prev.map(m =>
+          m.config === config ? { ...m, role: "applied" as const } : m
+        );
+        try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(updated)); } catch {}
+        return updated;
+      });
     } catch (e: any) {
       setError(e.message || "Failed to apply rule");
     } finally {
@@ -304,6 +314,19 @@ export default function Rules() {
   };
 
   const handleSignOut = () => { localStorage.removeItem("omnix_auth"); navigate("/login"); };
+
+  const handleResetRules = async () => {
+    try {
+      await fetch(`${API_BASE}/api/rules/reset`, { method: "POST" });
+      setHistory([]);
+      setChatHistory([]);
+      setInstruction("");
+      setGeneratedConfig(null);
+      setError(null);
+      try { localStorage.removeItem(HISTORY_KEY); localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
+    } catch (e) { console.error("Reset failed", e); }
+  };
+
   const canSend = !!instruction.trim() && !processing && !generatedConfig;
 
   return (
@@ -585,8 +608,17 @@ export default function Rules() {
                     <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Active Rules</Typography>
                     <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>Applied to pipeline</Typography>
                   </Box>
-                  <Box sx={{ px: 1.5, py: 0.4, borderRadius: "20px", background: `${GREEN}12`, border: `1px solid ${GREEN}25` }}>
-                    <Typography sx={{ color: GREEN, fontSize: ".65rem", fontWeight: 700 }}>{history.length} rules</Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: "20px", background: `${GREEN}12`, border: `1px solid ${GREEN}25` }}>
+                      <Typography sx={{ color: GREEN, fontSize: ".65rem", fontWeight: 700 }}>{history.length} rules</Typography>
+                    </Box>
+                    {history.length > 0 && (
+                      <Tooltip title="Clear all rules and start fresh">
+                        <Box onClick={handleResetRules} sx={{ px: 1, py: 0.3, borderRadius: "6px", cursor: "pointer", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.4)" }, transition: "all .2s" }}>
+                          <Typography sx={{ color: "rgba(239,68,68,0.7)", fontSize: ".6rem", fontWeight: 600 }}>Reset</Typography>
+                        </Box>
+                      </Tooltip>
+                    )}
                   </Box>
                 </Box>
                 <Box sx={{ p: "8px 12px 12px" }}>
