@@ -222,15 +222,29 @@ export default function Login() {
   const nav = useNavigate()
   useEffect(() => { setTimeout(() => setMounted(true), 80) }, [])
 
-  const login = () => {
+  const login = async () => {
   if (!email || !pw) { setErr('Please enter your credentials'); return }
-  if (email !== 'admin' || pw !== 'omnix2026') {
-    setErr('Invalid credentials — use admin / omnix2026')
-    return
-  }
+  setErr('')
   setLoading(true)
-  localStorage.setItem('omnix_auth', 'true')
-  setTimeout(() => nav('/dashboard', { replace: true }), 900)
+  try {
+    const res = await fetch('http://localhost:8000/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setErr(data.detail || 'Invalid email or password')
+      setLoading(false)
+      return
+    }
+    const data = await res.json()
+    localStorage.setItem('omnix_token', data.access_token)
+    nav('/rules', { replace: true })
+  } catch (e) {
+    setErr('Could not reach the server. Is the backend running?')
+    setLoading(false)
+  }
 }
 
   return (
@@ -400,6 +414,15 @@ export default function Login() {
               <Box sx={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
               <Typography sx={{ color: 'rgba(255,255,255,0.18)', fontSize: '.72rem' }}>or</Typography>
               <Box sx={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '.85rem' }}>
+                Don't have an account?{' '}
+                <Box component="span" onClick={() => nav('/signup')}
+                  sx={{ color: '#818cf8', cursor: 'pointer', '&:hover': { color: '#a5b4fc' }, transition: 'color .15s' }}>
+                  Sign up
+                </Box>
+              </Typography>
             </Box>
 
             <Button fullWidth variant="outlined"

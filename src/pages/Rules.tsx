@@ -41,15 +41,15 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import { useTheme } from "./ThemeContext";
+import { apiGet, apiPost } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
-const API_BASE = "http://localhost:8000";
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
 const AMBER = "#FFB300";
 const DRAWER_OPEN = 220;
 const DRAWER_CLOSED = 56;
-const HISTORY_KEY = "omnix_rule_history";
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
 
@@ -329,6 +329,8 @@ const markPendingAsDiscarded = (msgs: ChatMessage[]): ChatMessage[] =>
   );
 
 export default function Rules() {
+  const { user, logout } = useAuth();
+
   const [instruction, setInstruction] = useState(() => {
     try {
       return localStorage.getItem(DRAFT_KEY) || "";
@@ -346,15 +348,8 @@ export default function Rules() {
     }
   });
 
-  // Lisha's pattern: load persisted rule history on init
-  const [history, setHistory] = useState<RuleHistoryItem[]>(() => {
-    try {
-      const s = localStorage.getItem(HISTORY_KEY);
-      return s ? JSON.parse(s) : [];
-    } catch {
-      return [];
-    }
-  });
+  // History now loaded from DB via GET /api/rules — see useEffect below
+  const [history, setHistory] = useState<RuleHistoryItem[]>([]);
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -385,11 +380,30 @@ export default function Rules() {
       localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
     } catch {}
   }, [chatHistory]);
+
+  // Load active rules from DB on mount
   useEffect(() => {
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    } catch {}
-  }, [history]);
+    apiGet("/api/rules")
+      .then((rules: any[]) => {
+        const mapped: RuleHistoryItem[] = rules.map((r) => ({
+          id: r.id,
+          instruction: r.instruction,
+          status: "active",
+          time: r.created_at
+            ? new Date(r.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "",
+          pipeline: r.pipeline_id || "YOLOv8 + ByteTrack",
+          alerts: 0,
+          config: r.config_json,
+        }));
+        setHistory(mapped);
+      })
+      .catch((e) => console.error("Failed to load rules from DB", e));
+  }, []);
+
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, processing]);
@@ -425,16 +439,9 @@ export default function Rules() {
     setProcessing(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/rules/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: llmInstruction }),
+      const data = await apiPost("/api/rules/generate", {
+        instruction: llmInstruction,
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
       const assistantMsg: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
@@ -457,12 +464,7 @@ export default function Rules() {
   const applyPendingRule = async (config: any, instruction: string) => {
     setProcessing(true);
     try {
-      const res = await fetch(`${API_BASE}/api/rules/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await apiPost("/api/rules/apply", { config, instruction });
 
       const newRule: RuleHistoryItem = {
         id: Date.now(),
@@ -472,18 +474,13 @@ export default function Rules() {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        pipeline: config.pipeline_id || "YOLOv8 + ByteTrack",
+        pipeline:
+          data.pipeline_id || config.pipeline_id || "YOLOv8 + ByteTrack",
         alerts: 0,
         config,
         isNew: true,
       };
-      setHistory((prev) => {
-        const updated = [newRule, ...prev];
-        try {
-          localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      setHistory((prev) => [newRule, ...prev]);
 
       setChatHistory([]);
       try {
@@ -552,10 +549,10 @@ export default function Rules() {
     await callLLM(userMsg, userMsg);
   };
 
-  // Lisha's Reset functionality — wired through confirmation dialog
+  // Reset — clears DB-backed pipeline config + local chat/draft state
   const handleResetRules = async () => {
     try {
-      await fetch(`${API_BASE}/api/rules/reset`, { method: "POST" });
+      await apiPost("/api/rules/reset");
     } catch (e) {
       console.error("Reset API call failed", e);
     }
@@ -565,16 +562,15 @@ export default function Rules() {
     setError(null);
     setExpandedTechIds(new Set());
     try {
-      localStorage.removeItem(HISTORY_KEY);
       localStorage.removeItem(CHAT_HISTORY_KEY);
     } catch {}
     setResetConfirmOpen(false);
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem("omnix_auth");
-    navigate("/login");
+    logout();
   };
+
   const canSend = !!instruction.trim() && !processing;
 
   const inputBorder = processing
@@ -725,9 +721,15 @@ export default function Rules() {
                 title={!sidebarOpen ? item.text : ""}
                 placement="right"
               >
-                <Box
+               <Box
                   onClick={() => {
-                    if (item.text !== "Rules") navigate(item.path);
+                    if (item.text !== "Rules") {
+                      if (processing) {
+                        setError("Please wait for the AI to finish before navigating away.");
+                        return;
+                      }
+                      navigate(item.path);
+                    }
                   }}
                   sx={{
                     display: "flex",
@@ -824,7 +826,7 @@ export default function Rules() {
                   <Typography
                     sx={{ color: "#fff", fontSize: ".72rem", fontWeight: 700 }}
                   >
-                    A
+                    {(user?.name || "A").charAt(0).toUpperCase()}
                   </Typography>
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -836,13 +838,13 @@ export default function Rules() {
                       lineHeight: 1,
                     }}
                   >
-                    Admin
+                    {user?.name || "Admin"}
                   </Typography>
                   <Typography
                     sx={{ color: t.textMuted, fontSize: ".65rem", mt: 0.2 }}
                     noWrap
                   >
-                    admin@omnix.ai
+                    {user?.email || ""}
                   </Typography>
                 </Box>
               </Box>
@@ -1820,7 +1822,6 @@ export default function Rules() {
                       Applied to pipeline
                     </Typography>
                   </Box>
-                  {/* Lisha's Reset control — now with confirmation dialog */}
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Box
                       sx={{
