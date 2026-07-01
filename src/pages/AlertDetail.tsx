@@ -17,7 +17,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import { useState, useEffect } from 'react'
 
-const API_BASE = 'http://localhost:8000'
+import { apiFetch } from '../lib/api'
 
 // ─── Design tokens (same as Dashboard) ───────────────────────────────────────
 const CYAN   = '#00D4FF'
@@ -124,7 +124,7 @@ export default function AlertDetail() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/incidents`)
+        const res = await apiFetch('/api/incidents')
         const data: ApiIncident[] = await res.json()
         setAllIncidents(data)
         const idx = (Number(id) || 1) - 1
