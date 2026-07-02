@@ -19,7 +19,6 @@ import { useState, useEffect } from 'react'
 
 import { apiFetch } from '../lib/api'
 
-// ─── Design tokens (same as Dashboard) ───────────────────────────────────────
 const CYAN   = '#00D4FF'
 const PURPLE = '#7C3AED'
 const GREEN  = '#00E676'
@@ -42,7 +41,6 @@ function titleCase(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-// ─── Right-panel section card — matches Settings SectionCard ──────────────────
 function DetailCard({
   title, accentColor = PURPLE, children, headerRight,
 }: {
@@ -76,7 +74,6 @@ function DetailCard({
   )
 }
 
-// ─── Detail row inside a card ─────────────────────────────────────────────────
 function DetailRow({
   icon, label, value, accentColor,
 }: {
@@ -127,20 +124,21 @@ export default function AlertDetail() {
         const res = await apiFetch('/api/incidents')
         const data: ApiIncident[] = await res.json()
         setAllIncidents(data)
-        const idx = (Number(id) || 1) - 1
-        setIncident(data[idx] || null)
+        // Find by actual ID instead of array index
+        const found = data.find((inc: ApiIncident) => String(inc.id) === String(id))
+        setIncident(found || null)
       } catch { /* API offline */ }
       setLoading(false)
     }
     fetchData()
   }, [id])
 
-  const currentIdx = (Number(id) || 1) - 1
-  const hasPrev   = currentIdx > 0
-  const hasNext   = currentIdx < allIncidents.length - 1
+  // Find current index by actual ID
+  const currentIdx = allIncidents.findIndex((inc) => String(inc.id) === String(id))
+  const hasPrev = currentIdx > 0
+  const hasNext = currentIdx < allIncidents.length - 1
   const confidence = 85 + (currentIdx % 14)
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) return (
     <Box sx={{ minHeight: '100vh', background: '#08080a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -163,7 +161,7 @@ export default function AlertDetail() {
   return (
     <Box sx={{ minHeight: '100vh', background: '#08080a', fontFamily: '"Inter", system-ui, sans-serif' }}>
 
-      {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
+      {/* TOP BAR */}
       <Box sx={{
         px: 4, height: 64,
         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -171,10 +169,8 @@ export default function AlertDetail() {
         background: 'rgba(13,13,16,0.98)',
         backdropFilter: 'blur(20px)',
         position: 'sticky', top: 0, zIndex: 50,
-        // subtle purple top accent line
         boxShadow: `0 -1px 0 0 ${PURPLE}60 inset, 0 1px 0 rgba(255,255,255,0.04)`,
       }}>
-        {/* Back button */}
         <Box onClick={() => navigate('/dashboard')} sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: .7, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)', transition: 'all .2s', '&:hover': { background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' } }}>
           <ArrowBackIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }} />
           <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.78rem' }}>Dashboard</Typography>
@@ -182,7 +178,6 @@ export default function AlertDetail() {
 
         <Box sx={{ width: '1px', height: 16, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
 
-        {/* Brand + breadcrumb */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{ width: 28, height: 28, borderRadius: '7px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 16px rgba(99,102,241,0.5)', flexShrink: 0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -200,19 +195,20 @@ export default function AlertDetail() {
           </Box>
         </Box>
 
-        {/* Prev / Next navigation */}
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
           <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '.72rem', mr: 1 }}>
             {currentIdx + 1} / {allIncidents.length}
           </Typography>
           <Tooltip title="Previous incident">
-            <Box onClick={hasPrev ? () => navigate(`/alert/${currentIdx}`) : undefined}
+            <Box
+              onClick={hasPrev ? () => navigate(`/alert/${allIncidents[currentIdx - 1].id}`) : undefined}
               sx={{ width: 32, height: 32, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${hasPrev ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)'}`, background: hasPrev ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: hasPrev ? 'pointer' : 'default', transition: 'all .2s', '&:hover': hasPrev ? { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.18)' } : {} }}>
               <ChevronLeftIcon sx={{ fontSize: 18, color: hasPrev ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)' }} />
             </Box>
           </Tooltip>
           <Tooltip title="Next incident">
-            <Box onClick={hasNext ? () => navigate(`/alert/${currentIdx + 2}`) : undefined}
+            <Box
+              onClick={hasNext ? () => navigate(`/alert/${allIncidents[currentIdx + 1].id}`) : undefined}
               sx={{ width: 32, height: 32, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${hasNext ? `${PURPLE}50` : 'rgba(255,255,255,0.04)'}`, background: hasNext ? `${PURPLE}15` : 'transparent', cursor: hasNext ? 'pointer' : 'default', transition: 'all .2s', '&:hover': hasNext ? { background: `${PURPLE}25`, borderColor: `${PURPLE}70` } : {} }}>
               <ChevronRightIcon sx={{ fontSize: 18, color: hasNext ? PURPLE : 'rgba(255,255,255,0.15)' }} />
             </Box>
@@ -220,10 +216,10 @@ export default function AlertDetail() {
         </Box>
       </Box>
 
-      {/* ── MAIN CONTENT ─────────────────────────────────────────────────────── */}
+      {/* MAIN CONTENT */}
       <Box sx={{ maxWidth: 1280, mx: 'auto', p: '36px 32px', display: 'flex', gap: 4 }}>
 
-        {/* ── LEFT COLUMN ─────────────────────────────────────────────────────── */}
+        {/* LEFT COLUMN */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
 
           {/* Incident header card */}
@@ -233,7 +229,6 @@ export default function AlertDetail() {
             background: 'linear-gradient(135deg, rgba(239,68,68,0.07) 0%, rgba(124,58,237,0.05) 100%)',
             border: '1px solid rgba(239,68,68,0.18)',
             position: 'relative', overflow: 'hidden',
-            // top accent bar
             '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${RED}80, ${PURPLE}80)` },
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -250,13 +245,13 @@ export default function AlertDetail() {
             </Box>
 
             <Typography sx={{ color: '#fff', fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-1.2px', lineHeight: 1.1, mb: 1.2 }}>
-              {titleCase(incident.violation)}
+              {titleCase(incident.violation || 'Violation')}
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               {[
-                { val: incident.id, label: 'Incident' },
-                { val: `Camera 1 — ${titleCase(incident.zone)}`, label: null },
+                { val: String(incident.id), label: 'Incident' },
+                { val: `Camera 1 — ${titleCase(incident.zone || 'unknown')}`, label: null },
                 { val: `ByteTrack #${incident.person_id}`, label: null },
               ].map((item, i, arr) => (
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -290,22 +285,20 @@ export default function AlertDetail() {
               ) : (
                 <Box sx={{ height: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, background: 'linear-gradient(135deg, #0f1923, #1a2a3a)' }}>
                   <CameraAltIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.08)' }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '.82rem' }}>Screenshot unavailable — start API server</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '.82rem' }}>Screenshot unavailable</Typography>
                 </Box>
               )}
 
-              {/* Top overlay */}
               <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, px: 2.5, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: RED, animation: 'blink 1s infinite', '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: .2 } } }} />
                   <Typography sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '.68rem', fontWeight: 700, letterSpacing: '.06em' }}>CAPTURED</Typography>
                   <Box sx={{ width: '1px', height: 10, background: 'rgba(255,255,255,0.2)', mx: .5 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.65rem' }}>Camera 1 — {titleCase(incident.zone)}</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.65rem' }}>Camera 1 — {titleCase(incident.zone || 'unknown')}</Typography>
                 </Box>
                 <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '.62rem', fontFamily: 'monospace' }}>Frame {incident.frame} · OMNIX CV Engine</Typography>
               </Box>
 
-              {/* Bottom overlay tags — bigger, clearer */}
               <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, px: 2.5, py: 2, display: 'flex', gap: 1.5, alignItems: 'center', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: .7, px: 1.5, py: .7, background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.6)', borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
                   <WarningAmberIcon sx={{ fontSize: 13, color: '#fca5a5' }} />
@@ -345,35 +338,32 @@ export default function AlertDetail() {
           </Box>
         </Box>
 
-        {/* ── RIGHT COLUMN — independently scrollable ─────────────────────── */}
+        {/* RIGHT COLUMN */}
         <Box sx={{
           width: 340, flexShrink: 0,
-          position: 'sticky', top: 64,           // sticks below the 64px topbar
-          maxHeight: 'calc(100vh - 64px)',        // fills remaining viewport height
+          position: 'sticky', top: 64,
+          maxHeight: 'calc(100vh - 64px)',
           overflowY: 'auto',
-          pr: '4px',                              // room for scrollbar
-          // Custom slim scrollbar
+          pr: '4px',
           '&::-webkit-scrollbar': { width: '4px' },
           '&::-webkit-scrollbar-track': { background: 'transparent' },
           '&::-webkit-scrollbar-thumb': { background: 'rgba(124,58,237,0.35)', borderRadius: '4px' },
           '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(124,58,237,0.6)' },
         }}>
 
-          {/* Alert Details */}
           <DetailCard title="Alert Details" accentColor={PURPLE}>
-            <DetailRow icon={<CameraAltIcon fontSize="small" />}    label="Camera"        value={`Camera 1 — ${titleCase(incident.zone)}`} accentColor="#818cf8" />
-            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Rule Violated" value={titleCase(incident.violation)}             accentColor={AMBER} />
-            <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                       accentColor={GREEN} />
-            <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={`ByteTrack #${incident.person_id}`}         accentColor={CYAN} />
+            <DetailRow icon={<CameraAltIcon fontSize="small" />}    label="Camera"        value={`Camera 1 — ${titleCase(incident.zone || 'unknown')}`} accentColor="#818cf8" />
+            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Rule Violated" value={titleCase(incident.violation || 'violation')}           accentColor={AMBER} />
+            <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
+            <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={`ByteTrack #${incident.person_id}`}                       accentColor={CYAN} />
           </DetailCard>
 
-          {/* Detection Metrics */}
           <DetailCard title="Detection Metrics" accentColor={GREEN}>
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               {[
-                { label: 'Frame Number',    value: `#${incident.frame}`, color: AMBER,  pct: null },
-                { label: 'Confidence Score', value: `${confidence}%`,   color: GREEN,   pct: confidence },
-                { label: 'Detection Zone',  value: titleCase(incident.zone), color: CYAN, pct: null },
+                { label: 'Frame Number',     value: `#${incident.frame}`,                  color: AMBER, pct: null },
+                { label: 'Confidence Score', value: `${confidence}%`,                      color: GREEN, pct: confidence },
+                { label: 'Detection Zone',   value: titleCase(incident.zone || 'unknown'), color: CYAN,  pct: null },
               ].map((m, i) => (
                 <Box key={i}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: .8 }}>
@@ -390,7 +380,6 @@ export default function AlertDetail() {
             </Box>
           </DetailCard>
 
-          {/* Bounding Box Coordinates */}
           <DetailCard title="Bounding Box Coordinates" accentColor={CYAN}>
             <Box sx={{ p: 3 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
@@ -398,16 +387,14 @@ export default function AlertDetail() {
                   <Box key={k} sx={{ p: '12px 14px', borderRadius: '10px', background: `${CYAN}08`, border: `1px solid ${CYAN}20`, transition: 'all .2s', '&:hover': { background: `${CYAN}12`, borderColor: `${CYAN}35` } }}>
                     <Typography sx={{ color: CYAN, fontSize: '.6rem', fontWeight: 700, mb: .5, letterSpacing: '.06em', textTransform: 'uppercase' }}>{k}</Typography>
                     <Typography sx={{ color: '#e2e8f0', fontSize: '.85rem', fontWeight: 700, fontFamily: 'monospace' }}>
-                      {incident.bbox[i]?.toFixed(1) ?? '—'}
+                      {incident.bbox?.[i]?.toFixed(1) ?? '—'}
                     </Typography>
                   </Box>
                 ))}
               </Box>
-
             </Box>
           </DetailCard>
 
-          {/* Automated Actions */}
           <Box sx={{
             borderRadius: '16px',
             background: `linear-gradient(135deg, ${GREEN}08, rgba(99,102,241,0.04))`,
@@ -421,10 +408,10 @@ export default function AlertDetail() {
             </Box>
             <Box sx={{ p: '12px 16px', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {[
-                { icon: <PhotoCameraIcon sx={{ fontSize: 14 }} />,    text: 'Screenshot captured & stored', done: true },
-                { icon: <StorageIcon sx={{ fontSize: 14 }} />,        text: 'Event logged to database',      done: true },
-                { icon: <NotificationsIcon sx={{ fontSize: 14 }} />,  text: 'Dashboard notification sent',   done: true },
-                { icon: <PhoneAndroidIcon sx={{ fontSize: 14 }} />,   text: 'WhatsApp alert queued',         done: false },
+                { icon: <PhotoCameraIcon sx={{ fontSize: 14 }} />,   text: 'Screenshot captured & stored', done: true },
+                { icon: <StorageIcon sx={{ fontSize: 14 }} />,       text: 'Event logged to database',      done: true },
+                { icon: <NotificationsIcon sx={{ fontSize: 14 }} />, text: 'Dashboard notification sent',   done: true },
+                { icon: <PhoneAndroidIcon sx={{ fontSize: 14 }} />,  text: 'WhatsApp alert queued',         done: false },
               ].map((t, i) => (
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: '9px 12px', borderRadius: '9px', background: t.done ? `${GREEN}06` : 'rgba(255,255,255,0.02)', border: `1px solid ${t.done ? GREEN + '18' : 'rgba(255,255,255,0.04)'}`, transition: 'all .2s', '&:hover': { background: t.done ? `${GREEN}10` : 'rgba(255,255,255,0.03)' } }}>
                   <Box sx={{ width: 26, height: 26, borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? `${GREEN}15` : 'rgba(255,255,255,0.04)', border: `1px solid ${t.done ? GREEN + '25' : 'rgba(255,255,255,0.06)'}`, flexShrink: 0 }}>
