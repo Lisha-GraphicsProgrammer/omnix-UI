@@ -41,6 +41,7 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { useTheme } from "./ThemeContext";
 import { apiGet, apiPost } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -187,11 +188,12 @@ const howItWorks = [
 ];
 
 const navItems = [
-  { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} />, path: "/dashboard" },
+  { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Cameras" },
   { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} />, path: "/rules" },
-  { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} />, path: "/dashboard" },
-  { text: "Zones", icon: <MyLocationIcon sx={{ fontSize: 18 }} />, path: "/dashboard" },
-  { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} />, path: "/dashboard" },
+  { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Alert%20Dashboard" },
+  { text: "Zones", icon: <MyLocationIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Zones" },
+  { text: "Analytics", icon: <TrendingUpIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Analytics" },
+  { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Settings" },
 ];
 
 const markPendingAsDiscarded = (msgs: ChatMessage[]): ChatMessage[] =>
@@ -424,7 +426,7 @@ export default function Rules() {
                         setError("Please wait for the AI to finish before navigating away.");
                         return;
                       }
-                      navigate(item.path);
+                      navigate(item.path, { replace: false });
                     }
                   }}
                   sx={{ display: "flex", alignItems: "center", gap: 1.5, px: sidebarOpen ? 3 : 1.5, py: 1.4, mx: 1, mb: 0.5, borderRadius: "10px", cursor: "pointer", position: "relative", background: isSel ? "rgba(99,102,241,0.12)" : "transparent", border: isSel ? "1px solid rgba(99,102,241,0.2)" : "1px solid transparent", transition: "all .2s", "&:hover": { background: isSel ? "rgba(99,102,241,0.12)" : t.surfaceHover } }}
@@ -579,7 +581,7 @@ export default function Rules() {
                                       {msg.config.zones.map((z: any, zi: number) => {
                                         const matchedZone = zones.find((dz) => dz.name === z.name);
                                         return (
-                                          <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1.2, py: 0.4, borderRadius: "6px", background: matchedZone ? `${matchedZone.color}15` : `${CYAN}10`, border: `1px solid ${matchedZone ? matchedZone.color + "30" : CYAN + "25"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}25` } : {} }}>
+                                          <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1.2, py: 0.4, borderRadius: "6px", background: matchedZone ? `${matchedZone.color}15` : `${CYAN}10`, border: `1px solid ${matchedZone ? matchedZone.color + "30" : CYAN + "25"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}25` } : {} }}>
                                             <MyLocationIcon sx={{ fontSize: 11, color: matchedZone ? matchedZone.color : CYAN }} />
                                             <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".65rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
                                             {matchedZone && <Typography sx={{ color: matchedZone.color, fontSize: ".55rem", opacity: 0.7 }}>↗</Typography>}
@@ -716,7 +718,7 @@ export default function Rules() {
                                 {ruleZones.map((z: any, zi: number) => {
                                   const matchedZone = zones.find((dz) => dz.name === z.name);
                                   return (
-                                    <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: "5px", background: matchedZone ? `${matchedZone.color}12` : `${CYAN}08`, border: `1px solid ${matchedZone ? matchedZone.color + "25" : CYAN + "20"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}20` } : {} }}>
+                                    <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: "5px", background: matchedZone ? `${matchedZone.color}12` : `${CYAN}08`, border: `1px solid ${matchedZone ? matchedZone.color + "25" : CYAN + "20"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}20` } : {} }}>
                                       <MyLocationIcon sx={{ fontSize: 10, color: matchedZone ? matchedZone.color : CYAN }} />
                                       <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".6rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
                                     </Box>
@@ -742,7 +744,7 @@ export default function Rules() {
                     <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Camera Zones</Typography>
                     <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>{zones.length} zone{zones.length !== 1 ? "s" : ""} defined</Typography>
                   </Box>
-                  <Box onClick={() => navigate("/dashboard")} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                  <Box onClick={() => navigate("/dashboard?page=Zones")} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
                     <Typography sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}>Manage →</Typography>
                   </Box>
                 </Box>

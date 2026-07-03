@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -51,9 +51,15 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import AddIcon from "@mui/icons-material/Add";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { useTheme } from "./ThemeContext";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer, Cell
+} from "recharts";
 
 const DRAWER_OPEN = 220;
 const CYAN = "#00D4FF";
@@ -167,6 +173,7 @@ function Sidebar({ selected, onSelect, open, onToggle, onSignOut, t, userName, u
     { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} /> },
     { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} /> },
     { text: "Zones", icon: <MyLocationIcon sx={{ fontSize: 18 }} /> },
+    { text: "Analytics", icon: <TrendingUpIcon sx={{ fontSize: 18 }} /> },
     { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} /> },
   ];
 
@@ -430,8 +437,6 @@ function ZonesPage() {
   const [snack, setSnack] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [imgSize] = useState({ w: 854, h: 480 });
   const [deleteConfirm, setDeleteConfirm] = useState<ZoneData | null>(null);
-
-  // Edit mode
   const [editingZone, setEditingZone] = useState<ZoneData | null>(null);
   const [editPolygon, setEditPolygon] = useState<[number, number][]>([]);
   const [draggingPointIdx, setDraggingPointIdx] = useState<number | null>(null);
@@ -445,7 +450,6 @@ function ZonesPage() {
   };
 
   useEffect(() => { fetchZones(); }, []);
-
   useEffect(() => {
     apiFetch("/api/rules").then(r => r.json()).then(setRules).catch(() => {});
   }, []);
@@ -456,7 +460,6 @@ function ZonesPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     const scaleX = canvas.width / imgSize.w;
     const scaleY = canvas.height / imgSize.h;
 
@@ -485,11 +488,7 @@ function ZonesPage() {
         ctx.arc(x * scaleX, y * scaleY, r, 0, Math.PI * 2);
         ctx.fillStyle = isEditing ? (draggingPointIdx === i ? "#ffffff" : zone.color) : zone.color;
         ctx.fill();
-        if (isEditing) {
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
+        if (isEditing) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke(); }
       });
 
       const cx = polygon.reduce((s, p) => s + p[0], 0) / polygon.length * scaleX;
@@ -508,16 +507,11 @@ function ZonesPage() {
       ctx.beginPath();
       ctx.moveTo(currentPoints[0][0] * scaleX, currentPoints[0][1] * scaleY);
       currentPoints.slice(1).forEach(([x, y]) => ctx.lineTo(x * scaleX, y * scaleY));
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
       currentPoints.forEach(([x, y], i) => {
         ctx.beginPath();
         ctx.arc(x * scaleX, y * scaleY, i === 0 ? 6 : 4, 0, Math.PI * 2);
-        ctx.fillStyle = i === 0 ? "#00E676" : "#fff";
-        ctx.fill();
+        ctx.fillStyle = i === 0 ? "#00E676" : "#fff"; ctx.fill();
       });
     }
   }, [zones, currentPoints, hoveredZone, selectedZone, imgSize, editingZone, editPolygon, draggingPointIdx]);
@@ -527,15 +521,12 @@ function ZonesPage() {
   const getCanvasPoint = (e: React.MouseEvent<HTMLCanvasElement>): [number, number] => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = imgSize.w / rect.width;
-    const scaleY = imgSize.h / rect.height;
-    return [(e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY];
+    return [(e.clientX - rect.left) * (imgSize.w / rect.width), (e.clientY - rect.top) * (imgSize.h / rect.height)];
   };
 
   const findDragHandle = (pt: [number, number], polygon: [number, number][]): number | null => {
     for (let i = 0; i < polygon.length; i++) {
-      const dx = pt[0] - polygon[i][0];
-      const dy = pt[1] - polygon[i][1];
+      const dx = pt[0] - polygon[i][0], dy = pt[1] - polygon[i][1];
       if (Math.sqrt(dx * dx + dy * dy) < 20) return i;
     }
     return null;
@@ -543,75 +534,44 @@ function ZonesPage() {
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isAdmin) return;
-
     if (drawing) {
       const pt = getCanvasPoint(e);
       if (currentPoints.length >= 3) {
-        const first = currentPoints[0];
-        const dx = pt[0] - first[0];
-        const dy = pt[1] - first[1];
-        if (Math.sqrt(dx * dx + dy * dy) < 40) {
-          setPendingPolygon(currentPoints);
-          setCurrentPoints([]);
-          setDrawing(false);
-          setNameDialog(true);
-          return;
-        }
+        const dx = pt[0] - currentPoints[0][0], dy = pt[1] - currentPoints[0][1];
+        if (Math.sqrt(dx * dx + dy * dy) < 40) { setPendingPolygon(currentPoints); setCurrentPoints([]); setDrawing(false); setNameDialog(true); return; }
       }
-      setCurrentPoints((prev) => [...prev, pt]);
-      return;
+      setCurrentPoints((prev) => [...prev, pt]); return;
     }
-
     if (editingZone) {
       const pt = getCanvasPoint(e);
       const idx = findDragHandle(pt, editPolygon);
-      if (idx !== null) setDraggingPointIdx(idx);
-      return;
+      if (idx !== null) setDraggingPointIdx(idx); return;
     }
-
     const pt = getCanvasPoint(e);
     if (hoveredZone !== null) {
       const z = zones.find((z) => z.id === hoveredZone) || null;
       if (z) {
-        if (selectedZone?.id === z.id) {
-          setEditingZone(z);
-          setEditPolygon([...z.polygon]);
-          setSelectedZone(null);
-          setSnack({ msg: `Editing "${z.name}" — drag corner handles to reshape`, type: "success" });
-        } else {
-          setSelectedZone(z);
-        }
+        if (selectedZone?.id === z.id) { setEditingZone(z); setEditPolygon([...z.polygon]); setSelectedZone(null); setSnack({ msg: `Editing "${z.name}" — drag corner handles to reshape`, type: "success" }); }
+        else setSelectedZone(z);
       }
-    } else {
-      setSelectedZone(null);
-    }
+    } else setSelectedZone(null);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const pt = getCanvasPoint(e);
-
     if (editingZone && draggingPointIdx !== null) {
-      setEditPolygon((prev) => {
-        const next = [...prev] as [number, number][];
-        next[draggingPointIdx] = pt;
-        return next;
-      });
-      return;
+      setEditPolygon((prev) => { const next = [...prev] as [number, number][]; next[draggingPointIdx] = pt; return next; }); return;
     }
-
     if (drawing || editingZone) return;
-
     const canvas = canvasRef.current!;
-    const scaleX = canvas.width / imgSize.w;
-    const scaleY = canvas.height / imgSize.h;
+    const scaleX = canvas.width / imgSize.w, scaleY = canvas.height / imgSize.h;
     let found: number | null = null;
     for (const zone of zones) {
       if (zone.polygon.length < 3) continue;
       let inside = false;
       const poly = zone.polygon;
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-        const xi = poly[i][0] * scaleX, yi = poly[i][1] * scaleY;
-        const xj = poly[j][0] * scaleX, yj = poly[j][1] * scaleY;
+        const xi = poly[i][0] * scaleX, yi = poly[i][1] * scaleY, xj = poly[j][0] * scaleX, yj = poly[j][1] * scaleY;
         const px = pt[0] * scaleX, py = pt[1] * scaleY;
         if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
       }
@@ -620,27 +580,15 @@ function ZonesPage() {
     setHoveredZone(found);
   };
 
-  const handleCanvasMouseUp = () => {
-    if (draggingPointIdx !== null) setDraggingPointIdx(null);
-  };
+  const handleCanvasMouseUp = () => { if (draggingPointIdx !== null) setDraggingPointIdx(null); };
 
   const handleSaveZone = async () => {
     if (!newZoneName.trim() || pendingPolygon.length < 3) return;
     setSaving(true);
     try {
-      const res = await apiFetch("/api/zones", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newZoneName.trim(), polygon: pendingPolygon, camera_id: null }),
-      });
-      if (res.ok) {
-        setSnack({ msg: `Zone "${newZoneName}" saved!`, type: "success" });
-        setNameDialog(false); setNewZoneName(""); setPendingPolygon([]);
-        fetchZones();
-      } else {
-        const d = await res.json().catch(() => ({}));
-        setSnack({ msg: d.detail || "Failed to save zone", type: "error" });
-      }
+      const res = await apiFetch("/api/zones", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newZoneName.trim(), polygon: pendingPolygon, camera_id: null }) });
+      if (res.ok) { setSnack({ msg: `Zone "${newZoneName}" saved!`, type: "success" }); setNameDialog(false); setNewZoneName(""); setPendingPolygon([]); fetchZones(); }
+      else { const d = await res.json().catch(() => ({})); setSnack({ msg: d.detail || "Failed to save zone", type: "error" }); }
     } catch { setSnack({ msg: "Could not reach server", type: "error" }); }
     setSaving(false);
   };
@@ -649,18 +597,9 @@ function ZonesPage() {
     if (!editingZone) return;
     setSaving(true);
     try {
-      const res = await apiFetch(`/api/zones/${editingZone.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ polygon: editPolygon }),
-      });
-      if (res.ok) {
-        setSnack({ msg: `Zone "${editingZone.name}" updated!`, type: "success" });
-        setEditingZone(null); setEditPolygon([]);
-        fetchZones();
-      } else {
-        setSnack({ msg: "Failed to save zone edits", type: "error" });
-      }
+      const res = await apiFetch(`/api/zones/${editingZone.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ polygon: editPolygon }) });
+      if (res.ok) { setSnack({ msg: `Zone "${editingZone.name}" updated!`, type: "success" }); setEditingZone(null); setEditPolygon([]); fetchZones(); }
+      else setSnack({ msg: "Failed to save zone edits", type: "error" });
     } catch { setSnack({ msg: "Could not reach server", type: "error" }); }
     setSaving(false);
   };
@@ -668,57 +607,33 @@ function ZonesPage() {
   const handleDeleteZone = async (zone: ZoneData) => {
     try {
       const res = await apiFetch(`/api/zones/${zone.id}`, { method: "DELETE" });
-      if (res.ok) {
-        setSnack({ msg: `Zone "${zone.name}" deleted`, type: "success" });
-        setSelectedZone(null); setDeleteConfirm(null);
-        if (editingZone?.id === zone.id) { setEditingZone(null); setEditPolygon([]); }
-        fetchZones();
-      }
+      if (res.ok) { setSnack({ msg: `Zone "${zone.name}" deleted`, type: "success" }); setSelectedZone(null); setDeleteConfirm(null); if (editingZone?.id === zone.id) { setEditingZone(null); setEditPolygon([]); } fetchZones(); }
     } catch { setSnack({ msg: "Could not reach server", type: "error" }); }
   };
 
-  const startDrawing = () => {
-    setDrawing(true); setCurrentPoints([]);
-    setSelectedZone(null); setEditingZone(null); setEditPolygon([]);
-    setSnack({ msg: "Click to place points. Click the first point (green) to close the zone.", type: "success" });
-  };
-
+  const startDrawing = () => { setDrawing(true); setCurrentPoints([]); setSelectedZone(null); setEditingZone(null); setEditPolygon([]); setSnack({ msg: "Click to place points. Click the first point (green) to close the zone.", type: "success" }); };
   const cancelEdit = () => { setEditingZone(null); setEditPolygon([]); setDraggingPointIdx(null); };
-
-  const getCursor = () => {
-    if (drawing) return "crosshair";
-    if (editingZone) return draggingPointIdx !== null ? "grabbing" : "grab";
-    if (hoveredZone !== null) return "pointer";
-    return "default";
-  };
+  const getCursor = () => { if (drawing) return "crosshair"; if (editingZone) return draggingPointIdx !== null ? "grabbing" : "grab"; if (hoveredZone !== null) return "pointer"; return "default"; };
 
   return (
     <Box>
       <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <Box>
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Zone Manager</Typography>
-          <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>
-            {editingZone ? `Editing "${editingZone.name}" — drag corner handles to reshape` : "Draw detection zones on your camera feed"}
-          </Typography>
+          <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>{editingZone ? `Editing "${editingZone.name}" — drag corner handles to reshape` : "Draw detection zones on your camera feed"}</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           {editingZone ? (
             <>
-              <Box onClick={cancelEdit} sx={{ px: 2, py: 1, borderRadius: "10px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { background: t.surfaceHover } }}>
-                <Typography sx={{ color: t.textMuted, fontSize: ".78rem", fontWeight: 600 }}>Cancel</Typography>
-              </Box>
+              <Box onClick={cancelEdit} sx={{ px: 2, py: 1, borderRadius: "10px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { background: t.surfaceHover } }}><Typography sx={{ color: t.textMuted, fontSize: ".78rem", fontWeight: 600 }}>Cancel</Typography></Box>
               <Box onClick={handleSaveEditedZone} sx={{ display: "flex", alignItems: "center", gap: 1, px: 2.5, py: 1, borderRadius: "10px", background: "linear-gradient(135deg, #00E676, #00C853)", border: "1px solid rgba(0,230,118,0.3)", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, boxShadow: "0 4px 14px rgba(0,230,118,0.25)", transition: "all .2s", "&:hover": !saving ? { transform: "translateY(-1px)" } : {} }}>
                 <Typography sx={{ color: "#000", fontSize: ".78rem", fontWeight: 700 }}>{saving ? "Saving..." : "✓ Save Changes"}</Typography>
               </Box>
             </>
           ) : drawing ? (
             <>
-              <Box onClick={() => { setDrawing(false); setCurrentPoints([]); }} sx={{ px: 2, py: 1, borderRadius: "10px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { background: t.surfaceHover } }}>
-                <Typography sx={{ color: t.textMuted, fontSize: ".78rem", fontWeight: 600 }}>Cancel</Typography>
-              </Box>
-              <Box sx={{ px: 2, py: 1, borderRadius: "10px", background: "rgba(0,230,118,0.1)", border: `1px solid ${GREEN}40` }}>
-                <Typography sx={{ color: GREEN, fontSize: ".78rem", fontWeight: 600 }}>● Drawing... ({currentPoints.length} pts)</Typography>
-              </Box>
+              <Box onClick={() => { setDrawing(false); setCurrentPoints([]); }} sx={{ px: 2, py: 1, borderRadius: "10px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { background: t.surfaceHover } }}><Typography sx={{ color: t.textMuted, fontSize: ".78rem", fontWeight: 600 }}>Cancel</Typography></Box>
+              <Box sx={{ px: 2, py: 1, borderRadius: "10px", background: "rgba(0,230,118,0.1)", border: `1px solid ${GREEN}40` }}><Typography sx={{ color: GREEN, fontSize: ".78rem", fontWeight: 600 }}>● Drawing... ({currentPoints.length} pts)</Typography></Box>
             </>
           ) : isAdmin ? (
             <Box onClick={startDrawing} sx={{ display: "flex", alignItems: "center", gap: 1, px: 2.5, py: 1, borderRadius: "10px", background: "linear-gradient(135deg, #6366f1, #7c3aed)", border: "1px solid rgba(99,102,241,0.3)", cursor: "pointer", boxShadow: "0 4px 14px rgba(99,102,241,0.25)", transition: "all .2s", "&:hover": { transform: "translateY(-1px)" } }}>
@@ -736,10 +651,7 @@ function ZonesPage() {
           {(drawing || editingZone) && (
             <Box sx={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", px: 3, py: 1.5, borderRadius: "12px", background: "rgba(0,0,0,0.75)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", zIndex: 20 }}>
               <Typography sx={{ color: "#fff", fontSize: ".8rem", textAlign: "center" }}>
-                {editingZone ? "Drag the corner handles to reshape • Click Save Changes when done"
-                  : currentPoints.length === 0 ? "Click to place the first point"
-                    : currentPoints.length < 3 ? `${currentPoints.length} point${currentPoints.length > 1 ? "s" : ""} placed — keep clicking`
-                      : "Click the green point to close the zone"}
+                {editingZone ? "Drag the corner handles to reshape • Click Save Changes when done" : currentPoints.length === 0 ? "Click to place the first point" : currentPoints.length < 3 ? `${currentPoints.length} point${currentPoints.length > 1 ? "s" : ""} placed — keep clicking` : "Click the green point to close the zone"}
               </Typography>
             </Box>
           )}
@@ -750,17 +662,11 @@ function ZonesPage() {
           )}
         </Box>
 
-        {/* Right panel */}
         <Box sx={{ width: 300, borderLeft: `1px solid ${t.border}`, background: t.sidebarBg, display: "flex", flexDirection: "column", overflowY: "auto" }}>
           <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}` }}>
-            <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>
-              Zones <Chip label={zones.length} size="small" sx={{ ml: 1, height: 18, fontSize: ".6rem", background: `${CYAN}18`, color: CYAN, border: `1px solid ${CYAN}30` }} />
-            </Typography>
-            <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.3 }}>
-              {editingZone ? "Editing mode — drag handles on canvas" : "Click once to select • Click again to edit"}
-            </Typography>
+            <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Zones <Chip label={zones.length} size="small" sx={{ ml: 1, height: 18, fontSize: ".6rem", background: `${CYAN}18`, color: CYAN, border: `1px solid ${CYAN}30` }} /></Typography>
+            <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.3 }}>{editingZone ? "Editing mode — drag handles on canvas" : "Click once to select • Click again to edit"}</Typography>
           </Box>
-
           {loading ? (
             <Box sx={{ p: 3 }}><Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>Loading zones...</Typography></Box>
           ) : zones.length === 0 ? (
@@ -776,17 +682,7 @@ function ZonesPage() {
                 const isEdit = editingZone?.id === zone.id;
                 const ruleCount = rules.filter(r => r.zone_id === zone.id).length;
                 return (
-                  <Box key={zone.id} onClick={() => {
-                    if (drawing || editingZone) return;
-                    if (isSel) {
-                      setEditingZone(zone);
-                      setEditPolygon([...zone.polygon]);
-                      setSelectedZone(null);
-                      setSnack({ msg: `Editing "${zone.name}" — drag corner handles to reshape`, type: "success" });
-                    } else {
-                      setSelectedZone(zone);
-                    }
-                  }} sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, cursor: drawing || editingZone ? "default" : "pointer", background: isEdit ? `${zone.color}15` : isSel ? `${zone.color}08` : "transparent", borderLeft: isEdit ? `3px solid ${zone.color}` : isSel ? `3px solid ${zone.color}80` : "3px solid transparent", transition: "all .15s", "&:hover": !drawing && !editingZone ? { background: `${zone.color}08` } : {} }}>
+                  <Box key={zone.id} onClick={() => { if (drawing || editingZone) return; if (isSel) { setEditingZone(zone); setEditPolygon([...zone.polygon]); setSelectedZone(null); setSnack({ msg: `Editing "${zone.name}" — drag corner handles to reshape`, type: "success" }); } else setSelectedZone(zone); }} sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, cursor: drawing || editingZone ? "default" : "pointer", background: isEdit ? `${zone.color}15` : isSel ? `${zone.color}08` : "transparent", borderLeft: isEdit ? `3px solid ${zone.color}` : isSel ? `3px solid ${zone.color}80` : "3px solid transparent", transition: "all .15s", "&:hover": !drawing && !editingZone ? { background: `${zone.color}08` } : {} }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <Box sx={{ width: 12, height: 12, borderRadius: "3px", background: zone.color, flexShrink: 0 }} />
                       <Typography sx={{ color: t.text, fontSize: ".85rem", fontWeight: isEdit ? 700 : isSel ? 600 : 500, flex: 1 }}>{zone.name}</Typography>
@@ -797,7 +693,6 @@ function ZonesPage() {
                         </IconButton>
                       )}
                     </Box>
-                    {/* Points + rule count */}
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5, ml: "27px" }}>
                       <Typography sx={{ color: t.textMuted, fontSize: ".7rem" }}>
                         {zone.polygon.length} points
@@ -805,9 +700,7 @@ function ZonesPage() {
                       </Typography>
                       {ruleCount > 0 && (
                         <Box sx={{ px: 1, py: 0.2, borderRadius: "5px", background: `${zone.color}15`, border: `1px solid ${zone.color}30` }}>
-                          <Typography sx={{ color: zone.color, fontSize: ".6rem", fontWeight: 700 }}>
-                            {ruleCount} rule{ruleCount > 1 ? "s" : ""}
-                          </Typography>
+                          <Typography sx={{ color: zone.color, fontSize: ".6rem", fontWeight: 700 }}>{ruleCount} rule{ruleCount > 1 ? "s" : ""}</Typography>
                         </Box>
                       )}
                     </Box>
@@ -836,9 +729,7 @@ function ZonesPage() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button onClick={() => { setNameDialog(false); setPendingPolygon([]); setNewZoneName(""); }} sx={{ color: t.textMuted, borderRadius: "9px", textTransform: "none", border: `1px solid ${t.border}`, px: 2.5 }}>Cancel</Button>
-          <Button onClick={handleSaveZone} disabled={!newZoneName.trim() || saving} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #6366f1, #7c3aed)", px: 2.5 }}>
-            {saving ? "Saving..." : "Save Zone"}
-          </Button>
+          <Button onClick={handleSaveZone} disabled={!newZoneName.trim() || saving} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #6366f1, #7c3aed)", px: 2.5 }}>{saving ? "Saving..." : "Save Zone"}</Button>
         </DialogActions>
       </Dialog>
 
@@ -856,6 +747,304 @@ function ZonesPage() {
       <Snackbar open={!!snack} autoHideDuration={4000} onClose={() => setSnack(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
         <Alert severity={snack?.type || "success"} onClose={() => setSnack(null)} sx={{ borderRadius: "10px" }}>{snack?.msg}</Alert>
       </Snackbar>
+    </Box>
+  );
+}
+
+// ─── AnalyticsPage ────────────────────────────────────────────────────────────
+function AnalyticsPage() {
+  const { t } = useTheme();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const [preset, setPreset] = useState<"today" | "7d" | "30d" | "custom">("7d");
+  const [fromDate, setFromDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().split("T")[0]; });
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const [overTime, setOverTime] = useState<{ date: string; count: number }[]>([]);
+  const [byRule, setByRule] = useState<{ rule_name: string; count: number; severity: string }[]>([]);
+  const [byHour, setByHour] = useState<{ hour: number; count: number }[]>([]);
+  const [fpRate, setFpRate] = useState<{ rule_name: string; tp_count: number; fp_count: number; total: number; rate: number }[]>([]);
+
+  const applyPreset = (p: "today" | "7d" | "30d" | "custom") => {
+    setPreset(p);
+    const today = new Date().toISOString().split("T")[0];
+    if (p === "today") { setFromDate(today); setToDate(today); setPeriod("day"); }
+    else if (p === "7d") { const d = new Date(); d.setDate(d.getDate() - 7); setFromDate(d.toISOString().split("T")[0]); setToDate(today); setPeriod("day"); }
+    else if (p === "30d") { const d = new Date(); d.setDate(d.getDate() - 30); setFromDate(d.toISOString().split("T")[0]); setToDate(today); setPeriod("day"); }
+  };
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const params = `from_date=${fromDate}&to_date=${toDate}`;
+      const [ot, br, bh, fp] = await Promise.all([
+        apiFetch(`/api/analytics/incidents-over-time?period=${period}&${params}`).then(r => r.json()),
+        apiFetch(`/api/analytics/incidents-by-rule?${params}`).then(r => r.json()),
+        apiFetch(`/api/analytics/incidents-by-hour?${params}`).then(r => r.json()),
+        apiFetch(`/api/analytics/false-positive-rate?${params}`).then(r => r.json()),
+      ]);
+      setOverTime(Array.isArray(ot) ? ot : []);
+      setByRule(Array.isArray(br) ? br : []);
+      setByHour(Array.isArray(bh) ? bh : []);
+      setFpRate(Array.isArray(fp) ? fp : []);
+    } catch (e) { console.error("Analytics fetch failed", e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchAll(); }, [fromDate, toDate, period]);
+
+  const handleExport = async (format: "csv" | "pdf") => {
+    setExporting(format);
+    setShowExportMenu(false);
+    try {
+      const token = localStorage.getItem("omnix_token");
+      const params = `format=${format}&from_date=${fromDate}&to_date=${toDate}`;
+      const res = await fetch(`http://localhost:8000/api/export/incidents?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const site = "Site_A";
+      a.download = `omnix_report_${site}_${fromDate}_to_${toDate}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error("Export error", e); }
+    setExporting(null);
+  };
+
+  const totalIncidents = overTime.reduce((s, d) => s + d.count, 0);
+  const uniqueRules = byRule.length;
+  const days = Math.max(1, Math.ceil((new Date(toDate).getTime() - new Date(fromDate).getTime()) / 86400000));
+  const avgPerDay = (totalIncidents / days).toFixed(1);
+  const worstHour = byHour.reduce((a, b) => b.count > a.count ? b : a, { hour: 0, count: 0 });
+
+  const CHART_COLORS = [CYAN, PURPLE, GREEN, AMBER, "#FF4444", "#FF6B6B", "#818cf8", "#f472b6"];
+
+  const chartBg = t.surface;
+  const gridColor = t.border;
+  const textColor = t.textMuted;
+
+  const CustomTooltipStyle = {
+    background: t.bgSecondary || t.sidebarBg,
+    border: `1px solid ${t.border}`,
+    borderRadius: "10px",
+    padding: "10px 14px",
+    color: t.text,
+    fontSize: "0.8rem",
+  };
+
+  const isEmpty = totalIncidents === 0;
+
+  return (
+    <Box sx={{ overflowY: "auto", height: "100vh" }}>
+      {/* Topbar */}
+      <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
+        <Box>
+          <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Analytics</Typography>
+          <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>Historical safety monitoring insights</Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          {/* Export button */}
+          {isAdmin && (
+            <Box sx={{ position: "relative" }}>
+              <Box onClick={() => setShowExportMenu(o => !o)} sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${PURPLE}, #5B21B6)`, border: `1px solid ${PURPLE}60`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s" }}>
+                <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
+                <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>{exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}</Typography>
+              </Box>
+              {showExportMenu && (
+                <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
+                  {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
+                    <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      <Box sx={{ p: 4 }}>
+        {/* Date controls */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            {(["today", "7d", "30d", "custom"] as const).map((p) => (
+              <Box key={p} onClick={() => applyPreset(p)} sx={{ px: 2, py: 0.8, borderRadius: "8px", background: preset === p ? `${PURPLE}20` : t.surface, border: `1px solid ${preset === p ? PURPLE + "50" : t.border}`, cursor: "pointer", transition: "all .15s" }}>
+                <Typography sx={{ color: preset === p ? "#a5b4fc" : t.textMuted, fontSize: ".78rem", fontWeight: preset === p ? 700 : 400 }}>
+                  {p === "today" ? "Today" : p === "7d" ? "Last 7 days" : p === "30d" ? "Last 30 days" : "Custom"}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          {preset === "custom" && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ background: "transparent", border: `1px solid ${t.border}`, borderRadius: "8px", color: t.text, padding: "6px 10px", fontSize: "0.82rem", outline: "none" }} />
+              <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>to</Typography>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ background: "transparent", border: `1px solid ${t.border}`, borderRadius: "8px", color: t.text, padding: "6px 10px", fontSize: "0.82rem", outline: "none" }} />
+            </Box>
+          )}
+          <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
+            {(["day", "week", "month"] as const).map(p => (
+              <Box key={p} onClick={() => setPeriod(p)} sx={{ px: 1.5, py: 0.6, borderRadius: "7px", background: period === p ? `${CYAN}15` : "transparent", border: `1px solid ${period === p ? CYAN + "40" : t.border}`, cursor: "pointer" }}>
+                <Typography sx={{ color: period === p ? CYAN : t.textMuted, fontSize: ".72rem", fontWeight: period === p ? 700 : 400 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Loading */}
+        {loading && <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${PURPLE}, ${CYAN})` } }} />}
+
+        {/* Summary cards */}
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
+          {[
+            { val: String(totalIncidents), label: "Total Incidents", sub: `${fromDate} → ${toDate}`, c: "#FF4444", icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
+            { val: String(uniqueRules), label: "Unique Rules Triggered", sub: "Distinct violation types", c: PURPLE, icon: <RuleIcon sx={{ fontSize: 20 }} /> },
+            { val: avgPerDay, label: "Avg per Day", sub: "Incidents per calendar day", c: CYAN, icon: <TrendingUpIcon sx={{ fontSize: 20 }} /> },
+            { val: `${worstHour.hour}:00`, label: "Worst Hour", sub: `${worstHour.count} incidents`, c: AMBER, icon: <SpeedIcon sx={{ fontSize: 20 }} /> },
+          ].map((s, i) => (
+            <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
+              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box></Box>
+              <Box>
+                <Typography sx={{ fontSize: "1.45rem", fontWeight: 800, color: s.c, lineHeight: 1.1, letterSpacing: "-0.5px" }}>{s.val}</Typography>
+                <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 600, mt: ".2rem" }}>{s.label}</Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".68rem", mt: ".1rem" }}>{s.sub}</Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+
+        {isEmpty && !loading ? (
+          <Box sx={{ textAlign: "center", py: 10, background: t.surface, borderRadius: "16px", border: `1px solid ${t.border}` }}>
+            <TrendingUpIcon sx={{ fontSize: 48, color: t.textMuted, opacity: 0.3, mb: 2 }} />
+            <Typography sx={{ color: t.textMuted, fontSize: "1rem", fontWeight: 600 }}>No incidents in selected range</Typography>
+            <Typography sx={{ color: t.textMuted, fontSize: ".82rem", mt: 0.5 }}>Try selecting a wider date range or check that the pipeline has been running</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
+
+            {/* Incidents over time */}
+            <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)` }}>
+                <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Incidents Over Time</Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Violation volume by {period}</Typography>
+              </Box>
+              <Box sx={{ p: 3 }}>
+                {overTime.every(d => d.count === 0) ? (
+                  <Box sx={{ textAlign: "center", py: 4 }}><Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>No data in range</Typography></Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={overTime} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                      <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => v.length > 7 ? v.slice(5) : v} />
+                      <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
+                      <RechartsTooltip contentStyle={CustomTooltipStyle} />
+                      <Line type="monotone" dataKey="count" stroke={CYAN} strokeWidth={2} dot={{ fill: CYAN, r: 3 }} activeDot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </Box>
+            </Box>
+
+            {/* Incidents by hour */}
+            <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${AMBER}10 0%, transparent 60%)` }}>
+                <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Incidents by Hour of Day</Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Identify shift-based patterns</Typography>
+              </Box>
+              <Box sx={{ p: 3 }}>
+                {byHour.every(d => d.count === 0) ? (
+                  <Box sx={{ textAlign: "center", py: 4 }}><Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>No data in range</Typography></Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={byHour} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                      <XAxis dataKey="hour" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => `${v}h`} />
+                      <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
+                      <RechartsTooltip contentStyle={CustomTooltipStyle} formatter={(v: any) => [v, "incidents"]} labelFormatter={(l: any) => `Hour ${l}:00`} />
+                      <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                        {byHour.map((entry, index) => (
+                          <Cell key={index} fill={entry.count === worstHour.count && entry.count > 0 ? "#FF4444" : AMBER} fillOpacity={0.8} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </Box>
+            </Box>
+
+            {/* Incidents by rule */}
+            <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${PURPLE}10 0%, transparent 60%)` }}>
+                <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Top Rules by Incidents</Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Top 10 most triggered rules</Typography>
+              </Box>
+              <Box sx={{ p: 3 }}>
+                {byRule.length === 0 ? (
+                  <Box sx={{ textAlign: "center", py: 4 }}><Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>No data in range</Typography></Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart layout="vertical" data={byRule} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
+                      <XAxis type="number" tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="rule_name" tick={{ fill: textColor, fontSize: 9 }} width={110} tickFormatter={v => v.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).slice(0, 14)} />
+                      <RechartsTooltip contentStyle={CustomTooltipStyle} />
+                      <Bar dataKey="count" radius={[0, 3, 3, 0]}>
+                        {byRule.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.85} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </Box>
+            </Box>
+
+            {/* False positive rate table */}
+            <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${GREEN}10 0%, transparent 60%)` }}>
+                <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>False Positive Rate by Rule</Typography>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Which rules are most trustworthy</Typography>
+              </Box>
+              <Box sx={{ overflowY: "auto", maxHeight: 260 }}>
+                {fpRate.length === 0 ? (
+                  <Box sx={{ textAlign: "center", py: 4 }}><Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>No reviewed incidents yet</Typography></Box>
+                ) : (
+                  <>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", px: 3, py: 1.2, borderBottom: `1px solid ${t.border}`, background: t.surface, position: "sticky", top: 0 }}>
+                      {["Rule", "TP", "FP", "FP %"].map(h => (
+                        <Typography key={h} sx={{ color: t.textMuted, fontSize: ".62rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</Typography>
+                      ))}
+                    </Box>
+                    {fpRate.map((row, i) => (
+                      <Box key={i} sx={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", px: 3, py: 1.5, borderBottom: `1px solid ${t.border}`, "&:hover": { background: t.surfaceHover }, "&:last-child": { borderBottom: "none" } }}>
+                        <Typography sx={{ color: t.text, fontSize: ".8rem" }} noWrap>{row.rule_name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Typography>
+                        <Typography sx={{ color: GREEN, fontSize: ".8rem", fontWeight: 600 }}>{row.tp_count}</Typography>
+                        <Typography sx={{ color: "#fca5a5", fontSize: ".8rem", fontWeight: 600 }}>{row.fp_count}</Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                          <Box sx={{ flex: 1, height: 4, borderRadius: 2, background: t.border, overflow: "hidden" }}>
+                            <Box sx={{ height: "100%", width: `${row.rate}%`, background: row.rate > 50 ? "#ef4444" : row.rate > 20 ? AMBER : GREEN, borderRadius: 2 }} />
+                          </Box>
+                          <Typography sx={{ color: row.rate > 50 ? "#fca5a5" : row.rate > 20 ? AMBER : GREEN, fontSize: ".75rem", fontWeight: 700, minWidth: 36 }}>{row.rate}%</Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </>
+                )}
+              </Box>
+            </Box>
+
+          </Box>
+        )}
+        <Box sx={{ height: 40 }} />
+      </Box>
     </Box>
   );
 }
@@ -899,9 +1088,7 @@ function CamerasPage() {
       <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <Box>
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Camera Management</Typography>
-          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>
-            {apiError ? "⚠️ API offline — showing mock data" : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}
-          </Typography>
+          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>{apiError ? "⚠️ API offline — showing mock data" : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -925,9 +1112,7 @@ function CamerasPage() {
             { val: String(alertCount), label: "Active Alerts", sub: "Violations detected", c: AMBER, icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
           ].map((s, i) => (
             <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", transition: "all .25s", "&:hover": { transform: "translateY(-2px)", boxShadow: `0 12px 32px ${s.c}18`, borderColor: `${s.c}30` }, "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
-              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box>
-              </Box>
+              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box></Box>
               <Box>
                 <Typography sx={{ fontSize: "1.45rem", fontWeight: 800, color: s.c, lineHeight: 1.1, letterSpacing: "-0.5px" }}>{s.val}</Typography>
                 <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 600, mt: ".2rem" }}>{s.label}</Typography>
@@ -944,9 +1129,7 @@ function CamerasPage() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                   <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px #ef4444" }} />
                   <Typography sx={{ color: t.text, fontWeight: 600, fontSize: ".9rem" }}>{selectedCam.name}</Typography>
-                  <Box sx={{ px: 1, py: 0.2, borderRadius: "4px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
-                    <Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 700 }}>LIVE</Typography>
-                  </Box>
+                  <Box sx={{ px: 1, py: 0.2, borderRadius: "4px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}><Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 700 }}>LIVE</Typography></Box>
                 </Box>
                 <Box onClick={() => setSelectedCam(null)} sx={{ cursor: "pointer", color: t.textMuted, fontSize: "1.2rem", px: 1, "&:hover": { color: t.text } }}>✕</Box>
               </Box>
@@ -989,22 +1172,12 @@ function CamerasPage() {
                         <Box sx={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 6px #ef4444", animation: "blink 1s infinite", "@keyframes blink": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.2 } } }} />
                         <Typography sx={{ color: "#fca5a5", fontSize: ".55rem", fontWeight: 800, letterSpacing: ".05em" }}>{hasStream ? "LIVE" : "ONLINE"}</Typography>
                       </Box>
-                      {hasStream && (
-                        <Box sx={{ position: "absolute", bottom: 10, left: 10, px: 1, py: 0.3, borderRadius: "6px", background: `${CYAN}20`, border: `1px solid ${CYAN}40`, backdropFilter: "blur(8px)", zIndex: 2 }}>
-                          <Typography sx={{ color: CYAN, fontSize: ".55rem", fontWeight: 700 }}>▶️ Click to expand</Typography>
-                        </Box>
-                      )}
-                      {meta.alerts > 0 && (
-                        <Box sx={{ position: "absolute", top: 10, right: 10, px: 1, py: 0.3, borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", backdropFilter: "blur(8px)", zIndex: 2 }}>
-                          <Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 800 }}>⚠️ {meta.alerts}</Typography>
-                        </Box>
-                      )}
+                      {hasStream && <Box sx={{ position: "absolute", bottom: 10, left: 10, px: 1, py: 0.3, borderRadius: "6px", background: `${CYAN}20`, border: `1px solid ${CYAN}40`, backdropFilter: "blur(8px)", zIndex: 2 }}><Typography sx={{ color: CYAN, fontSize: ".55rem", fontWeight: 700 }}>▶️ Click to expand</Typography></Box>}
+                      {meta.alerts > 0 && <Box sx={{ position: "absolute", top: 10, right: 10, px: 1, py: 0.3, borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", backdropFilter: "blur(8px)", zIndex: 2 }}><Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 800 }}>⚠️ {meta.alerts}</Typography></Box>}
                     </>
                   ) : (
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
-                      <Box sx={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <VideocamIcon sx={{ color: "rgba(239,68,68,0.5)", fontSize: 20 }} />
-                      </Box>
+                      <Box sx={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><VideocamIcon sx={{ color: "rgba(239,68,68,0.5)", fontSize: 20 }} /></Box>
                       <Typography sx={{ color: "rgba(239,68,68,0.5)", fontSize: ".68rem", fontWeight: 600, letterSpacing: ".04em" }}>OFFLINE</Typography>
                     </Box>
                   )}
@@ -1022,12 +1195,8 @@ function CamerasPage() {
                     </Box>
                   )}
                   <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap" }}>
-                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: isOnline ? "rgba(110,231,183,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${isOnline ? "rgba(110,231,183,0.15)" : "rgba(239,68,68,0.15)"}` }}>
-                      <Typography sx={{ color: isOnline ? "#6ee7b7" : "#fca5a5", fontSize: ".58rem", fontWeight: 600 }}>{isOnline ? "● Online" : "● Offline"}</Typography>
-                    </Box>
-                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}>
-                      <Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{meta.res}</Typography>
-                    </Box>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: isOnline ? "rgba(110,231,183,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${isOnline ? "rgba(110,231,183,0.15)" : "rgba(239,68,68,0.15)"}` }}><Typography sx={{ color: isOnline ? "#6ee7b7" : "#fca5a5", fontSize: ".58rem", fontWeight: 600 }}>{isOnline ? "● Online" : "● Offline"}</Typography></Box>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}><Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{meta.res}</Typography></Box>
                     {cam.fps > 0 && <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}><Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{cam.fps}fps</Typography></Box>}
                     {hasStream && <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: `${CYAN}10`, border: `1px solid ${CYAN}25` }}><Typography sx={{ color: CYAN, fontSize: ".58rem", fontWeight: 600 }}>STREAM</Typography></Box>}
                   </Box>
@@ -1080,9 +1249,7 @@ function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
       <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <Box>
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Alert Dashboard</Typography>
-          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>
-            {apiError ? "⚠️ API offline — showing cached state" : `Real-time violation monitoring — ${alerts.length} events`}
-          </Typography>
+          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>{apiError ? "⚠️ API offline — showing cached state" : `Real-time violation monitoring — ${alerts.length} events`}</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -1098,9 +1265,7 @@ function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
           {statCards.map((s, i) => (
             <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", transition: "all .25s", "&:hover": { transform: "translateY(-2px)", boxShadow: `0 12px 32px ${s.c}18`, borderColor: `${s.c}30` }, "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
-              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box>
-              </Box>
+              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box></Box>
               <Box>
                 <Typography sx={{ fontSize: "1.45rem", fontWeight: 800, color: s.c, lineHeight: 1.1, letterSpacing: "-0.5px" }}>{s.val}</Typography>
                 <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 600, mt: ".2rem" }}>{s.label}</Typography>
@@ -1113,9 +1278,7 @@ function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
           <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Violation Log</Typography>
-              <Box sx={{ px: 1.5, py: 0.4, borderRadius: "20px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                <Typography sx={{ color: "#fca5a5", fontSize: ".65rem", fontWeight: 700 }}>{filtered.length} events</Typography>
-              </Box>
+              <Box sx={{ px: 1.5, py: 0.4, borderRadius: "20px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}><Typography sx={{ color: "#fca5a5", fontSize: ".65rem", fontWeight: 700 }}>{filtered.length} events</Typography></Box>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>
               {["All", "Critical", "High", "Medium"].map((f) => (
@@ -1131,9 +1294,7 @@ function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
               <Typography sx={{ color: t.textMuted, fontSize: ".85rem" }}>Loading incidents...</Typography>
             </Box>
           ) : filtered.length === 0 ? (
-            <Box sx={{ p: 8, textAlign: "center" }}>
-              <Typography sx={{ color: t.textMuted, fontSize: ".9rem", mb: 0.5 }}>{apiError ? "Cannot reach API at localhost:8000" : "No violations match this filter"}</Typography>
-            </Box>
+            <Box sx={{ p: 8, textAlign: "center" }}><Typography sx={{ color: t.textMuted, fontSize: ".9rem", mb: 0.5 }}>{apiError ? "Cannot reach API at localhost:8000" : "No violations match this filter"}</Typography></Box>
           ) : (
             <Box>
               <Box sx={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 0.7fr", px: 3, py: 1.5, borderBottom: `1px solid ${t.border}`, background: t.surface }}>
@@ -1215,7 +1376,6 @@ function SettingsPage() {
   };
 
   const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
-
   const selectSx = { minWidth: 160, fontSize: "0.82rem", background: t.surface, border: `1px solid ${t.border}`, borderRadius: "8px", color: t.text, "& fieldset": { border: "none" }, "& .MuiSvgIcon-root": { color: t.textMuted } };
 
   return (
@@ -1277,14 +1437,7 @@ function SettingsPage() {
 
         <SectionCard icon={<NotificationsActiveIcon fontSize="small" />} title="Alert System" subtitle="Configure how and where alerts are dispatched" accentColor={AMBER}>
           <SettingRow label="Alert Channels" description="Where to send violation notifications" tag="Active" tagColor={GREEN}>
-            <FormControl size="small">
-              <Select value={alertChannel} onChange={(e) => { setAlertChannel(e.target.value); mark(); }} sx={selectSx}>
-                <MenuItem value="dashboard">Dashboard Only</MenuItem>
-                <MenuItem value="email">Email</MenuItem>
-                <MenuItem value="webhook">Webhook</MenuItem>
-                <MenuItem value="all">All Channels</MenuItem>
-              </Select>
-            </FormControl>
+            <FormControl size="small"><Select value={alertChannel} onChange={(e) => { setAlertChannel(e.target.value); mark(); }} sx={selectSx}><MenuItem value="dashboard">Dashboard Only</MenuItem><MenuItem value="email">Email</MenuItem><MenuItem value="webhook">Webhook</MenuItem><MenuItem value="all">All Channels</MenuItem></Select></FormControl>
           </SettingRow>
           <SettingRow label="Alert Deduplication" description="Prevent duplicate alerts for the same event" tag="ByteTrack" tooltip="Uses ByteTrack IDs to suppress repeated alerts">
             <Switch checked={dedup} onChange={(e) => { setDedup(e.target.checked); mark(); }} size="small" sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: GREEN }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { background: GREEN } }} />
@@ -1298,35 +1451,16 @@ function SettingsPage() {
           <SettingRow label="Active Models" description="Currently loaded detection models" tag="Running" tagColor={GREEN}><ValuePill value="Helmet + Vest + Base YOLO" /></SettingRow>
           <SettingRow label="Vest Model" description="Trained on Roboflow safety vest dataset" tag="POC" tagColor={AMBER}><ValuePill value="79% mAP@50" highlight /></SettingRow>
           <SettingRow label="Frame Sampling" description="How frequently frames are processed" tag="Max Quality" tagColor={CYAN} tooltip="Every frame = highest accuracy, higher GPU load">
-            <FormControl size="small">
-              <Select value={frameSampling} onChange={(e) => { setFrameSampling(e.target.value); mark(); }} sx={selectSx}>
-                <MenuItem value="every">Every frame</MenuItem>
-                <MenuItem value="2">Every 2nd frame</MenuItem>
-                <MenuItem value="5">Every 5th frame</MenuItem>
-                <MenuItem value="10">Every 10th frame</MenuItem>
-              </Select>
-            </FormControl>
+            <FormControl size="small"><Select value={frameSampling} onChange={(e) => { setFrameSampling(e.target.value); mark(); }} sx={selectSx}><MenuItem value="every">Every frame</MenuItem><MenuItem value="2">Every 2nd frame</MenuItem><MenuItem value="5">Every 5th frame</MenuItem><MenuItem value="10">Every 10th frame</MenuItem></Select></FormControl>
           </SettingRow>
           <SettingRow label="Model Precision" description="Speed vs accuracy tradeoff">
-            <FormControl size="small">
-              <Select value={modelPrecision} onChange={(e) => { setModelPrecision(e.target.value); mark(); }} sx={selectSx}>
-                <MenuItem value="fast">Fast (FP16)</MenuItem>
-                <MenuItem value="balanced">Balanced (FP32)</MenuItem>
-                <MenuItem value="accurate">Accurate (Full)</MenuItem>
-              </Select>
-            </FormControl>
+            <FormControl size="small"><Select value={modelPrecision} onChange={(e) => { setModelPrecision(e.target.value); mark(); }} sx={selectSx}><MenuItem value="fast">Fast (FP16)</MenuItem><MenuItem value="balanced">Balanced (FP32)</MenuItem><MenuItem value="accurate">Accurate (Full)</MenuItem></Select></FormControl>
           </SettingRow>
         </SectionCard>
 
         <SectionCard icon={<SettingsIcon fontSize="small" />} title="Platform" subtitle="General platform settings" accentColor="rgba(255,255,255,0.45)">
           <SettingRow label="LLM Model" description="AI model for natural language rule parsing" tag="Ollama" tagColor={PURPLE}>
-            <FormControl size="small">
-              <Select value={llmModel} onChange={(e) => { setLlmModel(e.target.value); mark(); }} sx={{ ...selectSx, minWidth: 200 }}>
-                <MenuItem value="claude-haiku">Claude Haiku (planned)</MenuItem>
-                <MenuItem value="claude-sonnet">Claude Sonnet</MenuItem>
-                <MenuItem value="ollama-local">Ollama (local)</MenuItem>
-              </Select>
-            </FormControl>
+            <FormControl size="small"><Select value={llmModel} onChange={(e) => { setLlmModel(e.target.value); mark(); }} sx={{ ...selectSx, minWidth: 200 }}><MenuItem value="claude-haiku">Claude Haiku (planned)</MenuItem><MenuItem value="claude-sonnet">Claude Sonnet</MenuItem><MenuItem value="ollama-local">Ollama (local)</MenuItem></Select></FormControl>
           </SettingRow>
           <SettingRow label="Site Name" description="Current monitoring site identifier" tag="Active" tagColor={GREEN}>
             <TextField value={siteName} onChange={(e) => { setSiteName(e.target.value); mark(); }} size="small" sx={{ width: 220, "& .MuiOutlinedInput-root": { fontSize: "0.82rem", background: t.surface, borderRadius: "8px", color: t.text, "& fieldset": { borderColor: t.border }, "&:hover fieldset": { borderColor: t.borderStrong }, "&.Mui-focused fieldset": { borderColor: CYAN } } }} />
@@ -1353,18 +1487,14 @@ function SettingsPage() {
           </Box>
           <Box sx={{ display: "flex", gap: "10px" }}>
             {[{ label: "Flush Alert Queue", endpoint: "/api/danger/flush-alerts" }, { label: "Reset Track IDs", endpoint: "/api/danger/reset-tracks" }].map(({ label, endpoint }) => (
-              <Box key={label} onClick={async () => { if (!window.confirm(`${label} — are you sure?`)) return; try { await apiFetch(endpoint, { method: "POST" }); } catch {} }} sx={{ px: "16px", py: "7px", borderRadius: "8px", cursor: "pointer", border: "1px solid rgba(255,68,68,0.3)", color: "#FF6B6B", fontSize: "0.8rem", fontWeight: 500, transition: "all .2s", "&:hover": { background: "rgba(255,68,68,0.1)" } }}>
-                {label}
-              </Box>
+              <Box key={label} onClick={async () => { if (!window.confirm(`${label} — are you sure?`)) return; try { await apiFetch(endpoint, { method: "POST" }); } catch {} }} sx={{ px: "16px", py: "7px", borderRadius: "8px", cursor: "pointer", border: "1px solid rgba(255,68,68,0.3)", color: "#FF6B6B", fontSize: "0.8rem", fontWeight: 500, transition: "all .2s", "&:hover": { background: "rgba(255,68,68,0.1)" } }}>{label}</Box>
             ))}
           </Box>
         </Box>
       </Box>
 
       <Snackbar open={saved} autoHideDuration={3000} onClose={() => setSaved(false)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-        <Alert severity="success" onClose={() => setSaved(false)} sx={{ background: `${GREEN}12`, border: `1px solid ${GREEN}30`, color: GREEN, "& .MuiAlert-icon": { color: GREEN } }}>
-          Settings saved successfully
-        </Alert>
+        <Alert severity="success" onClose={() => setSaved(false)} sx={{ background: `${GREEN}12`, border: `1px solid ${GREEN}30`, color: GREEN, "& .MuiAlert-icon": { color: GREEN } }}>Settings saved successfully</Alert>
       </Snackbar>
     </Box>
   );
@@ -1372,17 +1502,32 @@ function SettingsPage() {
 
 // ─── Dashboard shell ──────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [selected, setSelected] = useState("Alert Dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [signOutOpen, setSignOutOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTheme();
   const { user, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : 56;
 
+  const getPageFromUrl = () => {
+    const params = new URLSearchParams(location.search);
+    return params.get("page") || "Alert Dashboard";
+  };
+
+  const [selected, setSelected] = useState(getPageFromUrl);
+
+  useEffect(() => {
+    const page = getPageFromUrl();
+    setSelected(page);
+  }, [location.search]);
+
   const handleSelect = (item: string) => {
-    setSelected(item);
-    if (item === "Rules") navigate("/rules");
+    if (item === "Rules") {
+      navigate("/rules");
+      return;
+    }
+    navigate(`/dashboard?page=${encodeURIComponent(item)}`, { replace: true });
   };
 
   return (
@@ -1393,6 +1538,7 @@ export default function Dashboard() {
         {selected === "Alert Dashboard" && <AlertsPage navigate={navigate} />}
         {selected === "Cameras" && <CamerasPage />}
         {selected === "Zones" && <ZonesPage />}
+        {selected === "Analytics" && <AnalyticsPage />}
         {selected === "Settings" && <SettingsPage />}
       </Box>
 
