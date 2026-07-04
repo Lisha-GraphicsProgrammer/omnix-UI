@@ -1,4 +1,6 @@
-const API_BASE = 'http://localhost:8000'
+// Base URL comes from environment; falls back to local dev backend.
+// Set VITE_API_URL in .env (and in your host's env vars when deploying).
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = localStorage.getItem('omnix_token')

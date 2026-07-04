@@ -6,6 +6,7 @@ import LockIcon from '@mui/icons-material/Lock'
 import PersonIcon from '@mui/icons-material/Person'
 import BusinessIcon from '@mui/icons-material/Business'
 import { useAuth } from '../context/AuthContext'
+import { registerRequest } from '../api/auth'
 
 const inp = {
   '& .MuiOutlinedInput-root': {
@@ -39,22 +40,13 @@ export default function Signup() {
     setErr('')
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, site_name: siteName }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setErr(data.detail || 'Registration failed')
-        setLoading(false)
-        return
-      }
-      const data = await res.json()
+      const data = await registerRequest(name, email, password, siteName)
       login(data.access_token, data.user)
       nav('/rules', { replace: true })
-    } catch {
-      setErr('Could not reach the server. Is the backend running?')
+    } catch (e: any) {
+      setErr(e?.message === 'NETWORK'
+        ? 'Could not reach the server. Is the backend running?'
+        : (e?.message || 'Registration failed'))
       setLoading(false)
     }
   }

@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Box, Typography, Tooltip } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import WifiIcon from "@mui/icons-material/Wifi";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useTheme } from "../../context/ThemeContext";
-import { apiFetch } from "../../lib/api";
+import { useCameras, useIncidents } from "../../hooks/queries";
 import { CYAN, GREEN, AMBER } from "../../lib/constants";
-import type { ApiCamera, ApiIncident } from "../../types";
+import type { ApiCamera } from "../../types";
 
 const mockCameras = [
   { id: 1, name: "Camera 1 — Loading Zone", location: "Loading zone entrance", status: "online", alerts: 2, fps: 25, res: "1080p" },
@@ -22,25 +22,15 @@ const mockCameras = [
 
 export default function CamerasPage() {
   const { t } = useTheme();
-  const [cameras, setCameras] = useState<ApiCamera[]>([]);
-  const [lastDetection, setLastDetection] = useState<string | null>(null);
-  const [apiError, setApiError] = useState(false);
   const [selectedCam, setSelectedCam] = useState<ApiCamera | null>(null);
 
-  useEffect(() => {
-    const fetchCameras = async () => {
-      try {
-        const [camRes, incRes] = await Promise.all([apiFetch("/api/cameras"), apiFetch("/api/incidents")]);
-        if (camRes.ok) { const camData: ApiCamera[] = await camRes.json(); setCameras(camData); }
-        const incData: ApiIncident[] = await incRes.json();
-        if (incData?.length > 0) setLastDetection(incData[0].timestamp);
-        setApiError(false);
-      } catch (e) { console.error("Cameras fetch failed:", e); setApiError(true); }
-    };
-    fetchCameras();
-    const ti = setInterval(fetchCameras, 5000);
-    return () => clearInterval(ti);
-  }, []);
+  const { data: camerasData, isError: camError } = useCameras();
+  const { data: incidentsData, isError: incError } = useIncidents();
+
+  const cameras: ApiCamera[] = camerasData ?? [];
+  const lastDetection: string | null =
+    incidentsData && incidentsData.length > 0 ? incidentsData[0].timestamp : null;
+  const apiError = camError || incError;
 
   const mockMeta: Record<number, { alerts: number; res: string }> = {
     1: { alerts: 2, res: "1080p" }, 2: { alerts: 1, res: "1080p" }, 3: { alerts: 1, res: "720p" },

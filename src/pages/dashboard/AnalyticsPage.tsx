@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Box, Typography, LinearProgress } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import RuleIcon from "@mui/icons-material/Rule";
@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
-import { apiFetch } from "../../lib/api";
+import { useAnalytics } from "../../hooks/queries";
+import { exportIncidents } from "../../api/analytics";
 import { CYAN, PURPLE, GREEN, AMBER } from "../../lib/constants";
 
 export default function AnalyticsPage() {
@@ -23,14 +24,14 @@ export default function AnalyticsPage() {
   const [fromDate, setFromDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().split("T")[0]; });
   const [toDate, setToDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const [overTime, setOverTime] = useState<{ date: string; count: number }[]>([]);
-  const [byRule, setByRule] = useState<{ rule_name: string; count: number; severity: string }[]>([]);
-  const [byHour, setByHour] = useState<{ hour: number; count: number }[]>([]);
-  const [fpRate, setFpRate] = useState<{ rule_name: string; tp_count: number; fp_count: number; total: number; rate: number }[]>([]);
+  const { data: analytics, isFetching: loading } = useAnalytics(fromDate, toDate, period);
+  const overTime = analytics?.overTime ?? [];
+  const byRule = analytics?.byRule ?? [];
+  const byHour = analytics?.byHour ?? [];
+  const fpRate = analytics?.fpRate ?? [];
 
   const applyPreset = (p: "today" | "7d" | "30d" | "custom") => {
     setPreset(p);
@@ -40,37 +41,11 @@ export default function AnalyticsPage() {
     else if (p === "30d") { const d = new Date(); d.setDate(d.getDate() - 30); setFromDate(d.toISOString().split("T")[0]); setToDate(today); setPeriod("day"); }
   };
 
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      const params = `from_date=${fromDate}&to_date=${toDate}`;
-      const [ot, br, bh, fp] = await Promise.all([
-        apiFetch(`/api/analytics/incidents-over-time?period=${period}&${params}`).then(r => r.json()),
-        apiFetch(`/api/analytics/incidents-by-rule?${params}`).then(r => r.json()),
-        apiFetch(`/api/analytics/incidents-by-hour?${params}`).then(r => r.json()),
-        apiFetch(`/api/analytics/false-positive-rate?${params}`).then(r => r.json()),
-      ]);
-      setOverTime(Array.isArray(ot) ? ot : []);
-      setByRule(Array.isArray(br) ? br : []);
-      setByHour(Array.isArray(bh) ? bh : []);
-      setFpRate(Array.isArray(fp) ? fp : []);
-    } catch (e) { console.error("Analytics fetch failed", e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchAll(); }, [fromDate, toDate, period]);
-
   const handleExport = async (format: "csv" | "pdf") => {
     setExporting(format);
     setShowExportMenu(false);
     try {
-      const token = localStorage.getItem("omnix_token");
-      const params = `format=${format}&from_date=${fromDate}&to_date=${toDate}`;
-      const res = await fetch(`http://localhost:8000/api/export/incidents?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
+      const blob = await exportIncidents(format, fromDate, toDate);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
