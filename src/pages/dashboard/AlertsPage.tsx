@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -6,35 +6,21 @@ import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
 import { useTheme } from "../../context/ThemeContext";
-import { apiFetch } from "../../lib/api";
+import { useIncidents, useStats } from "../../hooks/queries";
 import { GREEN, AMBER, severityConfig } from "../../lib/constants";
 import { transformIncident } from "../../lib/format";
-import type { ApiIncident, ApiStats, DashboardAlert } from "../../types";
+import type { ApiStats, DashboardAlert } from "../../types";
 
 export default function AlertsPage({ navigate }: { navigate: (p: string) => void }) {
   const { t } = useTheme();
-  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
-  const [stats, setStats] = useState<ApiStats>({ total: 0, unique_persons: 0, zones_affected: [] });
-  const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState(false);
   const [filter, setFilter] = useState("All");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [incRes, statsRes] = await Promise.all([apiFetch("/api/incidents"), apiFetch("/api/stats")]);
-        const incJson = await incRes.json();
-        const statsJson = await statsRes.json();
-        setAlerts((incJson as ApiIncident[]).map(transformIncident));
-        setStats(statsJson);
-        setApiError(false);
-      } catch (e) { console.error("Dashboard fetch failed:", e); setApiError(true); }
-      setLoading(false);
-    };
-    fetchData();
-    const iv = setInterval(fetchData, 5000);
-    return () => clearInterval(iv);
-  }, []);
+  const { data: incidentsData, isLoading: loading, isError: incidentsError } = useIncidents();
+  const { data: statsData, isError: statsError } = useStats();
+
+  const alerts: DashboardAlert[] = (incidentsData ?? []).map(transformIncident);
+  const stats: ApiStats = statsData ?? { total: 0, unique_persons: 0, zones_affected: [] };
+  const apiError = incidentsError || statsError;
 
   const filtered = alerts.filter((a) => filter === "All" || a.severity === filter.toLowerCase());
   const statCards = [

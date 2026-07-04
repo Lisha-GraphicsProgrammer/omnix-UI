@@ -1,7 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline } from '@mui/material'
-import { ThemeProvider as OmnixThemeProvider } from './pages/ThemeContext'
+import { ThemeProvider as OmnixThemeProvider } from './context/ThemeContext'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './lib/queryClient'
 import App from './App.tsx'
 
 const theme = createTheme({
@@ -24,9 +26,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <OmnixThemeProvider>
-        <App />
-      </OmnixThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <OmnixThemeProvider>
+          <App />
+        </OmnixThemeProvider>
+      </QueryClientProvider>
     </MuiThemeProvider>
   </StrictMode>
 )

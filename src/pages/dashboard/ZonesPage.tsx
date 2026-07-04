@@ -6,7 +6,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, API_BASE } from "../../lib/api";
 import { CYAN, GREEN } from "../../lib/constants";
 import type { ZoneData, RuleItem } from "../../types";
 
@@ -240,7 +240,7 @@ export default function ZonesPage() {
 
       <Box sx={{ display: "flex", height: "calc(100vh - 73px)" }}>
         <Box sx={{ flex: 1, position: "relative", background: "#000", overflow: "hidden" }}>
-          <img ref={imgRef} src="http://localhost:8000/api/video/snapshot" alt="Camera feed" style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }} />
+          <img ref={imgRef} src={`${API_BASE}/api/video/snapshot`} alt="Camera feed" style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }} />
           <canvas ref={canvasRef} width={854} height={480} onMouseDown={handleCanvasMouseDown} onMouseMove={handleCanvasMouseMove} onMouseUp={handleCanvasMouseUp} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: getCursor(), zIndex: 10 }} />
           {(drawing || editingZone) && (
             <Box sx={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", px: 3, py: 1.5, borderRadius: "12px", background: "rgba(0,0,0,0.75)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", zIndex: 20 }}>
