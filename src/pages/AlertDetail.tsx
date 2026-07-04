@@ -121,8 +121,10 @@ export default function AlertDetail() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await apiFetch('/api/incidents')
-        const data: ApiIncident[] = await res.json()
+        const res = await apiFetch('/api/incidents?limit=200&offset=0')
+        const raw = await res.json()
+        // Tolerates both the paginated envelope and the legacy bare array
+        const data: ApiIncident[] = Array.isArray(raw) ? raw : (raw.items ?? [])
         setAllIncidents(data)
         // Find by actual ID instead of array index
         const found = data.find((inc: ApiIncident) => String(inc.id) === String(id))

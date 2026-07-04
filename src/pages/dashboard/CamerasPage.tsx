@@ -5,7 +5,7 @@ import WifiIcon from "@mui/icons-material/Wifi";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useTheme } from "../../context/ThemeContext";
-import { useCameras, useIncidents } from "../../hooks/queries";
+import { useCameras, useLatestIncident } from "../../hooks/queries";
 import { CYAN, GREEN, AMBER } from "../../lib/constants";
 import type { ApiCamera } from "../../types";
 
@@ -25,11 +25,10 @@ export default function CamerasPage() {
   const [selectedCam, setSelectedCam] = useState<ApiCamera | null>(null);
 
   const { data: camerasData, isError: camError } = useCameras();
-  const { data: incidentsData, isError: incError } = useIncidents();
+  const { data: latestIncident, isError: incError } = useLatestIncident();
 
   const cameras: ApiCamera[] = camerasData ?? [];
-  const lastDetection: string | null =
-    incidentsData && incidentsData.length > 0 ? incidentsData[0].timestamp : null;
+  const lastDetection: string | null = latestIncident?.timestamp ?? null;
   const apiError = camError || incError;
 
   const mockMeta: Record<number, { alerts: number; res: string }> = {
