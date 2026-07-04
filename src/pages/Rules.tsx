@@ -24,15 +24,9 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
-import CameraAltIcon from "@mui/icons-material/CameraAlt";
-import RuleIcon from "@mui/icons-material/Rule";
 import SettingsIcon from "@mui/icons-material/Settings";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import LogoutIcon from "@mui/icons-material/Logout";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import MenuIcon from "@mui/icons-material/Menu";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ReportProblemOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -41,17 +35,16 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import { useTheme } from "./ThemeContext";
+import { useTheme } from "../context/ThemeContext";
 import { apiGet, apiPost } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import Sidebar from "../components/layout/Sidebar";
+import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
 
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
 const AMBER = "#FFB300";
-const DRAWER_OPEN = 220;
-const DRAWER_CLOSED = 56;
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
 
@@ -185,15 +178,6 @@ const howItWorks = [
   { n: "02", icon: <PsychologyIcon sx={{ fontSize: 14 }} />, text: "AI extracts intent, objects & logic", color: "#a78bfa" },
   { n: "03", icon: <AccountTreeIcon sx={{ fontSize: 14 }} />, text: "OMNIX generates JSON pipeline config", color: CYAN },
   { n: "04", icon: <RocketLaunchIcon sx={{ fontSize: 14 }} />, text: "Reply 'yes' to deploy, or describe a change", color: GREEN },
-];
-
-const navItems = [
-  { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Cameras" },
-  { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} />, path: "/rules" },
-  { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Alert%20Dashboard" },
-  { text: "Zones", icon: <MyLocationIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Zones" },
-  { text: "Analytics", icon: <TrendingUpIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Analytics" },
-  { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} />, path: "/dashboard?page=Settings" },
 ];
 
 const markPendingAsDiscarded = (msgs: ChatMessage[]): ChatMessage[] =>
@@ -390,82 +374,23 @@ export default function Rules() {
   return (
     <Box sx={{ height: "100vh", display: "flex", background: t.bg, fontFamily: '"Inter", system-ui, sans-serif', overflow: "hidden" }}>
 
-      {/* SIDEBAR */}
-      <Box sx={{ width: drawerWidth, flexShrink: 0, display: "flex", flexDirection: "column", background: t.sidebarBg, borderRight: `1px solid ${t.border}`, position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100, transition: "width .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden" }}>
-        <Box sx={{ px: sidebarOpen ? 3 : 1.5, py: 3, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 1.5, minHeight: 72 }}>
-          <Box sx={{ width: 30, height: 30, borderRadius: "8px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(99,102,241,0.4)", flexShrink: 0 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="white" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="3.5" fill="white" />
-              <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
-            </svg>
-          </Box>
-          {sidebarOpen && (
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem", lineHeight: 1 }}>OMNIX</Typography>
-              <Typography sx={{ color: t.textMuted, fontSize: ".58rem", letterSpacing: ".06em" }}>ENTERPRISE</Typography>
-            </Box>
-          )}
-          <IconButton size="small" onClick={() => setSidebarOpen((o) => !o)} sx={{ color: t.textMuted, ml: sidebarOpen ? 0 : "-4px", "&:hover": { color: t.text } }}>
-            {sidebarOpen ? <ChevronLeftIcon fontSize="small" /> : <MenuIcon fontSize="small" />}
-          </IconButton>
-        </Box>
-
-        <Box sx={{ flex: 1, py: 2, overflowX: "hidden" }}>
-          {sidebarOpen && (
-            <Typography sx={{ color: t.textMuted, fontSize: ".6rem", fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", px: 3, mb: 1, opacity: 0.6 }}>Navigation</Typography>
-          )}
-          {navItems.map((item) => {
-            const isSel = item.text === "Rules";
-            return (
-              <Tooltip key={item.text} title={!sidebarOpen ? item.text : ""} placement="right">
-                <Box
-                  onClick={() => {
-                    if (item.text !== "Rules") {
-                      if (processing) {
-                        setError("Please wait for the AI to finish before navigating away.");
-                        return;
-                      }
-                      navigate(item.path, { replace: false });
-                    }
-                  }}
-                  sx={{ display: "flex", alignItems: "center", gap: 1.5, px: sidebarOpen ? 3 : 1.5, py: 1.4, mx: 1, mb: 0.5, borderRadius: "10px", cursor: "pointer", position: "relative", background: isSel ? "rgba(99,102,241,0.12)" : "transparent", border: isSel ? "1px solid rgba(99,102,241,0.2)" : "1px solid transparent", transition: "all .2s", "&:hover": { background: isSel ? "rgba(99,102,241,0.12)" : t.surfaceHover } }}
-                >
-                  {isSel && <Box sx={{ position: "absolute", left: 0, top: "25%", bottom: "25%", width: 3, borderRadius: "0 3px 3px 0", background: "#6366f1", boxShadow: "0 0 8px #6366f1" }} />}
-                  <Box sx={{ color: isSel ? "#818cf8" : t.textMuted, display: "flex", flexShrink: 0 }}>{item.icon}</Box>
-                  {sidebarOpen && <Typography sx={{ color: isSel ? t.text : t.textSecondary, fontSize: ".85rem", fontWeight: isSel ? 600 : 400, whiteSpace: "nowrap" }}>{item.text}</Typography>}
-                </Box>
-              </Tooltip>
-            );
-          })}
-        </Box>
-
-        <Box sx={{ p: sidebarOpen ? 2 : 1, borderTop: `1px solid ${t.border}` }}>
-          {sidebarOpen ? (
-            <>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: "10px 12px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, mb: 1.5 }}>
-                <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Typography sx={{ color: "#fff", fontSize: ".72rem", fontWeight: 700 }}>{(user?.name || "A").charAt(0).toUpperCase()}</Typography>
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ color: t.text, fontSize: ".78rem", fontWeight: 600, lineHeight: 1 }}>{user?.name || "Admin"}</Typography>
-                  <Typography sx={{ color: t.textMuted, fontSize: ".65rem", mt: 0.2 }} noWrap>{user?.email || ""}</Typography>
-                </Box>
-              </Box>
-              <Box onClick={() => setSignOutOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1, borderRadius: "8px", cursor: "pointer", "&:hover": { background: t.surfaceHover }, transition: "all .2s" }}>
-                <LogoutIcon sx={{ color: t.textMuted, fontSize: 15 }} />
-                <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>Sign out</Typography>
-              </Box>
-            </>
-          ) : (
-            <Tooltip title="Sign out" placement="right">
-              <Box onClick={() => setSignOutOpen(true)} sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: 1, borderRadius: "8px", cursor: "pointer", "&:hover": { background: t.surfaceHover } }}>
-                <LogoutIcon sx={{ color: t.textMuted, fontSize: 18 }} />
-              </Box>
-            </Tooltip>
-          )}
-        </Box>
-      </Box>
+      {/* SIDEBAR (shared component) */}
+      <Sidebar
+        selected="Rules"
+        onSelect={(item) => {
+          if (item === "Rules") return;
+          if (processing) {
+            setError("Please wait for the AI to finish before navigating away.");
+            return;
+          }
+          navigate(`/dashboard?page=${encodeURIComponent(item)}`, { replace: false });
+        }}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((o) => !o)}
+        onSignOut={() => setSignOutOpen(true)}
+        userName={user?.name || "Admin"}
+        userEmail={user?.email || ""}
+      />
 
       {/* MAIN */}
       <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: "flex", flexDirection: "column", transition: "margin-left .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden", height: "100vh" }}>
