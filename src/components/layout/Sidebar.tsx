@@ -2,7 +2,6 @@ import { Box, Typography, Tooltip, IconButton } from "@mui/material";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleIcon from "@mui/icons-material/Rule";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import MyLocationIcon from "@mui/icons-material/MyLocation";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -20,7 +19,6 @@ export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut,
     { text: "Cameras", icon: <CameraAltIcon sx={{ fontSize: 18 }} /> },
     { text: "Rules", icon: <RuleIcon sx={{ fontSize: 18 }} /> },
     { text: "Alert Dashboard", icon: <DashboardIcon sx={{ fontSize: 18 }} /> },
-    { text: "Zones", icon: <MyLocationIcon sx={{ fontSize: 18 }} /> },
     { text: "Analytics", icon: <TrendingUpIcon sx={{ fontSize: 18 }} /> },
     { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} /> },
   ];

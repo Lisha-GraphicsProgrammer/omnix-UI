@@ -7,7 +7,6 @@ import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
 import Sidebar from "../components/layout/Sidebar";
 import AlertsPage from "./dashboard/AlertsPage";
 import CamerasPage from "./dashboard/CamerasPage";
-import ZonesPage from "./dashboard/ZonesPage";
 import AnalyticsPage from "./dashboard/AnalyticsPage";
 import SettingsPage from "./dashboard/SettingsPage";
 
@@ -22,7 +21,8 @@ export default function Dashboard() {
 
   const getPageFromUrl = () => {
     const params = new URLSearchParams(location.search);
-    return params.get("page") || "Alert Dashboard";
+    const page = params.get("page") || "Alert Dashboard";
+    return page === "Zones" ? "Cameras" : page; // Zones page folded into the Rules wizard
   };
 
   const [selected, setSelected] = useState(getPageFromUrl);
@@ -47,7 +47,6 @@ export default function Dashboard() {
       <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: "flex", flexDirection: "column", minHeight: "100vh", transition: "margin-left .25s cubic-bezier(.4,0,.2,1)" }}>
         {selected === "Alert Dashboard" && <AlertsPage navigate={navigate} />}
         {selected === "Cameras" && <CamerasPage />}
-        {selected === "Zones" && <ZonesPage />}
         {selected === "Analytics" && <AnalyticsPage />}
         {selected === "Settings" && <SettingsPage />}
       </Box>

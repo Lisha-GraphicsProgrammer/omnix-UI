@@ -36,7 +36,9 @@ import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { useTheme } from "../context/ThemeContext";
-import { apiGet, apiPost } from "../lib/api";
+import { apiGet, apiPost, API_BASE } from "../lib/api";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import RuleSetupWizard from "../components/rules/RuleSetupWizard";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
@@ -47,6 +49,7 @@ const GREEN = "#00E676";
 const AMBER = "#FFB300";
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
+const CONTEXT_KEY = "omnix_rule_context";
 
 interface RuleHistoryItem {
   id: number;
@@ -206,6 +209,12 @@ export default function Rules() {
   const [expandedTechIds, setExpandedTechIds] = useState<Set<number>>(new Set());
   const [appliedToast, setAppliedToast] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [snapTs] = useState(() => Date.now());
+  const [ruleContext, setRuleContext] = useState<{ camera: any | null; zone: any | null }>(() => {
+    try { return JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null") || { camera: null, zone: null }; }
+    catch { return { camera: null, zone: null }; }
+  });
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -217,11 +226,13 @@ export default function Rules() {
 
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, instruction); } catch {} }, [instruction]);
   useEffect(() => { try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); } catch {} }, [chatHistory]);
+  useEffect(() => { try { localStorage.setItem(CONTEXT_KEY, JSON.stringify(ruleContext)); } catch {} }, [ruleContext]);
 
-  // Load zones
+  // Load zones for the selected camera (all zones if none selected yet)
   useEffect(() => {
-    apiGet("/api/zones").then((z: any[]) => setZones(z)).catch(() => {});
-  }, []);
+    const q = ruleContext.camera?.id != null ? `?camera_id=${ruleContext.camera.id}` : "";
+    apiGet(`/api/zones${q}`).then((z: any[]) => setZones(z)).catch(() => {});
+  }, [ruleContext.camera?.id]);
 
   // Load active rules from DB on mount
   useEffect(() => {
@@ -266,7 +277,7 @@ export default function Rules() {
     setProcessing(true);
     setError(null);
     try {
-      const data = await apiPost("/api/rules/generate", { instruction: llmInstruction });
+      const data = await apiPost("/api/rules/generate", { instruction: llmInstruction, camera_id: ruleContext.camera?.id });
       const assistantMsg: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
@@ -311,6 +322,7 @@ export default function Rules() {
 
   const handleSend = async () => {
     if (!instruction.trim() || processing) return;
+    if (!ruleContext.camera) { setWizardOpen(true); return; }
     const userMsg = instruction.trim();
     setInstruction("");
     setError(null);
@@ -545,6 +557,30 @@ export default function Rules() {
                 </Box>
               )}
 
+              {/* Rule context — camera + zone */}
+              <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                {ruleContext.camera ? (
+                  <>
+                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${CYAN}10`, border: `1px solid ${CYAN}30`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                      <CameraAltIcon sx={{ fontSize: 13, color: CYAN }} />
+                      <Typography sx={{ color: CYAN, fontSize: ".7rem", fontWeight: 700 }}>{ruleContext.camera.name}</Typography>
+                    </Box>
+                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${PURPLE}10`, border: `1px solid ${PURPLE}30`, cursor: "pointer", "&:hover": { background: `${PURPLE}20` } }}>
+                      <MyLocationIcon sx={{ fontSize: 13, color: "#a78bfa" }} />
+                      <Typography sx={{ color: "#a78bfa", fontSize: ".7rem", fontWeight: 700 }}>
+                        {ruleContext.zone ? ruleContext.zone.name.replace(/_/g, " ") : "whole frame"}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ color: t.textMuted, fontSize: ".68rem" }}>click to change</Typography>
+                  </>
+                ) : (
+                  <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.8, py: 0.7, borderRadius: "9px", background: `linear-gradient(135deg, ${PURPLE}18, ${CYAN}10)`, border: `1px dashed ${PURPLE}50`, cursor: "pointer", "&:hover": { borderColor: PURPLE } }}>
+                    <CameraAltIcon sx={{ fontSize: 15, color: "#a78bfa" }} />
+                    <Typography sx={{ color: "#a78bfa", fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
+                  </Box>
+                )}
+              </Box>
+
               {error && (
                 <Box sx={{ mb: 2, p: "14px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "flex-start", gap: 1.5 }}>
                   <ErrorOutlineIcon sx={{ color: "#fca5a5", fontSize: 18, mt: 0.2 }} />
@@ -669,12 +705,12 @@ export default function Rules() {
                     <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Camera Zones</Typography>
                     <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>{zones.length} zone{zones.length !== 1 ? "s" : ""} defined</Typography>
                   </Box>
-                  <Box onClick={() => navigate("/dashboard?page=Zones")} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
-                    <Typography sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}>Manage →</Typography>
+                  <Box onClick={() => setWizardOpen(true)} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                    <Typography sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}>Change →</Typography>
                   </Box>
                 </Box>
                 <Box sx={{ position: "relative", background: "#000", aspectRatio: "16/9" }}>
-                  <img src="http://localhost:8000/api/video/snapshot" alt="Camera" style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }} />
+                  <img src={`${API_BASE}/api/video/snapshot?camera_id=${ruleContext.camera?.id ?? 1}&t=${snapTs}`} alt="Camera" style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }} />
                   <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 854 480" preserveAspectRatio="none">
                     {zones.map((zone) => zone.polygon.length >= 3 && (
                       <g key={zone.id}>
@@ -760,6 +796,16 @@ export default function Rules() {
           <Button onClick={handleResetRules} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", px: 2.5 }}>Reset Everything</Button>
         </DialogActions>
       </Dialog>
+
+      <RuleSetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onComplete={({ camera, zone }) => {
+          setRuleContext({ camera, zone });
+          setWizardOpen(false);
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }}
+      />
 
       <Dialog open={signOutOpen} onClose={() => setSignOutOpen(false)} sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "16px", minWidth: 360 } }}>
         <DialogTitle sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}>Sign out of OMNIX?</DialogTitle>
