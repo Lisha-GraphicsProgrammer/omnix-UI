@@ -6,7 +6,7 @@ import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useTheme } from "../../context/ThemeContext";
 import { useCameras, useLatestIncident } from "../../hooks/queries";
-import { CYAN, GREEN, AMBER } from "../../lib/constants";
+import { ACCENT, GREEN, AMBER } from "../../lib/constants";
 import type { ApiCamera } from "../../types";
 
 const mockCameras = [
@@ -37,17 +37,23 @@ export default function CamerasPage() {
     7: { alerts: 0, res: "4K" }, 8: { alerts: 0, res: "720p" },
   };
 
-  const displayCameras = cameras.length > 0 ? cameras : mockCameras.map((c) => ({ id: c.id, name: c.name, location: c.location, status: c.status, stream_url: null, snapshot_url: null, fps: c.fps, resolution: c.res, source: "none" }));
+  const displayCameras = cameras.length > 0 ? cameras : mockCameras.map((c) => ({
+    id: c.id, name: c.name, location: c.location, status: c.status,
+    stream_url: null, snapshot_url: null, fps: c.fps, resolution: c.res, source: "none",
+  }));
   const onlineCount = displayCameras.filter((c) => c.status === "online").length;
   const offlineCount = displayCameras.filter((c) => c.status === "offline").length;
   const alertCount = displayCameras.reduce((a, c) => a + (mockMeta[c.id]?.alerts || 0), 0);
 
   return (
     <Box>
+      {/* Topbar */}
       <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <Box>
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Camera Management</Typography>
-          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>{apiError ? "⚠️ API offline — showing mock data" : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}</Typography>
+          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>
+            {apiError ? "⚠️ API offline — showing mock data" : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}
+          </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -55,7 +61,7 @@ export default function CamerasPage() {
             <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>{apiError ? "Offline" : "Live"}</Typography>
           </Box>
           <Tooltip title="Coming in V2" arrow>
-            <Box sx={{ px: 2.5, py: 1, borderRadius: "10px", background: "linear-gradient(135deg, #6366f1, #7c3aed)", border: "1px solid rgba(99,102,241,0.3)", cursor: "not-allowed", opacity: 0.5, boxShadow: "0 4px 14px rgba(99,102,241,0.25)" }}>
+            <Box sx={{ px: 2.5, py: 1, borderRadius: "10px", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: "not-allowed", opacity: 0.5, boxShadow: `0 4px 14px ${ACCENT}25` }}>
               <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>+ Add Camera</Typography>
             </Box>
           </Tooltip>
@@ -63,15 +69,18 @@ export default function CamerasPage() {
       </Box>
 
       <Box sx={{ p: 4 }}>
+        {/* Stat cards */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
           {[
-            { val: String(displayCameras.length), label: "Total Cameras", sub: "Configured on site", c: "#818cf8", icon: <VideocamIcon sx={{ fontSize: 20 }} /> },
+            { val: String(displayCameras.length), label: "Total Cameras", sub: "Configured on site", c: "#E8D5B0", icon: <VideocamIcon sx={{ fontSize: 20 }} /> },
             { val: String(onlineCount), label: "Online", sub: "Streaming live", c: GREEN, icon: <CheckCircleIcon sx={{ fontSize: 20 }} /> },
-            { val: String(offlineCount), label: "Offline", sub: "Needs attention", c: "#FF4444", icon: <WifiIcon sx={{ fontSize: 20 }} /> },
+            { val: String(offlineCount), label: "Offline", sub: "Needs attention", c: "#E74C3C", icon: <WifiIcon sx={{ fontSize: 20 }} /> },
             { val: String(alertCount), label: "Active Alerts", sub: "Violations detected", c: AMBER, icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
           ].map((s, i) => (
             <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", transition: "all .25s", "&:hover": { transform: "translateY(-2px)", boxShadow: `0 12px 32px ${s.c}18`, borderColor: `${s.c}30` }, "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
-              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box></Box>
+              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box>
+              </Box>
               <Box>
                 <Typography sx={{ fontSize: "1.45rem", fontWeight: 800, color: s.c, lineHeight: 1.1, letterSpacing: "-0.5px" }}>{s.val}</Typography>
                 <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 600, mt: ".2rem" }}>{s.label}</Typography>
@@ -81,23 +90,26 @@ export default function CamerasPage() {
           ))}
         </Box>
 
+        {/* Camera expand modal */}
         {selectedCam && (
-          <Box onClick={() => setSelectedCam(null)} sx={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+          <Box onClick={() => setSelectedCam(null)} sx={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
             <Box onClick={(e) => e.stopPropagation()} sx={{ width: "min(900px, 90vw)", borderRadius: "20px", overflow: "hidden", border: `1px solid ${t.border}`, boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
               <Box sx={{ px: 3, py: 2, background: t.sidebarBg, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px #ef4444" }} />
+                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
                   <Typography sx={{ color: t.text, fontWeight: 600, fontSize: ".9rem" }}>{selectedCam.name}</Typography>
-                  <Box sx={{ px: 1, py: 0.2, borderRadius: "4px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}><Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 700 }}>LIVE</Typography></Box>
+                  <Box sx={{ px: 1, py: 0.2, borderRadius: "4px", background: `${ACCENT}18`, border: `1px solid ${ACCENT}35` }}>
+                    <Typography sx={{ color: ACCENT, fontSize: ".6rem", fontWeight: 700 }}>LIVE</Typography>
+                  </Box>
                 </Box>
                 <Box onClick={() => setSelectedCam(null)} sx={{ cursor: "pointer", color: t.textMuted, fontSize: "1.2rem", px: 1, "&:hover": { color: t.text } }}>✕</Box>
               </Box>
               {selectedCam.stream_url ? (
                 <img src={selectedCam.stream_url} alt="Live stream" style={{ width: "100%", display: "block", maxHeight: "70vh", objectFit: "contain", background: "#000" }} />
               ) : (
-                <Box sx={{ height: 400, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
-                  <VideocamIcon sx={{ fontSize: 48, color: "rgba(255,255,255,0.1)" }} />
-                  <Typography sx={{ color: "rgba(255,255,255,0.3)" }}>No stream available</Typography>
+                <Box sx={{ height: 400, background: "#0a0806", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
+                  <VideocamIcon sx={{ fontSize: 48, color: "rgba(245,240,235,0.08)" }} />
+                  <Typography sx={{ color: "rgba(245,240,235,0.2)" }}>No stream available</Typography>
                 </Box>
               )}
               <Box sx={{ px: 3, py: 1.5, background: t.sidebarBg, display: "flex", gap: 3 }}>
@@ -109,55 +121,89 @@ export default function CamerasPage() {
           </Box>
         )}
 
+        {/* Camera grid */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2.5 }}>
           {displayCameras.map((cam) => {
             const meta = mockMeta[cam.id] || { alerts: 0, res: cam.resolution };
             const isOnline = cam.status === "online";
             const hasStream = !!cam.stream_url;
             return (
-              <Box key={cam.id} onClick={() => isOnline && setSelectedCam(cam)} sx={{ borderRadius: "20px", overflow: "hidden", background: t.surface, border: `1px solid ${!isOnline ? "rgba(239,68,68,0.2)" : t.border}`, transition: "all .25s", boxShadow: "0 4px 16px rgba(0,0,0,0.15)", cursor: isOnline ? "pointer" : "default", "&:hover": isOnline ? { transform: "translateY(-3px)", boxShadow: `0 12px 32px ${hasStream ? "rgba(0,212,255,0.15)" : "rgba(0,0,0,0.2)"}`, borderColor: hasStream ? `${CYAN}40` : t.border } : {} }}>
-                <Box sx={{ aspectRatio: "16/9", background: !isOnline ? "linear-gradient(135deg, #1a0a0a, #2a0f0f)" : "linear-gradient(135deg, #0d1117, #161b22)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+              <Box
+                key={cam.id}
+                onClick={() => isOnline && setSelectedCam(cam)}
+                sx={{
+                  borderRadius: "20px", overflow: "hidden",
+                  background: t.surface,
+                  border: `1px solid ${!isOnline ? "rgba(231,76,60,0.2)" : t.border}`,
+                  transition: "all .25s", boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                  cursor: isOnline ? "pointer" : "default",
+                  "&:hover": isOnline ? { transform: "translateY(-3px)", boxShadow: `0 12px 32px ${ACCENT}15`, borderColor: `${ACCENT}35` } : {},
+                }}
+              >
+                <Box sx={{ aspectRatio: "16/9", background: !isOnline ? "linear-gradient(135deg, #1a0a0a, #2a0f0f)" : "linear-gradient(135deg, #130e0c, #1e1510)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
                   {isOnline ? (
                     <>
                       {hasStream ? (
                         <img src={cam.stream_url || ""} alt={cam.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                       ) : (
                         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <VideocamIcon sx={{ color: "rgba(99,102,241,0.2)", fontSize: 32 }} />
-                          <Typography sx={{ color: "rgba(255,255,255,0.1)", fontSize: ".6rem", letterSpacing: ".06em" }}>NO SIGNAL</Typography>
+                          <VideocamIcon sx={{ color: `${ACCENT}30`, fontSize: 32 }} />
+                          <Typography sx={{ color: "rgba(245,240,235,0.1)", fontSize: ".6rem", letterSpacing: ".06em" }}>NO SIGNAL</Typography>
                         </Box>
                       )}
-                      <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 0.6, px: 1, py: 0.4, borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", backdropFilter: "blur(8px)", zIndex: 2 }}>
-                        <Box sx={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 6px #ef4444", animation: "blink 1s infinite", "@keyframes blink": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.2 } } }} />
-                        <Typography sx={{ color: "#fca5a5", fontSize: ".55rem", fontWeight: 800, letterSpacing: ".05em" }}>{hasStream ? "LIVE" : "ONLINE"}</Typography>
+                      <Box sx={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 0.6, px: 1, py: 0.4, borderRadius: "6px", background: `${ACCENT}25`, border: `1px solid ${ACCENT}50`, backdropFilter: "blur(8px)", zIndex: 2 }}>
+                        <Box sx={{ width: 5, height: 5, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 6px ${ACCENT}`, animation: "blink 1s infinite", "@keyframes blink": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.2 } } }} />
+                        <Typography sx={{ color: "#E8D5B0", fontSize: ".55rem", fontWeight: 800, letterSpacing: ".05em" }}>{hasStream ? "LIVE" : "ONLINE"}</Typography>
                       </Box>
-                      {hasStream && <Box sx={{ position: "absolute", bottom: 10, left: 10, px: 1, py: 0.3, borderRadius: "6px", background: `${CYAN}20`, border: `1px solid ${CYAN}40`, backdropFilter: "blur(8px)", zIndex: 2 }}><Typography sx={{ color: CYAN, fontSize: ".55rem", fontWeight: 700 }}>▶️ Click to expand</Typography></Box>}
-                      {meta.alerts > 0 && <Box sx={{ position: "absolute", top: 10, right: 10, px: 1, py: 0.3, borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", backdropFilter: "blur(8px)", zIndex: 2 }}><Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 800 }}>⚠️ {meta.alerts}</Typography></Box>}
+                      {hasStream && (
+                        <Box sx={{ position: "absolute", bottom: 10, left: 10, px: 1, py: 0.3, borderRadius: "6px", background: `${ACCENT}20`, border: `1px solid ${ACCENT}40`, backdropFilter: "blur(8px)", zIndex: 2 }}>
+                          <Typography sx={{ color: "#E8D5B0", fontSize: ".55rem", fontWeight: 700 }}>▶️ Click to expand</Typography>
+                        </Box>
+                      )}
+                      {meta.alerts > 0 && (
+                        <Box sx={{ position: "absolute", top: 10, right: 10, px: 1, py: 0.3, borderRadius: "6px", background: "rgba(231,76,60,0.25)", border: "1px solid rgba(231,76,60,0.5)", backdropFilter: "blur(8px)", zIndex: 2 }}>
+                          <Typography sx={{ color: "#fca5a5", fontSize: ".6rem", fontWeight: 800 }}>⚠️ {meta.alerts}</Typography>
+                        </Box>
+                      )}
                     </>
                   ) : (
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
-                      <Box sx={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><VideocamIcon sx={{ color: "rgba(239,68,68,0.5)", fontSize: 20 }} /></Box>
-                      <Typography sx={{ color: "rgba(239,68,68,0.5)", fontSize: ".68rem", fontWeight: 600, letterSpacing: ".04em" }}>OFFLINE</Typography>
+                      <Box sx={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(231,76,60,0.1)", border: "1px solid rgba(231,76,60,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <VideocamIcon sx={{ color: "rgba(231,76,60,0.5)", fontSize: 20 }} />
+                      </Box>
+                      <Typography sx={{ color: "rgba(231,76,60,0.5)", fontSize: ".68rem", fontWeight: 600, letterSpacing: ".04em" }}>OFFLINE</Typography>
                     </Box>
                   )}
                 </Box>
                 <Box sx={{ p: "14px 16px" }}>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.6 }}>
                     <Typography sx={{ color: t.text, fontSize: ".8rem", fontWeight: 600 }} noWrap>{cam.name}</Typography>
-                    <WifiIcon sx={{ fontSize: 13, color: isOnline ? "#6ee7b7" : "#fca5a5", flexShrink: 0, ml: 1 }} />
+                    <WifiIcon sx={{ fontSize: 13, color: isOnline ? GREEN : "#E74C3C", flexShrink: 0, ml: 1 }} />
                   </Box>
                   <Typography sx={{ color: t.textMuted, fontSize: ".7rem", mb: 0.8 }}>{cam.location}</Typography>
                   {cam.id === 1 && lastDetection && (
-                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.6, mb: 1, px: 1, py: 0.35, borderRadius: "6px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)" }}>
-                      <Box sx={{ width: 4, height: 4, borderRadius: "50%", background: "#ef4444", flexShrink: 0 }} />
-                      <Typography sx={{ color: "rgba(239,68,68,0.7)", fontSize: ".62rem" }}>Last: {new Date(lastDetection).toLocaleTimeString()}</Typography>
+                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.6, mb: 1, px: 1, py: 0.35, borderRadius: "6px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20` }}>
+                      <Box sx={{ width: 4, height: 4, borderRadius: "50%", background: ACCENT, flexShrink: 0 }} />
+                      <Typography sx={{ color: ACCENT, fontSize: ".62rem" }}>Last: {new Date(lastDetection).toLocaleTimeString()}</Typography>
                     </Box>
                   )}
                   <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap" }}>
-                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: isOnline ? "rgba(110,231,183,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${isOnline ? "rgba(110,231,183,0.15)" : "rgba(239,68,68,0.15)"}` }}><Typography sx={{ color: isOnline ? "#6ee7b7" : "#fca5a5", fontSize: ".58rem", fontWeight: 600 }}>{isOnline ? "● Online" : "● Offline"}</Typography></Box>
-                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}><Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{meta.res}</Typography></Box>
-                    {cam.fps > 0 && <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}><Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{cam.fps}fps</Typography></Box>}
-                    {hasStream && <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: `${CYAN}10`, border: `1px solid ${CYAN}25` }}><Typography sx={{ color: CYAN, fontSize: ".58rem", fontWeight: 600 }}>STREAM</Typography></Box>}
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: isOnline ? "rgba(39,174,96,0.08)" : "rgba(231,76,60,0.08)", border: `1px solid ${isOnline ? "rgba(39,174,96,0.2)" : "rgba(231,76,60,0.2)"}` }}>
+                      <Typography sx={{ color: isOnline ? GREEN : "#E74C3C", fontSize: ".58rem", fontWeight: 600 }}>{isOnline ? "● Online" : "● Offline"}</Typography>
+                    </Box>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}>
+                      <Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{meta.res}</Typography>
+                    </Box>
+                    {cam.fps > 0 && (
+                      <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}` }}>
+                        <Typography sx={{ color: t.textMuted, fontSize: ".58rem" }}>{cam.fps}fps</Typography>
+                      </Box>
+                    )}
+                    {hasStream && (
+                      <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: `${ACCENT}10`, border: `1px solid ${ACCENT}25` }}>
+                        <Typography sx={{ color: ACCENT, fontSize: ".58rem", fontWeight: 600 }}>STREAM</Typography>
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               </Box>
@@ -168,4 +214,3 @@ export default function CamerasPage() {
     </Box>
   );
 }
-

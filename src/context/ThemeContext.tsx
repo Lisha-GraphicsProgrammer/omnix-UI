@@ -27,32 +27,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggleMode = () => setMode(m => m === 'dark' ? 'light' : 'dark')
 
   const dark = {
-    bg: '#08080a',
-    bgSecondary: '#0d0d10',
-    surface: 'rgba(255,255,255,0.03)',
-    surfaceHover: 'rgba(255,255,255,0.06)',
-    border: 'rgba(255,255,255,0.07)',
-    borderStrong: 'rgba(255,255,255,0.12)',
-    text: '#ffffff',
-    textSecondary: 'rgba(255,255,255,0.6)',
-    textMuted: 'rgba(255,255,255,0.28)',
-    sidebarBg: '#0d0d10',
-    topbarBg: 'rgba(13,13,16,0.95)',
+    bg: '#120e0c',
+    bgSecondary: '#1a1412',
+    surface: 'rgba(255,235,220,0.04)',
+    surfaceHover: 'rgba(255,235,220,0.07)',
+    border: 'rgba(255,200,170,0.08)',
+    borderStrong: 'rgba(255,200,170,0.16)',
+    text: '#F5F0EB',
+    textSecondary: 'rgba(245,240,235,0.62)',
+    textMuted: 'rgba(245,240,235,0.30)',
+    sidebarBg: '#160f0d',
+    topbarBg: 'rgba(22,15,13,0.96)',
   }
 
-  // ── Softer, more professional light theme ──
-  const light = {
-    bg: '#f4f5f7',           // warm grey — not pure white
-    bgSecondary: '#ffffff',
-    surface: 'rgba(0,0,0,0.03)',
-    surfaceHover: 'rgba(0,0,0,0.055)',
-    border: 'rgba(0,0,0,0.08)',
-    borderStrong: 'rgba(0,0,0,0.15)',
-    text: '#1a1a2e',         // dark navy — softer than pure black
-    textSecondary: 'rgba(26,26,46,0.65)',
-    textMuted: 'rgba(26,26,46,0.38)',
-    sidebarBg: '#ffffff',
-    topbarBg: 'rgba(255,255,255,0.92)',
+  // ── Inspired by the room palette — greige + mauve + burgundy ──
+ const light = {
+    bg: '#C8BFBA',           
+    bgSecondary: '#E8E0DC',  // much lighter — cards pop out clearly
+    surface: 'rgba(255,255,255,0.55)',      // white-ish cards
+    surfaceHover: 'rgba(255,255,255,0.75)',
+    border: 'rgba(80,30,30,0.14)',
+    borderStrong: 'rgba(80,30,30,0.28)',
+    text: '#1E0E0E',         
+    textSecondary: 'rgba(30,14,14,0.68)',
+    textMuted: 'rgba(30,14,14,0.44)',
+    sidebarBg: '#9A7870',    // darker mauve-brown sidebar — more contrast
+    topbarBg: 'rgba(200,191,186,0.97)',
   }
 
   return (

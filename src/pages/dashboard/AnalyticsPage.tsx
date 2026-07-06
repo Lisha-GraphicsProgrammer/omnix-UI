@@ -13,7 +13,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useAnalytics } from "../../hooks/queries";
 import { exportIncidents } from "../../api/analytics";
-import { CYAN, PURPLE, GREEN, AMBER } from "../../lib/constants";
+import { ACCENT, GREEN, AMBER } from "../../lib/constants";
 
 export default function AnalyticsPage() {
   const { t } = useTheme();
@@ -49,8 +49,7 @@ export default function AnalyticsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const site = "Site_A";
-      a.download = `omnix_report_${site}_${fromDate}_to_${toDate}.${format}`;
+      a.download = `omnix_report_Site_A_${fromDate}_to_${toDate}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) { console.error("Export error", e); }
@@ -63,9 +62,9 @@ export default function AnalyticsPage() {
   const avgPerDay = (totalIncidents / days).toFixed(1);
   const worstHour = byHour.reduce((a, b) => b.count > a.count ? b : a, { hour: 0, count: 0 });
 
-  const CHART_COLORS = [CYAN, PURPLE, GREEN, AMBER, "#FF4444", "#FF6B6B", "#818cf8", "#f472b6"];
+  // Warm chart colors
+  const CHART_COLORS = [ACCENT, "#D4891A", GREEN, "#E8D5B0", "#E74C3C", "#A93226", "#27AE60", "#C07A1F"];
 
-  const chartBg = t.surface;
   const gridColor = t.border;
   const textColor = t.textMuted;
 
@@ -88,26 +87,28 @@ export default function AnalyticsPage() {
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Analytics</Typography>
           <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>Historical safety monitoring insights</Typography>
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          {/* Export button */}
-          {isAdmin && (
-            <Box sx={{ position: "relative" }}>
-              <Box onClick={() => setShowExportMenu(o => !o)} sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${PURPLE}, #5B21B6)`, border: `1px solid ${PURPLE}60`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s" }}>
-                <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
-                <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>{exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}</Typography>
-              </Box>
-              {showExportMenu && (
-                <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
-                  {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
-                    <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
+        {isAdmin && (
+          <Box sx={{ position: "relative" }}>
+            <Box
+              onClick={() => setShowExportMenu(o => !o)}
+              sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
+            >
+              <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
+              <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>
+                {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
+              </Typography>
             </Box>
-          )}
-        </Box>
+            {showExportMenu && (
+              <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
+                {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
+                  <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
       </Box>
 
       <Box sx={{ p: 4 }}>
@@ -115,8 +116,12 @@ export default function AnalyticsPage() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4, flexWrap: "wrap" }}>
           <Box sx={{ display: "flex", gap: 1 }}>
             {(["today", "7d", "30d", "custom"] as const).map((p) => (
-              <Box key={p} onClick={() => applyPreset(p)} sx={{ px: 2, py: 0.8, borderRadius: "8px", background: preset === p ? `${PURPLE}20` : t.surface, border: `1px solid ${preset === p ? PURPLE + "50" : t.border}`, cursor: "pointer", transition: "all .15s" }}>
-                <Typography sx={{ color: preset === p ? "#a5b4fc" : t.textMuted, fontSize: ".78rem", fontWeight: preset === p ? 700 : 400 }}>
+              <Box
+                key={p}
+                onClick={() => applyPreset(p)}
+                sx={{ px: 2, py: 0.8, borderRadius: "8px", background: preset === p ? `${ACCENT}18` : t.surface, border: `1px solid ${preset === p ? ACCENT + "50" : t.border}`, cursor: "pointer", transition: "all .15s" }}
+              >
+                <Typography sx={{ color: preset === p ? ACCENT : t.textMuted, fontSize: ".78rem", fontWeight: preset === p ? 700 : 400 }}>
                   {p === "today" ? "Today" : p === "7d" ? "Last 7 days" : p === "30d" ? "Last 30 days" : "Custom"}
                 </Typography>
               </Box>
@@ -131,26 +136,36 @@ export default function AnalyticsPage() {
           )}
           <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
             {(["day", "week", "month"] as const).map(p => (
-              <Box key={p} onClick={() => setPeriod(p)} sx={{ px: 1.5, py: 0.6, borderRadius: "7px", background: period === p ? `${CYAN}15` : "transparent", border: `1px solid ${period === p ? CYAN + "40" : t.border}`, cursor: "pointer" }}>
-                <Typography sx={{ color: period === p ? CYAN : t.textMuted, fontSize: ".72rem", fontWeight: period === p ? 700 : 400 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</Typography>
+              <Box
+                key={p}
+                onClick={() => setPeriod(p)}
+                sx={{ px: 1.5, py: 0.6, borderRadius: "7px", background: period === p ? `${ACCENT}15` : "transparent", border: `1px solid ${period === p ? ACCENT + "40" : t.border}`, cursor: "pointer" }}
+              >
+                <Typography sx={{ color: period === p ? ACCENT : t.textMuted, fontSize: ".72rem", fontWeight: period === p ? 700 : 400 }}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
-        {/* Loading */}
-        {loading && <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${PURPLE}, ${CYAN})` } }} />}
+        {/* Loading bar */}
+        {loading && (
+          <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, background: `${ACCENT}15`, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${ACCENT}, #D4891A)` } }} />
+        )}
 
         {/* Summary cards */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
           {[
-            { val: String(totalIncidents), label: "Total Incidents", sub: `${fromDate} → ${toDate}`, c: "#FF4444", icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
-            { val: String(uniqueRules), label: "Unique Rules Triggered", sub: "Distinct violation types", c: PURPLE, icon: <RuleIcon sx={{ fontSize: 20 }} /> },
-            { val: avgPerDay, label: "Avg per Day", sub: "Incidents per calendar day", c: CYAN, icon: <TrendingUpIcon sx={{ fontSize: 20 }} /> },
+            { val: String(totalIncidents), label: "Total Incidents", sub: `${fromDate} → ${toDate}`, c: "#E74C3C", icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
+            { val: String(uniqueRules), label: "Unique Rules Triggered", sub: "Distinct violation types", c: ACCENT, icon: <RuleIcon sx={{ fontSize: 20 }} /> },
+            { val: avgPerDay, label: "Avg per Day", sub: "Incidents per calendar day", c: "#E8D5B0", icon: <TrendingUpIcon sx={{ fontSize: 20 }} /> },
             { val: `${worstHour.hour}:00`, label: "Worst Hour", sub: `${worstHour.count} incidents`, c: AMBER, icon: <SpeedIcon sx={{ fontSize: 20 }} /> },
           ].map((s, i) => (
-            <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
-              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box></Box>
+            <Box key={i} sx={{ p: "20px 24px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, position: "relative", overflow: "hidden", transition: "all .25s", "&:hover": { transform: "translateY(-2px)", boxShadow: `0 12px 32px ${s.c}18`, borderColor: `${s.c}30` }, "&::before": { content: '""', position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${s.c}, transparent)` } }}>
+              <Box sx={{ width: 44, height: 44, borderRadius: "12px", background: `${s.c}18`, border: `1px solid ${s.c}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Box sx={{ color: s.c, display: "flex" }}>{s.icon}</Box>
+              </Box>
               <Box>
                 <Typography sx={{ fontSize: "1.45rem", fontWeight: 800, color: s.c, lineHeight: 1.1, letterSpacing: "-0.5px" }}>{s.val}</Typography>
                 <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 600, mt: ".2rem" }}>{s.label}</Typography>
@@ -171,7 +186,7 @@ export default function AnalyticsPage() {
 
             {/* Incidents over time */}
             <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
-              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)` }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${ACCENT}10 0%, transparent 60%)` }}>
                 <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Incidents Over Time</Typography>
                 <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Violation volume by {period}</Typography>
               </Box>
@@ -185,7 +200,7 @@ export default function AnalyticsPage() {
                       <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => v.length > 7 ? v.slice(5) : v} />
                       <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                       <RechartsTooltip contentStyle={CustomTooltipStyle} />
-                      <Line type="monotone" dataKey="count" stroke={CYAN} strokeWidth={2} dot={{ fill: CYAN, r: 3 }} activeDot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="count" stroke={ACCENT} strokeWidth={2} dot={{ fill: ACCENT, r: 3 }} activeDot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -210,7 +225,7 @@ export default function AnalyticsPage() {
                       <RechartsTooltip contentStyle={CustomTooltipStyle} formatter={(v: any) => [v, "incidents"]} labelFormatter={(l: any) => `Hour ${l}:00`} />
                       <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                         {byHour.map((entry, index) => (
-                          <Cell key={index} fill={entry.count === worstHour.count && entry.count > 0 ? "#FF4444" : AMBER} fillOpacity={0.8} />
+                          <Cell key={index} fill={entry.count === worstHour.count && entry.count > 0 ? "#E74C3C" : AMBER} fillOpacity={0.85} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -221,7 +236,7 @@ export default function AnalyticsPage() {
 
             {/* Incidents by rule */}
             <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
-              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${PURPLE}10 0%, transparent 60%)` }}>
+              <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${ACCENT}10 0%, transparent 60%)` }}>
                 <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Top Rules by Incidents</Typography>
                 <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: 0.2 }}>Top 10 most triggered rules</Typography>
               </Box>
@@ -244,7 +259,7 @@ export default function AnalyticsPage() {
               </Box>
             </Box>
 
-            {/* False positive rate table */}
+            {/* False positive rate */}
             <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
               <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${t.border}`, background: `linear-gradient(135deg, ${GREEN}10 0%, transparent 60%)` }}>
                 <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>False Positive Rate by Rule</Typography>
@@ -262,12 +277,12 @@ export default function AnalyticsPage() {
                     </Box>
                     {fpRate.map((row, i) => (
                       <Box key={i} sx={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", px: 3, py: 1.5, borderBottom: `1px solid ${t.border}`, "&:hover": { background: t.surfaceHover }, "&:last-child": { borderBottom: "none" } }}>
-                        <Typography sx={{ color: t.text, fontSize: ".8rem" }} noWrap>{row.rule_name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Typography>
+                        <Typography sx={{ color: t.text, fontSize: ".8rem" }} noWrap>{row.rule_name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</Typography>
                         <Typography sx={{ color: GREEN, fontSize: ".8rem", fontWeight: 600 }}>{row.tp_count}</Typography>
                         <Typography sx={{ color: "#fca5a5", fontSize: ".8rem", fontWeight: 600 }}>{row.fp_count}</Typography>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
                           <Box sx={{ flex: 1, height: 4, borderRadius: 2, background: t.border, overflow: "hidden" }}>
-                            <Box sx={{ height: "100%", width: `${row.rate}%`, background: row.rate > 50 ? "#ef4444" : row.rate > 20 ? AMBER : GREEN, borderRadius: 2 }} />
+                            <Box sx={{ height: "100%", width: `${row.rate}%`, background: row.rate > 50 ? "#E74C3C" : row.rate > 20 ? AMBER : GREEN, borderRadius: 2 }} />
                           </Box>
                           <Typography sx={{ color: row.rate > 50 ? "#fca5a5" : row.rate > 20 ? AMBER : GREEN, fontSize: ".75rem", fontWeight: 700, minWidth: 36 }}>{row.rate}%</Typography>
                         </Box>
@@ -277,7 +292,6 @@ export default function AnalyticsPage() {
                 )}
               </Box>
             </Box>
-
           </Box>
         )}
         <Box sx={{ height: 40 }} />
@@ -285,4 +299,3 @@ export default function AnalyticsPage() {
     </Box>
   );
 }
-

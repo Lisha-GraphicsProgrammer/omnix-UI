@@ -8,7 +8,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useTheme } from "../../context/ThemeContext";
-import { DRAWER_OPEN } from "../../lib/constants";
+import { DRAWER_OPEN, ACCENT } from "../../lib/constants";
 
 export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut, userName, userEmail }: {
   selected: string; onSelect: (s: string) => void; open: boolean; onToggle: () => void;
@@ -25,12 +25,14 @@ export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut,
 
   return (
     <Box sx={{ width: open ? DRAWER_OPEN : 56, flexShrink: 0, display: "flex", flexDirection: "column", background: t.sidebarBg, borderRight: `1px solid ${t.border}`, position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100, transition: "width .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden" }}>
+      
+      {/* Logo */}
       <Box sx={{ px: open ? 3 : 1.5, py: 3, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 1.5, minHeight: 72 }}>
-        <Box sx={{ width: 30, height: 30, borderRadius: "8px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(99,102,241,0.4)", flexShrink: 0 }}>
+        <Box sx={{ width: 30, height: 30, borderRadius: "8px", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${ACCENT}50`, flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
             <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="white" strokeWidth="1.5" />
             <circle cx="12" cy="12" r="3.5" fill="white" />
-            <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
+            <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
           </svg>
         </Box>
         {open && (
@@ -44,6 +46,7 @@ export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut,
         </IconButton>
       </Box>
 
+      {/* Nav items */}
       <Box sx={{ flex: 1, py: 2, overflowX: "hidden" }}>
         {open && (
           <Typography sx={{ color: t.textMuted, fontSize: ".6rem", fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", px: 3, mb: 1, opacity: 0.6 }}>Navigation</Typography>
@@ -52,21 +55,39 @@ export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut,
           const isSel = selected === item.text;
           return (
             <Tooltip key={item.text} title={!open ? item.text : ""} placement="right">
-              <Box onClick={() => onSelect(item.text)} sx={{ display: "flex", alignItems: "center", gap: 1.5, px: open ? 3 : 1.5, py: 1.4, mx: 1, mb: 0.5, borderRadius: "10px", cursor: "pointer", position: "relative", background: isSel ? "rgba(99,102,241,0.12)" : "transparent", border: isSel ? "1px solid rgba(99,102,241,0.2)" : "1px solid transparent", transition: "all .2s", "&:hover": { background: isSel ? "rgba(99,102,241,0.12)" : t.surfaceHover } }}>
-                {isSel && <Box sx={{ position: "absolute", left: 0, top: "25%", bottom: "25%", width: 3, borderRadius: "0 3px 3px 0", background: "#6366f1", boxShadow: "0 0 8px #6366f1" }} />}
-                <Box sx={{ color: isSel ? "#818cf8" : t.textMuted, display: "flex", transition: "color .2s", flexShrink: 0 }}>{item.icon}</Box>
-                {open && <Typography sx={{ color: isSel ? t.text : t.textSecondary, fontSize: ".85rem", fontWeight: isSel ? 600 : 400, transition: "all .2s", whiteSpace: "nowrap" }}>{item.text}</Typography>}
+              <Box
+                onClick={() => onSelect(item.text)}
+                sx={{
+                  display: "flex", alignItems: "center", gap: 1.5,
+                  px: open ? 3 : 1.5, py: 1.4, mx: 1, mb: 0.5,
+                  borderRadius: "10px", cursor: "pointer", position: "relative",
+                  background: isSel ? `${ACCENT}18` : "transparent",
+                  border: isSel ? `1px solid ${ACCENT}30` : "1px solid transparent",
+                  transition: "all .2s",
+                  "&:hover": { background: isSel ? `${ACCENT}18` : t.surfaceHover }
+                }}
+              >
+                {isSel && (
+                  <Box sx={{ position: "absolute", left: 0, top: "25%", bottom: "25%", width: 3, borderRadius: "0 3px 3px 0", background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
+                )}
+                <Box sx={{ color: isSel ? ACCENT : t.textMuted, display: "flex", transition: "color .2s", flexShrink: 0 }}>{item.icon}</Box>
+                {open && (
+                  <Typography sx={{ color: isSel ? t.text : t.textSecondary, fontSize: ".85rem", fontWeight: isSel ? 600 : 400, transition: "all .2s", whiteSpace: "nowrap" }}>
+                    {item.text}
+                  </Typography>
+                )}
               </Box>
             </Tooltip>
           );
         })}
       </Box>
 
+      {/* User section */}
       <Box sx={{ p: open ? 2 : 1, borderTop: `1px solid ${t.border}` }}>
         {open ? (
           <>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: "10px 12px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, mb: 1.5 }}>
-              <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Typography sx={{ color: "#fff", fontSize: ".72rem", fontWeight: 700 }}>{(userName || "A").charAt(0).toUpperCase()}</Typography>
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
