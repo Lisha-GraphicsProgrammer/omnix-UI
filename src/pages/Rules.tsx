@@ -1,8 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Typography, Tooltip, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, Button, Collapse, Snackbar, Alert as MuiAlert,
+  Box,
+  Typography,
+  Tooltip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Collapse,
+  Snackbar,
+  Alert as MuiAlert,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SecurityIcon from "@mui/icons-material/Security";
@@ -25,41 +35,57 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
-import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { useTheme } from "../context/ThemeContext";
 import { apiGet, apiPost, API_BASE } from "../lib/api";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleSetupWizard from "../components/rules/RuleSetupWizard";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
-import AnimatedBackground from "../components/layout/AnimatedBackground";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
 
-const ACCENT  = "#C0392B";
-const ACCENT2 = "#8B2E1F";
-const GREEN   = "#27AE60";
-const AMBER   = "#D4891A";
-const RED     = "#E74C3C";
-
-const DRAFT_KEY        = "omnix_rule_draft";
+const CYAN = "#00D4FF";
+const PURPLE = "#7C3AED";
+const GREEN = "#00E676";
+const AMBER = "#FFB300";
+const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
-const CONTEXT_KEY      = "omnix_rule_context";
+const CONTEXT_KEY = "omnix_rule_context";
 
 interface RuleHistoryItem {
-  id: number; instruction: string; status: "pending" | "active";
-  time: string; pipeline: string; alerts: number; config?: any; isNew?: boolean;
-}
-interface ChatMessage {
-  id: number; role: "user" | "assistant" | "discarded";
-  text: string; config?: any; instruction?: string; time: string;
-}
-interface ZoneData {
-  id: number; name: string; polygon: [number, number][]; color: string;
+  id: number;
+  instruction: string;
+  status: "pending" | "active";
+  time: string;
+  pipeline: string;
+  alerts: number;
+  config?: any;
+  isNew?: boolean;
 }
 
-const POSITIVE_STARTERS = /^(yes|yep|yeah|yup|sure|ok|okay|alright|confirm(ed)?|apply|approved|done|go ahead|do it|looks good|sounds good|proceed|continue|let'?s (go|do it)|that'?s right|that is right|correct|perfect|great)\b/i;
-const NUANCE_AFTER = /\b(but|except|change|modify|update|make it|set it|adjust|instead|increase|decrease|reduce|raise|also|with)\b/i;
-const SHORT_NEGATIVE_RE = /^(no|nope|nah|cancel|stop|wait|never ?mind|abort|forget it|discard)[.!?\s]*$/i;
-const FRESH_RULE_STARTER = /^(alert|warn|notify|send|trigger|detect|flag|monitor|track|count|measure|watch)\b/i;
+interface ChatMessage {
+  id: number;
+  role: "user" | "assistant" | "discarded";
+  text: string;
+  config?: any;
+  instruction?: string;
+  time: string;
+}
+
+interface ZoneData {
+  id: number;
+  name: string;
+  polygon: [number, number][];
+  color: string;
+}
+
+const POSITIVE_STARTERS =
+  /^(yes|yep|yeah|yup|sure|ok|okay|alright|confirm(ed)?|apply|approved|done|go ahead|do it|looks good|sounds good|proceed|continue|let'?s (go|do it)|that'?s right|that is right|correct|perfect|great)\b/i;
+const NUANCE_AFTER =
+  /\b(but|except|change|modify|update|make it|set it|adjust|instead|increase|decrease|reduce|raise|also|with)\b/i;
+const SHORT_NEGATIVE_RE =
+  /^(no|nope|nah|cancel|stop|wait|never ?mind|abort|forget it|discard)[.!?\s]*$/i;
+const FRESH_RULE_STARTER =
+  /^(alert|warn|notify|send|trigger|detect|flag|monitor|track|count|measure|watch)\b/i;
 
 type Intent = "confirm" | "negate" | "fresh" | "refine";
 
@@ -71,7 +97,9 @@ function classifyIntent(text: string, hasPending: boolean): Intent {
     if (t.split(/\s+/).length <= 5) return "confirm";
     return "refine";
   }
-  if (hasPending && FRESH_RULE_STARTER.test(t) && t.split(/\s+/).length >= 5) return "fresh";
+  if (hasPending && FRESH_RULE_STARTER.test(t) && t.split(/\s+/).length >= 5) {
+    return "fresh";
+  }
   return "refine";
 }
 
@@ -86,6 +114,7 @@ function buildSummary(config: any): string {
   const rule = rules[0] || {};
   const ruleType = rule.type || "";
   const required: string[] = rule.required || [];
+
   let action = "";
   if (ruleType === "missing_in_zone") {
     const gear = required.map((g: string) => g.replace(/_/g, " ")).join(" and ");
@@ -105,20 +134,25 @@ function SummaryText({ text, color }: { text: string; color: string }) {
   return (
     <Typography sx={{ fontSize: ".92rem", lineHeight: 1.75, color }}>
       {parts.map((part, i) =>
-        i % 2 === 1 ? <Box key={i} component="span" sx={{ fontWeight: 700, color: ACCENT }}>{part}</Box> : part
+        i % 2 === 1 ? (
+          <Box key={i} component="span" sx={{ fontWeight: 700, color: CYAN }}>{part}</Box>
+        ) : (part)
       )}
     </Typography>
   );
 }
 
 function SkeletonLoader({ t }: { t: any }) {
-  const pulse = (delay = 0) => ({ animation: `skpulse 1.6s ease-in-out ${delay}s infinite`, "@keyframes skpulse": { "0%,100%": { opacity: 0.35 }, "50%": { opacity: 0.8 } } });
+  const pulse = (delay = 0) => ({
+    animation: `skpulse 1.6s ease-in-out ${delay}s infinite`,
+    "@keyframes skpulse": { "0%,100%": { opacity: 0.35 }, "50%": { opacity: 0.8 } },
+  });
   const skBg = t.border;
   return (
     <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
-      <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `${ACCENT}25`, flexShrink: 0, mt: 0.5, ...pulse() }} />
-      <Box sx={{ flex: 1, borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${ACCENT}20`, background: `${ACCENT}04` }}>
-        <Box sx={{ px: 2.5, py: "14px", background: `${ACCENT}08`, borderBottom: `1px solid ${ACCENT}12`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `${CYAN}25`, flexShrink: 0, mt: 0.5, ...pulse() }} />
+      <Box sx={{ flex: 1, borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${CYAN}25`, background: `${CYAN}04` }}>
+        <Box sx={{ px: 2.5, py: "14px", background: `${CYAN}08`, borderBottom: `1px solid ${CYAN}15`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box sx={{ height: 12, width: 200, borderRadius: 6, background: skBg, ...pulse(0.1) }} />
           <Box sx={{ height: 18, width: 100, borderRadius: 6, background: skBg, ...pulse(0.2) }} />
         </Box>
@@ -137,15 +171,15 @@ function SkeletonLoader({ t }: { t: any }) {
 
 const suggestions = [
   { icon: <SecurityIcon sx={{ fontSize: 16 }} />, iconColor: AMBER, text: "Alert when worker without helmet enters loading zone", tag: "PPE Safety", tagColor: AMBER },
-  { icon: <GroupsIcon sx={{ fontSize: 16 }} />, iconColor: ACCENT, text: "Alert if more than 5 people are in the restricted area", tag: "Crowd Control", tagColor: ACCENT },
-  { icon: <WarningAmberIcon sx={{ fontSize: 16 }} />, iconColor: RED, text: "Alert when forklift comes within 5 meters of a worker", tag: "Proximity", tagColor: RED },
+  { icon: <GroupsIcon sx={{ fontSize: 16 }} />, iconColor: CYAN, text: "Alert if more than 5 people are in the restricted area", tag: "Crowd Control", tagColor: CYAN },
+  { icon: <WarningAmberIcon sx={{ fontSize: 16 }} />, iconColor: "#FF4444", text: "Alert when forklift comes within 5 meters of a worker", tag: "Proximity", tagColor: "#FF4444" },
   { icon: <BarChartIcon sx={{ fontSize: 16 }} />, iconColor: GREEN, text: "Alert if worker count exceeds 10 in warehouse zone", tag: "Count Logic", tagColor: GREEN },
 ];
 
 const howItWorks = [
-  { n: "01", icon: <EditNoteIcon sx={{ fontSize: 14 }} />, text: "Type your instruction in plain English", color: ACCENT },
-  { n: "02", icon: <PsychologyIcon sx={{ fontSize: 14 }} />, text: "AI extracts intent, objects & logic", color: AMBER },
-  { n: "03", icon: <AccountTreeIcon sx={{ fontSize: 14 }} />, text: "OMNIX generates JSON pipeline config", color: ACCENT },
+  { n: "01", icon: <EditNoteIcon sx={{ fontSize: 14 }} />, text: "Type your instruction in plain English", color: "#818cf8" },
+  { n: "02", icon: <PsychologyIcon sx={{ fontSize: 14 }} />, text: "AI extracts intent, objects & logic", color: "#a78bfa" },
+  { n: "03", icon: <AccountTreeIcon sx={{ fontSize: 14 }} />, text: "OMNIX generates JSON pipeline config", color: CYAN },
   { n: "04", icon: <RocketLaunchIcon sx={{ fontSize: 14 }} />, text: "Reply 'yes' to deploy, or describe a change", color: GREEN },
 ];
 
@@ -155,10 +189,17 @@ const markPendingAsDiscarded = (msgs: ChatMessage[]): ChatMessage[] =>
 export default function Rules() {
   const { user, logout } = useAuth();
 
-  const [instruction, setInstruction] = useState(() => { try { return localStorage.getItem(DRAFT_KEY) || ""; } catch { return ""; } });
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
-    try { const s = localStorage.getItem(CHAT_HISTORY_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
+  const [instruction, setInstruction] = useState(() => {
+    try { return localStorage.getItem(DRAFT_KEY) || ""; } catch { return ""; }
   });
+
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
+    try {
+      const s = localStorage.getItem(CHAT_HISTORY_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
+
   const [history, setHistory] = useState<RuleHistoryItem[]>([]);
   const [zones, setZones] = useState<ZoneData[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -171,13 +212,14 @@ export default function Rules() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [snapTs] = useState(() => Date.now());
   const [ruleContext, setRuleContext] = useState<{ camera: any | null; zone: any | null }>(() => {
-    try { return JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null") || { camera: null, zone: null }; } catch { return { camera: null, zone: null }; }
+    try { return JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null") || { camera: null, zone: null }; }
+    catch { return { camera: null, zone: null }; }
   });
-
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const { t, mode, toggleMode } = useTheme();
+
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED;
   const lastMsg = chatHistory[chatHistory.length - 1];
   const hasPending = lastMsg?.role === "assistant" && !!lastMsg.config;
@@ -186,89 +228,175 @@ export default function Rules() {
   useEffect(() => { try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); } catch {} }, [chatHistory]);
   useEffect(() => { try { localStorage.setItem(CONTEXT_KEY, JSON.stringify(ruleContext)); } catch {} }, [ruleContext]);
 
+  // Load zones for the selected camera (all zones if none selected yet)
   useEffect(() => {
     const q = ruleContext.camera?.id != null ? `?camera_id=${ruleContext.camera.id}` : "";
     apiGet(`/api/zones${q}`).then((z: any[]) => setZones(z)).catch(() => {});
   }, [ruleContext.camera?.id]);
 
+  // Load active rules from DB on mount
   useEffect(() => {
-    apiGet("/api/rules").then((rules: any[]) => {
-      setHistory(rules.map((r) => ({
-        id: r.id, instruction: r.instruction, status: "active",
-        time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
-        pipeline: r.pipeline_id || "YOLOv8 + ByteTrack", alerts: 0, config: r.config_json,
-      })));
-    }).catch((e) => console.error("Failed to load rules from DB", e));
+    apiGet("/api/rules")
+      .then((rules: any[]) => {
+        const mapped: RuleHistoryItem[] = rules.map((r) => ({
+          id: r.id,
+          instruction: r.instruction,
+          status: "active",
+          time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
+          pipeline: r.pipeline_id || "YOLOv8 + ByteTrack",
+          alerts: 0,
+          config: r.config_json,
+        }));
+        setHistory(mapped);
+      })
+      .catch((e) => console.error("Failed to load rules from DB", e));
   }, []);
 
   useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatHistory, processing]);
+
   useEffect(() => {
     const newOnes = history.filter((h) => h.isNew);
     if (newOnes.length === 0) return;
-    const tm = setTimeout(() => setHistory((prev) => prev.map((h) => h.isNew ? { ...h, isNew: false } : h)), 1800);
+    const tm = setTimeout(() => {
+      setHistory((prev) => prev.map((h) => (h.isNew ? { ...h, isNew: false } : h)));
+    }, 1800);
     return () => clearTimeout(tm);
   }, [history]);
+
   useEffect(() => { if (!processing) inputRef.current?.focus(); }, [processing]);
 
   const toggleTech = (id: number) => {
-    setExpandedTechIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+    setExpandedTechIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   const callLLM = async (llmInstruction: string, displayInstruction: string) => {
-    setProcessing(true); setError(null);
+    setProcessing(true);
+    setError(null);
     try {
       const data = await apiPost("/api/rules/generate", { instruction: llmInstruction, camera_id: ruleContext.camera?.id });
-      setChatHistory((prev) => [...prev, { id: Date.now() + 1, role: "assistant", text: buildSummary(data.config), config: data.config, instruction: displayInstruction, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-    } catch (e: any) { setError(e.message || "Failed to generate rule"); }
-    finally { setProcessing(false); }
+      const assistantMsg: ChatMessage = {
+        id: Date.now() + 1,
+        role: "assistant",
+        text: buildSummary(data.config),
+        config: data.config,
+        instruction: displayInstruction,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setChatHistory((prev) => [...prev, assistantMsg]);
+    } catch (e: any) {
+      setError(e.message || "Failed to generate rule");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const applyPendingRule = async (config: any, instruction: string) => {
     setProcessing(true);
     try {
       const data = await apiPost("/api/rules/apply", { config, instruction });
-      setHistory((prev) => [{ id: Date.now(), instruction, status: "active", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), pipeline: data.pipeline_id || config.pipeline_id || "YOLOv8 + ByteTrack", alerts: 0, config, isNew: true }, ...prev]);
-      setChatHistory([]); try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
-      setExpandedTechIds(new Set()); setAppliedToast(instruction);
-    } catch (e: any) { setError(e.message || "Failed to apply rule"); }
-    finally { setProcessing(false); }
+      const newRule: RuleHistoryItem = {
+        id: Date.now(),
+        instruction,
+        status: "active",
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        pipeline: data.pipeline_id || config.pipeline_id || "YOLOv8 + ByteTrack",
+        alerts: 0,
+        config,
+        isNew: true,
+      };
+      setHistory((prev) => [newRule, ...prev]);
+      setChatHistory([]);
+      try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
+      setExpandedTechIds(new Set());
+      setAppliedToast(instruction);
+      setRuleContext({ camera: null, zone: null });
+      try { localStorage.removeItem(CONTEXT_KEY); } catch {}
+    } catch (e: any) {
+      setError(e.message || "Failed to apply rule");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleSend = async () => {
     if (!instruction.trim() || processing) return;
     if (!ruleContext.camera) { setWizardOpen(true); return; }
-    const userMsg = instruction.trim(); setInstruction(""); setError(null);
-    const userChatMsg: ChatMessage = { id: Date.now(), role: "user", text: userMsg, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) };
+    const userMsg = instruction.trim();
+    setInstruction("");
+    setError(null);
+
+    const userChatMsg: ChatMessage = {
+      id: Date.now(),
+      role: "user",
+      text: userMsg,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
     const intent = classifyIntent(userMsg, hasPending);
-    if (!hasPending && (intent === "confirm" || intent === "negate")) { setError('Type a complete rule to begin.'); setInstruction(userMsg); return; }
-    if (intent === "confirm" && hasPending) { setChatHistory((prev) => [...prev, userChatMsg]); await applyPendingRule(lastMsg.config, lastMsg.instruction || userMsg); return; }
-    if (intent === "negate" && hasPending) { setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]); return; }
-    if (intent === "fresh" && hasPending) { setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]); await callLLM(userMsg, userMsg); return; }
-    if (intent === "refine" && hasPending) { const combined = `${lastMsg.instruction}, ${userMsg}`; setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]); await callLLM(combined, combined); return; }
-    setChatHistory((prev) => [...prev, userChatMsg]); await callLLM(userMsg, userMsg);
+
+    if (!hasPending && (intent === "confirm" || intent === "negate")) {
+      setError('Type a complete rule to begin — e.g. "Alert when a worker without a helmet enters the loading zone".');
+      setInstruction(userMsg);
+      return;
+    }
+    if (intent === "confirm" && hasPending) {
+      setChatHistory((prev) => [...prev, userChatMsg]);
+      await applyPendingRule(lastMsg.config, lastMsg.instruction || userMsg);
+      return;
+    }
+    if (intent === "negate" && hasPending) {
+      setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
+      return;
+    }
+    if (intent === "fresh" && hasPending) {
+      setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
+      await callLLM(userMsg, userMsg);
+      return;
+    }
+    if (intent === "refine" && hasPending) {
+      const combined = `${lastMsg.instruction}, ${userMsg}`;
+      setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
+      await callLLM(combined, combined);
+      return;
+    }
+    setChatHistory((prev) => [...prev, userChatMsg]);
+    await callLLM(userMsg, userMsg);
   };
 
   const handleResetRules = async () => {
-    try { await apiPost("/api/rules/reset"); } catch {}
-    setHistory([]); setChatHistory([]); setInstruction(""); setError(null);
-    setExpandedTechIds(new Set()); try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
+    try { await apiPost("/api/rules/reset"); } catch (e) { console.error("Reset API call failed", e); }
+    setHistory([]);
+    setChatHistory([]);
+    setInstruction("");
+    setError(null);
+    setExpandedTechIds(new Set());
+    try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
     setResetConfirmOpen(false);
   };
 
+  const handleSignOut = () => { logout(); };
+
   const canSend = !!instruction.trim() && !processing;
-  const inputBorder = processing ? t.border : hasPending ? `${ACCENT}55` : instruction ? `${ACCENT}40` : t.border;
-  const inputShadow = hasPending && !processing ? `0 0 0 4px ${ACCENT}12, 0 0 24px ${ACCENT}18` : instruction ? `0 0 0 4px ${ACCENT}08` : "none";
+  const inputBorder = processing ? t.border : hasPending ? `${CYAN}55` : instruction ? `${PURPLE}40` : t.border;
+  const inputShadow = hasPending && !processing ? `0 0 0 4px ${CYAN}12, 0 0 24px ${CYAN}20` : instruction ? `0 0 0 4px ${PURPLE}10` : "none";
   const inputPlaceholder = hasPending ? "Type 'yes' to apply, or describe what to change..." : chatHistory.length > 0 ? "Continue refining, or start a new rule..." : "e.g. Alert me when a worker without a helmet enters the loading zone...";
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", background: t.bg, fontFamily: '"Inter", system-ui, sans-serif', overflow: "hidden", position: "relative" }}>
-      <AnimatedBackground />
+    <Box sx={{ height: "100vh", display: "flex", background: t.bg, fontFamily: '"Inter", system-ui, sans-serif', overflow: "hidden" }}>
 
+      {/* SIDEBAR (shared component) */}
       <Sidebar
         selected="Rules"
         onSelect={(item) => {
           if (item === "Rules") return;
-          if (processing) { setError("Please wait for the AI to finish before navigating away."); return; }
+          if (processing) {
+            setError("Please wait for the AI to finish before navigating away.");
+            return;
+          }
           navigate(`/dashboard?page=${encodeURIComponent(item)}`, { replace: false });
         }}
         open={sidebarOpen}
@@ -278,16 +406,16 @@ export default function Rules() {
         userEmail={user?.email || ""}
       />
 
+      {/* MAIN */}
       <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: "flex", flexDirection: "column", transition: "margin-left .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden", height: "100vh" }}>
-        {/* Topbar */}
-        <Box sx={{ px: 4, height: 64, flexShrink: 0, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, background: t.topbarBg, backdropFilter: "blur(20px)", zIndex: 50, boxShadow: `0 -1px 0 0 ${ACCENT}30 inset` }}>
+        <Box sx={{ px: 4, height: 64, flexShrink: 0, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, background: t.topbarBg, backdropFilter: "blur(20px)", zIndex: 50, boxShadow: `0 -1px 0 0 ${PURPLE}50 inset` }}>
           <Box sx={{ width: "1px", height: 20, background: t.border, flexShrink: 0 }} />
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-            <Box sx={{ width: 28, height: 28, borderRadius: "7px", background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT2})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 12px ${ACCENT}40`, flexShrink: 0 }}>
+            <Box sx={{ width: 28, height: 28, borderRadius: "7px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                 <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="white" strokeWidth="1.5" />
                 <circle cx="12" cy="12" r="3.5" fill="white" />
-                <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
+                <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
               </svg>
             </Box>
             <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem", letterSpacing: "-.2px" }}>OMNIX</Typography>
@@ -312,15 +440,12 @@ export default function Rules() {
 
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* LEFT panel */}
-          <Box sx={{ flex: 1, overflowY: "auto", borderRight: `1px solid ${t.border}`, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${ACCENT}30`, borderRadius: "4px" } }}>
+          <Box sx={{ flex: 1, overflowY: "auto", borderRight: `1px solid ${t.border}`, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${PURPLE}35`, borderRadius: "4px" } }}>
             <Box sx={{ p: "40px 48px" }}>
-
-              {/* Header */}
               <Box sx={{ mb: 4 }}>
-                {/* ✅ FIXED: ACCENT color instead of CREAM for visibility in both modes */}
-                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, px: 1.5, py: 0.6, borderRadius: "20px", mb: 2.5, background: `${ACCENT}15`, border: `1px solid ${ACCENT}35`, boxShadow: `0 0 16px ${ACCENT}15` }}>
-                  <AutoFixHighIcon sx={{ fontSize: 12, color: ACCENT }} />
-                  <Typography sx={{ color: ACCENT, fontSize: ".7rem", fontWeight: 700, letterSpacing: ".04em" }}>Powered by OMNIX AI Engine</Typography>
+                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, px: 1.5, py: 0.6, borderRadius: "20px", mb: 2.5, background: `${PURPLE}15`, border: `1px solid ${PURPLE}40`, boxShadow: `0 0 16px ${PURPLE}20` }}>
+                  <AutoFixHighIcon sx={{ fontSize: 12, color: "#a5b4fc" }} />
+                  <Typography sx={{ color: "#a5b4fc", fontSize: ".7rem", fontWeight: 600, letterSpacing: ".04em" }}>Powered by OMNIX AI Engine</Typography>
                 </Box>
                 <Typography sx={{ color: t.text, fontSize: "2.2rem", fontWeight: 800, letterSpacing: "-1.2px", lineHeight: 1.1, mb: 1.5 }}>Create Detection Rule</Typography>
                 <Typography sx={{ color: t.textMuted, fontSize: ".9rem", lineHeight: 1.7, maxWidth: 480 }}>
@@ -328,7 +453,6 @@ export default function Rules() {
                 </Typography>
               </Box>
 
-              {/* Suggestions */}
               <Box sx={{ mb: 4 }}>
                 <Typography sx={{ color: t.textMuted, fontSize: ".65rem", textTransform: "uppercase", letterSpacing: ".12em", mb: 2 }}>Quick examples — click to use</Typography>
                 <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
@@ -346,26 +470,25 @@ export default function Rules() {
                 </Box>
               </Box>
 
-              {/* Chat history */}
               {chatHistory.length > 0 && (
                 <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
                   {chatHistory.map((msg) => (
                     <Box key={msg.id}>
                       {msg.role === "user" && (
                         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5 }}>
-                          <Box sx={{ maxWidth: "80%", p: "12px 16px", borderRadius: "16px 16px 4px 16px", background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT2})`, boxShadow: `0 4px 12px ${ACCENT}30` }}>
+                          <Box sx={{ maxWidth: "80%", p: "12px 16px", borderRadius: "16px 16px 4px 16px", background: `linear-gradient(135deg, ${PURPLE}, #5B21B6)`, boxShadow: `0 4px 12px ${PURPLE}30` }}>
                             <Typography sx={{ color: "#fff", fontSize: ".85rem", lineHeight: 1.6 }}>{msg.text}</Typography>
                             <Typography sx={{ color: "rgba(255,255,255,0.45)", fontSize: ".62rem", mt: 0.5, textAlign: "right" }}>{msg.time}</Typography>
                           </Box>
-                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT2})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5 }}>
+                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5 }}>
                             <PersonIcon sx={{ fontSize: 15, color: "#fff" }} />
                           </Box>
                         </Box>
                       )}
                       {(msg.role === "assistant" || msg.role === "discarded") && msg.config && (
                         <Box sx={{ display: "flex", gap: 1.5 }}>
-                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${ACCENT}40, ${ACCENT2}40)`, border: `1px solid ${ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5, opacity: msg.role === "assistant" ? 1 : 0.45 }}>
-                            <SmartToyIcon sx={{ fontSize: 15, color: ACCENT }} />
+                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${CYAN}40, ${PURPLE}40)`, border: `1px solid ${CYAN}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5, opacity: msg.role === "assistant" ? 1 : 0.45 }}>
+                            <SmartToyIcon sx={{ fontSize: 15, color: CYAN }} />
                           </Box>
                           <Box sx={{ flex: 1, maxWidth: "90%" }}>
                             {msg.role === "discarded" ? (
@@ -374,39 +497,40 @@ export default function Rules() {
                                   <Box sx={{ width: 6, height: 1.5, background: t.textMuted, borderRadius: 1 }} />
                                 </Box>
                                 <Typography sx={{ color: t.textMuted, fontSize: ".78rem", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "line-through" }}>
-                                  <Box component="span" sx={{ fontWeight: 600, mr: 0.5 }}>Discarded:</Box>{msg.instruction}
+                                  <Box component="span" sx={{ fontWeight: 600, mr: 0.5 }}>Discarded:</Box>
+                                  {msg.instruction}
                                 </Typography>
                                 <Typography sx={{ color: t.textMuted, fontSize: ".62rem", flexShrink: 0, fontFamily: "monospace" }}>{msg.time}</Typography>
                               </Box>
                             ) : (
-                              <Box sx={{ borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${ACCENT}25`, background: `${ACCENT}04` }}>
-                                <Box sx={{ px: 2.5, py: "12px", background: `${ACCENT}10`, borderBottom: `1px solid ${ACCENT}18`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <Box sx={{ borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${CYAN}30`, background: `${CYAN}05` }}>
+                                <Box sx={{ px: 2.5, py: "12px", background: `${CYAN}10`, borderBottom: `1px solid ${CYAN}20`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 700 }}>OMNIX understood your instruction</Typography>
-                                  {/* ✅ FIXED: ACCENT instead of CREAM */}
-                                  <Box sx={{ px: 1, py: 0.2, borderRadius: "5px", background: `${ACCENT}15`, border: `1px solid ${ACCENT}30` }}>
-                                    <Typography sx={{ color: ACCENT, fontSize: ".58rem", fontWeight: 700 }}>{msg.config.pipeline_id || "auto_rule"}</Typography>
+                                  <Box sx={{ px: 1, py: 0.2, borderRadius: "5px", background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
+                                    <Typography sx={{ color: "#a5b4fc", fontSize: ".58rem", fontWeight: 700 }}>{msg.config.pipeline_id || "auto_rule"}</Typography>
                                   </Box>
                                 </Box>
                                 <Box sx={{ p: "16px 20px" }}>
                                   <Box sx={{ p: "14px 16px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, mb: 2 }}>
                                     <SummaryText text={msg.text} color={t.text} />
                                   </Box>
+                                  {/* Zone reference chips */}
                                   {msg.config.zones && msg.config.zones.length > 0 && (
                                     <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mb: 1.5 }}>
                                       {msg.config.zones.map((z: any, zi: number) => {
                                         const matchedZone = zones.find((dz) => dz.name === z.name);
                                         return (
-                                          <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1.2, py: 0.4, borderRadius: "6px", background: matchedZone ? `${matchedZone.color}15` : `${ACCENT}10`, border: `1px solid ${matchedZone ? matchedZone.color + "30" : ACCENT + "25"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}25` } : {} }}>
-                                            <MyLocationIcon sx={{ fontSize: 11, color: matchedZone ? matchedZone.color : ACCENT }} />
-                                            <Typography sx={{ color: matchedZone ? matchedZone.color : ACCENT, fontSize: ".65rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
+                                          <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1.2, py: 0.4, borderRadius: "6px", background: matchedZone ? `${matchedZone.color}15` : `${CYAN}10`, border: `1px solid ${matchedZone ? matchedZone.color + "30" : CYAN + "25"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}25` } : {} }}>
+                                            <MyLocationIcon sx={{ fontSize: 11, color: matchedZone ? matchedZone.color : CYAN }} />
+                                            <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".65rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
                                             {matchedZone && <Typography sx={{ color: matchedZone.color, fontSize: ".55rem", opacity: 0.7 }}>↗</Typography>}
                                           </Box>
                                         );
                                       })}
                                     </Box>
                                   )}
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5, p: "8px 12px", borderRadius: "8px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}18` }}>
-                                    <SubdirectoryArrowRightIcon sx={{ fontSize: 14, color: ACCENT }} />
+                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5, p: "8px 12px", borderRadius: "8px", background: `${CYAN}08`, border: `1px solid ${CYAN}20` }}>
+                                    <SubdirectoryArrowRightIcon sx={{ fontSize: 14, color: CYAN }} />
                                     <Typography sx={{ color: t.textSecondary, fontSize: ".75rem" }}>
                                       Reply below — type <Box component="span" sx={{ color: GREEN, fontWeight: 700 }}>"yes"</Box> to apply, or describe what to change.
                                     </Typography>
@@ -435,32 +559,32 @@ export default function Rules() {
                 </Box>
               )}
 
-              {/* Camera + zone context */}
+              {/* Rule context — camera + zone */}
               <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                 {ruleContext.camera ? (
                   <>
-                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${ACCENT}10`, border: `1px solid ${ACCENT}30`, cursor: "pointer", "&:hover": { background: `${ACCENT}20` } }}>
-                      <CameraAltIcon sx={{ fontSize: 13, color: ACCENT }} />
-                      <Typography sx={{ color: ACCENT, fontSize: ".7rem", fontWeight: 700 }}>{ruleContext.camera.name}</Typography>
+                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${CYAN}10`, border: `1px solid ${CYAN}30`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                      <CameraAltIcon sx={{ fontSize: 13, color: CYAN }} />
+                      <Typography sx={{ color: CYAN, fontSize: ".7rem", fontWeight: 700 }}>{ruleContext.camera.name}</Typography>
                     </Box>
-                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${AMBER}10`, border: `1px solid ${AMBER}30`, cursor: "pointer", "&:hover": { background: `${AMBER}20` } }}>
-                      <MyLocationIcon sx={{ fontSize: 13, color: AMBER }} />
-                      <Typography sx={{ color: AMBER, fontSize: ".7rem", fontWeight: 700 }}>
+                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${PURPLE}10`, border: `1px solid ${PURPLE}30`, cursor: "pointer", "&:hover": { background: `${PURPLE}20` } }}>
+                      <MyLocationIcon sx={{ fontSize: 13, color: "#a78bfa" }} />
+                      <Typography sx={{ color: "#a78bfa", fontSize: ".7rem", fontWeight: 700 }}>
                         {ruleContext.zone ? ruleContext.zone.name.replace(/_/g, " ") : "whole frame"}
                       </Typography>
                     </Box>
                     <Typography sx={{ color: t.textMuted, fontSize: ".68rem" }}>click to change</Typography>
                   </>
                 ) : (
-                  <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.8, py: 0.7, borderRadius: "9px", background: `${ACCENT}10`, border: `1px dashed ${ACCENT}40`, cursor: "pointer", "&:hover": { borderColor: ACCENT, background: `${ACCENT}15` } }}>
-                    <CameraAltIcon sx={{ fontSize: 15, color: ACCENT }} />
-                    <Typography sx={{ color: ACCENT, fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
+                  <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.8, py: 0.7, borderRadius: "9px", background: `linear-gradient(135deg, ${PURPLE}18, ${CYAN}10)`, border: `1px dashed ${PURPLE}50`, cursor: "pointer", "&:hover": { borderColor: PURPLE } }}>
+                    <CameraAltIcon sx={{ fontSize: 15, color: "#a78bfa" }} />
+                    <Typography sx={{ color: "#a78bfa", fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
                   </Box>
                 )}
               </Box>
 
               {error && (
-                <Box sx={{ mb: 2, p: "14px 18px", borderRadius: "12px", background: `${RED}08`, border: `1px solid ${RED}25`, display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                <Box sx={{ mb: 2, p: "14px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "flex-start", gap: 1.5 }}>
                   <ErrorOutlineIcon sx={{ color: "#fca5a5", fontSize: 18, mt: 0.2 }} />
                   <Box sx={{ flex: 1 }}>
                     <Typography sx={{ color: "#fca5a5", fontSize: ".85rem", fontWeight: 600, mb: 0.5 }}>Heads up</Typography>
@@ -470,8 +594,7 @@ export default function Rules() {
                 </Box>
               )}
 
-              {/* Input box */}
-              <Box sx={{ borderRadius: "16px", background: t.surface, border: `1px solid ${inputBorder}`, overflow: "hidden", transition: "all .25s", boxShadow: inputShadow, ...(hasPending && !processing && { animation: "inputPulse 2.4s ease-in-out infinite", "@keyframes inputPulse": { "0%, 100%": { boxShadow: `0 0 0 4px ${ACCENT}10, 0 0 18px ${ACCENT}15` }, "50%": { boxShadow: `0 0 0 6px ${ACCENT}16, 0 0 28px ${ACCENT}22` } } }) }}>
+              <Box sx={{ borderRadius: "16px", background: t.surface, border: `1px solid ${inputBorder}`, overflow: "hidden", transition: "all .25s", boxShadow: inputShadow, ...(hasPending && !processing && { animation: "inputPulse 2.4s ease-in-out infinite", "@keyframes inputPulse": { "0%, 100%": { boxShadow: `0 0 0 4px ${CYAN}12, 0 0 18px ${CYAN}20` }, "50%": { boxShadow: `0 0 0 6px ${CYAN}18, 0 0 28px ${CYAN}30` } } }) }}>
                 <textarea
                   ref={inputRef}
                   value={instruction}
@@ -494,18 +617,13 @@ export default function Rules() {
                       </Box>
                     )}
                   </Box>
-                  <Box
-                    onClick={canSend ? handleSend : undefined}
-                    sx={{ display: "flex", alignItems: "center", gap: 1, px: "16px", py: "8px", borderRadius: "10px", background: processing || canSend ? `linear-gradient(135deg, ${ACCENT}, ${ACCENT2})` : t.surface, border: `1px solid ${processing || canSend ? ACCENT + "70" : t.border}`, cursor: canSend ? "pointer" : "default", boxShadow: canSend && !processing ? `0 4px 16px ${ACCENT}30` : processing ? `0 4px 16px ${ACCENT}20` : "none", transition: "all .2s", "&:hover": canSend && !processing ? { transform: "translateY(-1px)", boxShadow: `0 6px 20px ${ACCENT}40` } : {} }}
-                  >
+                  <Box onClick={canSend ? handleSend : undefined} sx={{ display: "flex", alignItems: "center", gap: 1, px: "16px", py: "8px", borderRadius: "10px", background: processing ? `linear-gradient(135deg, ${CYAN}, #0099CC)` : canSend ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)` : t.surface, border: `1px solid ${processing ? CYAN : canSend ? PURPLE + "70" : t.border}`, cursor: canSend ? "pointer" : "default", boxShadow: canSend && !processing ? `0 4px 16px ${PURPLE}40` : processing ? `0 4px 16px ${CYAN}30` : "none", transition: "all .2s", "&:hover": canSend && !processing ? { transform: "translateY(-1px)" } : {} }}>
                     {processing ? (
                       <SettingsIcon sx={{ fontSize: 15, color: "#fff", animation: "gearSpin 1.4s linear infinite", "@keyframes gearSpin": { "100%": { transform: "rotate(360deg)" } } }} />
                     ) : (
                       <SendIcon sx={{ fontSize: 14, color: canSend ? "#fff" : t.textMuted }} />
                     )}
-                    <Typography sx={{ fontSize: ".82rem", fontWeight: 600, color: processing || canSend ? "#fff" : t.textMuted }}>
-                      {processing ? "Calling AI Engine" : "Send"}
-                    </Typography>
+                    <Typography sx={{ fontSize: ".82rem", fontWeight: 600, color: processing || canSend ? "#fff" : t.textMuted }}>{processing ? "Calling AI Engine" : "Send"}</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -514,12 +632,12 @@ export default function Rules() {
           </Box>
 
           {/* RIGHT panel */}
-          <Box sx={{ width: 380, flexShrink: 0, overflowY: "auto", background: t.surface, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${ACCENT}30`, borderRadius: "4px" } }}>
+          <Box sx={{ width: 380, flexShrink: 0, overflowY: "auto", background: t.surface, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${PURPLE}35`, borderRadius: "4px" } }}>
             <Box sx={{ p: "40px 28px" }}>
 
               {/* Active Rules */}
               <Box sx={{ borderRadius: "16px", overflow: "hidden", mb: 3, background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${ACCENT}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${PURPLE}12 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <Box>
                     <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Active Rules</Typography>
                     <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>Applied to pipeline</Typography>
@@ -530,8 +648,8 @@ export default function Rules() {
                     </Box>
                     {history.length > 0 && (
                       <Tooltip title="Clear all rules and start fresh">
-                        <Box onClick={() => setResetConfirmOpen(true)} sx={{ px: 1, py: 0.3, borderRadius: "6px", cursor: "pointer", border: `1px solid ${RED}25`, "&:hover": { background: `${RED}08`, borderColor: `${RED}40` }, transition: "all .2s" }}>
-                          <Typography sx={{ color: `${RED}90`, fontSize: ".6rem", fontWeight: 600 }}>Reset</Typography>
+                        <Box onClick={() => setResetConfirmOpen(true)} sx={{ px: 1, py: 0.3, borderRadius: "6px", cursor: "pointer", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.4)" }, transition: "all .2s" }}>
+                          <Typography sx={{ color: "rgba(239,68,68,0.8)", fontSize: ".6rem", fontWeight: 600 }}>Reset</Typography>
                         </Box>
                       </Tooltip>
                     )}
@@ -548,7 +666,7 @@ export default function Rules() {
                       {history.map((item) => {
                         const ruleZones = item.config?.zones || [];
                         return (
-                          <Box key={item.id} sx={{ p: "14px 16px", borderRadius: "12px", background: t.surface, border: `1px solid ${item.isNew ? GREEN : t.border}`, transition: "all .25s", ...(item.isNew && { animation: "ruleFlash 1.6s ease-out", "@keyframes ruleFlash": { "0%": { borderColor: GREEN, boxShadow: `0 0 0 0 ${GREEN}80` }, "70%": { borderColor: GREEN, boxShadow: `0 0 0 6px ${GREEN}00` }, "100%": { borderColor: t.border, boxShadow: "none" } } }), "&:hover": { borderColor: `${ACCENT}25` } }}>
+                          <Box key={item.id} sx={{ p: "14px 16px", borderRadius: "12px", background: t.surface, border: `1px solid ${item.isNew ? GREEN : t.border}`, transition: "all .25s", ...(item.isNew && { animation: "ruleFlash 1.6s ease-out", "@keyframes ruleFlash": { "0%": { borderColor: GREEN, boxShadow: `0 0 0 0 ${GREEN}80, 0 0 18px ${GREEN}55` }, "70%": { borderColor: GREEN, boxShadow: `0 0 0 6px ${GREEN}00, 0 0 6px ${GREEN}30` }, "100%": { borderColor: t.border, boxShadow: "none" } } }), "&:hover": { borderColor: `${PURPLE}25` } }}>
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.8 }}>
                               <Box sx={{ display: "flex", alignItems: "center", gap: 0.7 }}>
                                 <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
@@ -557,14 +675,15 @@ export default function Rules() {
                               <Typography sx={{ color: t.textMuted, fontSize: ".65rem", fontFamily: "monospace" }}>{item.time}</Typography>
                             </Box>
                             <Typography sx={{ color: t.textSecondary, fontSize: ".82rem", lineHeight: 1.55, mb: 1 }}>{item.instruction}</Typography>
+                            {/* Zone links on active rules */}
                             {ruleZones.length > 0 && (
                               <Box sx={{ display: "flex", gap: 0.6, flexWrap: "wrap", mb: 1 }}>
                                 {ruleZones.map((z: any, zi: number) => {
                                   const matchedZone = zones.find((dz) => dz.name === z.name);
                                   return (
-                                    <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: "5px", background: matchedZone ? `${matchedZone.color}12` : `${ACCENT}08`, border: `1px solid ${matchedZone ? matchedZone.color + "25" : ACCENT + "20"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}20` } : {} }}>
-                                      <MyLocationIcon sx={{ fontSize: 10, color: matchedZone ? matchedZone.color : ACCENT }} />
-                                      <Typography sx={{ color: matchedZone ? matchedZone.color : ACCENT, fontSize: ".6rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
+                                    <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: "5px", background: matchedZone ? `${matchedZone.color}12` : `${CYAN}08`, border: `1px solid ${matchedZone ? matchedZone.color + "25" : CYAN + "20"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}20` } : {} }}>
+                                      <MyLocationIcon sx={{ fontSize: 10, color: matchedZone ? matchedZone.color : CYAN }} />
+                                      <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".6rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
                                     </Box>
                                   );
                                 })}
@@ -583,13 +702,13 @@ export default function Rules() {
 
               {/* Camera Zones Preview */}
               <Box sx={{ borderRadius: "16px", overflow: "hidden", mb: 3, background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${ACCENT}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <Box>
                     <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Camera Zones</Typography>
                     <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>{zones.length} zone{zones.length !== 1 ? "s" : ""} defined</Typography>
                   </Box>
-                  <Box onClick={() => setWizardOpen(true)} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${ACCENT}10`, border: `1px solid ${ACCENT}25`, cursor: "pointer", "&:hover": { background: `${ACCENT}20` } }}>
-                    <Typography sx={{ color: ACCENT, fontSize: ".6rem", fontWeight: 700 }}>Change →</Typography>
+                  <Box onClick={() => setWizardOpen(true)} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                    <Typography sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}>Change →</Typography>
                   </Box>
                 </Box>
                 <Box sx={{ position: "relative", background: "#000", aspectRatio: "16/9" }}>
@@ -597,8 +716,24 @@ export default function Rules() {
                   <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 854 480" preserveAspectRatio="none">
                     {zones.map((zone) => zone.polygon.length >= 3 && (
                       <g key={zone.id}>
-                        <polygon points={zone.polygon.map(([x, y]) => `${x},${y}`).join(" ")} fill={zone.color + "30"} stroke={zone.color} strokeWidth="2" />
-                        <text x={zone.polygon.reduce((s, p) => s + p[0], 0) / zone.polygon.length} y={zone.polygon.reduce((s, p) => s + p[1], 0) / zone.polygon.length} fill="#fff" fontSize="14" fontWeight="600" textAnchor="middle" dominantBaseline="middle" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}>{zone.name}</text>
+                        <polygon
+                          points={zone.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
+                          fill={zone.color + "30"}
+                          stroke={zone.color}
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={zone.polygon.reduce((s, p) => s + p[0], 0) / zone.polygon.length}
+                          y={zone.polygon.reduce((s, p) => s + p[1], 0) / zone.polygon.length}
+                          fill="#fff"
+                          fontSize="14"
+                          fontWeight="600"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+                        >
+                          {zone.name}
+                        </text>
                       </g>
                     ))}
                   </svg>
@@ -623,7 +758,7 @@ export default function Rules() {
 
               {/* How It Works */}
               <Box sx={{ borderRadius: "16px", overflow: "hidden", background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${ACCENT}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}` }}>
+                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}` }}>
                   <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>How It Works</Typography>
                   <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>From words to pipeline in seconds</Typography>
                 </Box>
@@ -656,18 +791,22 @@ export default function Rules() {
       <Dialog open={resetConfirmOpen} onClose={() => setResetConfirmOpen(false)} sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "16px", minWidth: 400 } }}>
         <DialogTitle sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}>Reset all rules?</DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}>This will clear all active rules from the pipeline and reset the chat. Detection will stop until you create a new rule.</Typography>
+          <Typography sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}>This will clear all active rules from the pipeline and reset the chat. Detection will stop until you create a new rule. This action cannot be undone.</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button onClick={() => setResetConfirmOpen(false)} sx={{ color: t.textSecondary, borderRadius: "9px", textTransform: "none", border: `1px solid ${t.border}`, px: 2.5 }}>Cancel</Button>
-          <Button onClick={handleResetRules} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: `linear-gradient(135deg, ${RED}, #C0392B)`, px: 2.5 }}>Reset Everything</Button>
+          <Button onClick={handleResetRules} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", px: 2.5 }}>Reset Everything</Button>
         </DialogActions>
       </Dialog>
 
       <RuleSetupWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        onComplete={({ camera, zone }) => { setRuleContext({ camera, zone }); setWizardOpen(false); setTimeout(() => inputRef.current?.focus(), 50); }}
+        onComplete={({ camera, zone }) => {
+          setRuleContext({ camera, zone });
+          setWizardOpen(false);
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }}
       />
 
       <Dialog open={signOutOpen} onClose={() => setSignOutOpen(false)} sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "16px", minWidth: 360 } }}>
@@ -677,7 +816,7 @@ export default function Rules() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button onClick={() => setSignOutOpen(false)} sx={{ color: t.textSecondary, borderRadius: "9px", textTransform: "none", border: `1px solid ${t.border}`, px: 2.5 }}>Cancel</Button>
-          <Button onClick={() => logout()} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: `linear-gradient(135deg, ${RED}, #C0392B)`, px: 2.5 }}>Sign Out</Button>
+          <Button onClick={handleSignOut} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", px: 2.5 }}>Sign Out</Button>
         </DialogActions>
       </Dialog>
     </Box>
