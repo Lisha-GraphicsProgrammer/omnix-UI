@@ -444,8 +444,8 @@ export default function Rules() {
             <Box sx={{ p: "40px 48px" }}>
               <Box sx={{ mb: 4 }}>
                 <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, px: 1.5, py: 0.6, borderRadius: "20px", mb: 2.5, background: `${PURPLE}15`, border: `1px solid ${PURPLE}40`, boxShadow: `0 0 16px ${PURPLE}20` }}>
-                  <AutoFixHighIcon sx={{ fontSize: 12, color: "#a5b4fc" }} />
-                  <Typography sx={{ color: "#a5b4fc", fontSize: ".7rem", fontWeight: 600, letterSpacing: ".04em" }}>Powered by OMNIX AI Engine</Typography>
+                  <AutoFixHighIcon sx={{ fontSize: 12, color: mode === "dark" ? "#c4b5fd" : "#5b21b6" }} />
+                  <Typography sx={{ color: mode === "dark" ? "#c4b5fd" : "#5b21b6", fontSize: ".7rem", fontWeight: 600, letterSpacing: ".04em" }}>Powered by OMNIX AI Engine</Typography>
                 </Box>
                 <Typography sx={{ color: t.text, fontSize: "2.2rem", fontWeight: 800, letterSpacing: "-1.2px", lineHeight: 1.1, mb: 1.5 }}>Create Detection Rule</Typography>
                 <Typography sx={{ color: t.textMuted, fontSize: ".9rem", lineHeight: 1.7, maxWidth: 480 }}>
@@ -507,7 +507,7 @@ export default function Rules() {
                                 <Box sx={{ px: 2.5, py: "12px", background: `${CYAN}10`, borderBottom: `1px solid ${CYAN}20`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 700 }}>OMNIX understood your instruction</Typography>
                                   <Box sx={{ px: 1, py: 0.2, borderRadius: "5px", background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
-                                    <Typography sx={{ color: "#a5b4fc", fontSize: ".58rem", fontWeight: 700 }}>{msg.config.pipeline_id || "auto_rule"}</Typography>
+                                    <Typography sx={{ color: mode === "dark" ? "#c4b5fd" : "#5b21b6", fontSize: ".58rem", fontWeight: 700 }}>{msg.config.pipeline_id || "auto_rule"}</Typography>
                                   </Box>
                                 </Box>
                                 <Box sx={{ p: "16px 20px" }}>
@@ -568,8 +568,8 @@ export default function Rules() {
                       <Typography sx={{ color: CYAN, fontSize: ".7rem", fontWeight: 700 }}>{ruleContext.camera.name}</Typography>
                     </Box>
                     <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${PURPLE}10`, border: `1px solid ${PURPLE}30`, cursor: "pointer", "&:hover": { background: `${PURPLE}20` } }}>
-                      <MyLocationIcon sx={{ fontSize: 13, color: "#a78bfa" }} />
-                      <Typography sx={{ color: "#a78bfa", fontSize: ".7rem", fontWeight: 700 }}>
+                      <MyLocationIcon sx={{ fontSize: 13, color: mode === "dark" ? "#a78bfa" : "#5b21b6" }} />
+                      <Typography sx={{ color: mode === "dark" ? "#a78bfa" : "#5b21b6", fontSize: ".7rem", fontWeight: 700 }}>
                         {ruleContext.zone ? ruleContext.zone.name.replace(/_/g, " ") : "whole frame"}
                       </Typography>
                     </Box>
@@ -577,8 +577,8 @@ export default function Rules() {
                   </>
                 ) : (
                   <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.8, py: 0.7, borderRadius: "9px", background: `linear-gradient(135deg, ${PURPLE}18, ${CYAN}10)`, border: `1px dashed ${PURPLE}50`, cursor: "pointer", "&:hover": { borderColor: PURPLE } }}>
-                    <CameraAltIcon sx={{ fontSize: 15, color: "#a78bfa" }} />
-                    <Typography sx={{ color: "#a78bfa", fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
+                    <CameraAltIcon sx={{ fontSize: 15, color: mode === "dark" ? "#a78bfa" : "#5b21b6" }} />
+                    <Typography sx={{ color: mode === "dark" ? "#a78bfa" : "#5b21b6", fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
                   </Box>
                 )}
               </Box>
@@ -689,9 +689,11 @@ export default function Rules() {
                                 })}
                               </Box>
                             )}
-                            <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}`, display: "inline-block" }}>
-                              <Typography sx={{ color: t.textMuted, fontSize: ".6rem", fontFamily: "monospace" }}>{item.pipeline}</Typography>
-                            </Box>
+                            <Tooltip title={item.pipeline}>
+                              <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}`, display: "block", maxWidth: "100%", overflow: "hidden" }}>
+                                <Typography sx={{ color: t.textMuted, fontSize: ".6rem", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.pipeline}</Typography>
+                              </Box>
+                            </Tooltip>
                           </Box>
                         );
                       })}
