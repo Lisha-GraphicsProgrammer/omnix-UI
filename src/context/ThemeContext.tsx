@@ -16,6 +16,9 @@ interface ThemeContextType {
     textSecondary: string
     textMuted: string
     sidebarBg: string
+    sidebarText: string
+    sidebarTextMuted: string
+    sidebarBorder: string
     topbarBg: string
   }
 }
@@ -37,6 +40,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     textSecondary: 'rgba(245,240,235,0.62)',
     textMuted: 'rgba(245,240,235,0.30)',
     sidebarBg: '#160f0d',
+    sidebarText: '#F5F0EB',
+    sidebarTextMuted: 'rgba(245,240,235,0.30)',
+    sidebarBorder: 'rgba(255,200,170,0.08)',
     topbarBg: 'rgba(22,15,13,0.96)',
   }
 
@@ -51,7 +57,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     text: '#1E0E0E',         
     textSecondary: 'rgba(30,14,14,0.68)',
     textMuted: 'rgba(30,14,14,0.44)',
-    sidebarBg: '#9A7870',    // darker mauve-brown sidebar — more contrast
+    sidebarBg: '#D9C7BE',      // soft dusty mauve — clearly distinct from the beige main bg, but still light and consistent with the rest of light mode
+    sidebarText: '#1E0E0E',    // same as body text — guaranteed legible against a light sidebar, no separate dark-panel logic needed
+    sidebarTextMuted: 'rgba(30,14,14,0.62)', // stronger than the standard textMuted so nav labels read clearly at a glance
+    sidebarBorder: 'rgba(80,30,30,0.18)',
     topbarBg: 'rgba(200,191,186,0.97)',
   }
 

@@ -94,15 +94,15 @@ export default function CamerasPage() {
         {selectedCam && (
           <Box onClick={() => setSelectedCam(null)} sx={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
             <Box onClick={(e) => e.stopPropagation()} sx={{ width: "min(900px, 90vw)", borderRadius: "20px", overflow: "hidden", border: `1px solid ${t.border}`, boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
-              <Box sx={{ px: 3, py: 2, background: t.sidebarBg, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box sx={{ px: 3, py: 2, background: t.sidebarBg, borderBottom: `1px solid ${t.sidebarBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                   <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
-                  <Typography sx={{ color: t.text, fontWeight: 600, fontSize: ".9rem" }}>{selectedCam.name}</Typography>
+                  <Typography sx={{ color: t.sidebarText, fontWeight: 600, fontSize: ".9rem" }}>{selectedCam.name}</Typography>
                   <Box sx={{ px: 1, py: 0.2, borderRadius: "4px", background: `${ACCENT}18`, border: `1px solid ${ACCENT}35` }}>
                     <Typography sx={{ color: ACCENT, fontSize: ".6rem", fontWeight: 700 }}>LIVE</Typography>
                   </Box>
                 </Box>
-                <Box onClick={() => setSelectedCam(null)} sx={{ cursor: "pointer", color: t.textMuted, fontSize: "1.2rem", px: 1, "&:hover": { color: t.text } }}>✕</Box>
+                <Box onClick={() => setSelectedCam(null)} sx={{ cursor: "pointer", color: t.sidebarTextMuted, fontSize: "1.2rem", px: 1, "&:hover": { color: t.sidebarText } }}>✕</Box>
               </Box>
               {selectedCam.stream_url ? (
                 <img src={selectedCam.stream_url} alt="Live stream" style={{ width: "100%", display: "block", maxHeight: "70vh", objectFit: "contain", background: "#000" }} />
@@ -113,9 +113,9 @@ export default function CamerasPage() {
                 </Box>
               )}
               <Box sx={{ px: 3, py: 1.5, background: t.sidebarBg, display: "flex", gap: 3 }}>
-                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>📍 {selectedCam.location}</Typography>
-                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>🎞️ {selectedCam.fps}fps</Typography>
-                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>📐 {selectedCam.resolution}</Typography>
+                <Typography sx={{ color: t.sidebarTextMuted, fontSize: ".72rem" }}>📍 {selectedCam.location}</Typography>
+                <Typography sx={{ color: t.sidebarTextMuted, fontSize: ".72rem" }}>🎞️ {selectedCam.fps}fps</Typography>
+                <Typography sx={{ color: t.sidebarTextMuted, fontSize: ".72rem" }}>📐 {selectedCam.resolution}</Typography>
               </Box>
             </Box>
           </Box>
