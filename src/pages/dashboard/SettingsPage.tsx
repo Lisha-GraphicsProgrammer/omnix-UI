@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [cooldown, setCooldown] = useState(150);
   const [confidence, setConfidence] = useState(0.5);
   const [bytetrackBuffer, setBytetrackBuffer] = useState(30);
+  const [persistenceFrames, setPersistenceFrames] = useState(5);
   const [dedup, setDedup] = useState(true);
   const [alertChannel, setAlertChannel] = useState("dashboard");
   const [emailAlerts, setEmailAlerts] = useState(false);
@@ -45,7 +46,7 @@ export default function SettingsPage() {
         const res = await apiFetch("/api/settings");
         if (!res.ok) return;
         const data = await res.json();
-        if (data.detection) { setCooldown(data.detection.alert_cooldown_frames ?? 150); setConfidence(data.detection.detection_confidence ?? 0.5); setBytetrackBuffer(data.detection.bytetrack_buffer ?? 30); }
+        if (data.detection) { setCooldown(data.detection.alert_cooldown_frames ?? 150); setConfidence(data.detection.detection_confidence ?? 0.5); setBytetrackBuffer(data.detection.bytetrack_buffer ?? 30); setPersistenceFrames(data.detection.persistence_frames ?? 5); }
         if (data.alerts) { setAlertChannel(data.alerts.channels ?? "dashboard"); setDedup(data.alerts.deduplication_enabled ?? true); setEmailAlerts(data.alerts.email_notifications_enabled ?? false); }
         if (data.ai_model) { setFrameSampling(data.ai_model.frame_sampling ?? "every"); setModelPrecision(data.ai_model.model_precision ?? "balanced"); }
         if (data.platform) { setLlmModel(data.platform.llm_model ?? "claude-haiku"); setSiteName(data.platform.site_name ?? "Site A — Construction"); setApiEndpoint(data.platform.api_endpoint ?? "http://localhost:8000"); }
@@ -57,11 +58,11 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ detection: { alert_cooldown_frames: cooldown, detection_confidence: confidence, bytetrack_buffer: bytetrackBuffer }, alerts: { channels: alertChannel, deduplication_enabled: dedup, email_notifications_enabled: emailAlerts }, ai_model: { frame_sampling: frameSampling, model_precision: modelPrecision }, platform: { llm_model: llmModel, site_name: siteName, api_endpoint: apiEndpoint } }) });
+      await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ detection: { alert_cooldown_frames: cooldown, detection_confidence: confidence, bytetrack_buffer: bytetrackBuffer, persistence_frames: persistenceFrames }, alerts: { channels: alertChannel, deduplication_enabled: dedup, email_notifications_enabled: emailAlerts }, ai_model: { frame_sampling: frameSampling, model_precision: modelPrecision }, platform: { llm_model: llmModel, site_name: siteName, api_endpoint: apiEndpoint } }) });
     } catch {} finally { setSaving(false); setDirty(false); setSaved(true); }
   };
 
-  const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
+  const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setPersistenceFrames(5); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
 
   const selectSx = {
     minWidth: 160, fontSize: "0.82rem", background: t.surface,
@@ -135,6 +136,12 @@ export default function SettingsPage() {
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
               <Slider value={cooldown} min={30} max={500} step={10} onChange={(_, v) => { setCooldown(v as number); mark(); }} sx={{ color: ACCENT, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
               <ValuePill value={`${cooldown} f`} highlight />
+            </Box>
+          </SettingRow>
+          <SettingRow label="Persistence Frames" description="Consecutive frames a violation must hold before an incident fires" tag="Anti-flicker" tooltip="Higher = fewer false positives from single-frame misdetections, but slower to catch real violations">
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
+              <Slider value={persistenceFrames} min={1} max={30} step={1} onChange={(_, v) => { setPersistenceFrames(v as number); mark(); }} sx={{ color: ACCENT, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
+              <ValuePill value={`${persistenceFrames} f`} highlight />
             </Box>
           </SettingRow>
           <SettingRow label="Detection Confidence" description="Minimum YOLO confidence score (0–1)" tag="YOLOv8" tooltip="Lower = more detections but more false positives">
