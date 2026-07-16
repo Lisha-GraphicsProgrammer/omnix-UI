@@ -42,7 +42,6 @@ import RuleSetupWizard from "../components/rules/RuleSetupWizard";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
-
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
@@ -50,7 +49,6 @@ const AMBER = "#FFB300";
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
 const CONTEXT_KEY = "omnix_rule_context";
-
 interface RuleHistoryItem {
   id: number;
   instruction: string;
@@ -297,7 +295,7 @@ export default function Rules() {
   const applyPendingRule = async (config: any, instruction: string) => {
     setProcessing(true);
     try {
-      const data = await apiPost("/api/rules/apply", { config, instruction });
+      const data = await apiPost("/api/rules/apply", { config, instruction, camera_id: ruleContext.camera?.id ?? 1 });
       const newRule: RuleHistoryItem = {
         id: Date.now(),
         instruction,
