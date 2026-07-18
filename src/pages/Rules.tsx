@@ -115,7 +115,9 @@ function buildSummary(config: any): string {
 
   let action = "";
   if (ruleType === "missing_in_zone") {
-    const gear = required.map((g: string) => g.replace(/_/g, " ")).join(" and ");
+    const gear = required
+      .map((g: string) => g.replace(/_/g, " "))
+      .join(" and ");
     action = `alert you whenever a person is detected without ${gear || "required safety gear"}`;
   } else if (ruleType === "person_in_zone") {
     action = "alert you whenever a person enters the zone";
@@ -133,8 +135,12 @@ function SummaryText({ text, color }: { text: string; color: string }) {
     <Typography sx={{ fontSize: ".92rem", lineHeight: 1.75, color }}>
       {parts.map((part, i) =>
         i % 2 === 1 ? (
-          <Box key={i} component="span" sx={{ fontWeight: 700, color: CYAN }}>{part}</Box>
-        ) : (part)
+          <Box key={i} component="span" sx={{ fontWeight: 700, color: CYAN }}>
+            {part}
+          </Box>
+        ) : (
+          part
+        ),
       )}
     </Typography>
   );
@@ -143,24 +149,97 @@ function SummaryText({ text, color }: { text: string; color: string }) {
 function SkeletonLoader({ t }: { t: any }) {
   const pulse = (delay = 0) => ({
     animation: `skpulse 1.6s ease-in-out ${delay}s infinite`,
-    "@keyframes skpulse": { "0%,100%": { opacity: 0.35 }, "50%": { opacity: 0.8 } },
+    "@keyframes skpulse": {
+      "0%,100%": { opacity: 0.35 },
+      "50%": { opacity: 0.8 },
+    },
   });
   const skBg = t.border;
   return (
     <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
-      <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `${CYAN}25`, flexShrink: 0, mt: 0.5, ...pulse() }} />
-      <Box sx={{ flex: 1, borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${CYAN}25`, background: `${CYAN}04` }}>
-        <Box sx={{ px: 2.5, py: "14px", background: `${CYAN}08`, borderBottom: `1px solid ${CYAN}15`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Box sx={{ height: 12, width: 200, borderRadius: 6, background: skBg, ...pulse(0.1) }} />
-          <Box sx={{ height: 18, width: 100, borderRadius: 6, background: skBg, ...pulse(0.2) }} />
+      <Box
+        sx={{
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          background: `${CYAN}25`,
+          flexShrink: 0,
+          mt: 0.5,
+          ...pulse(),
+        }}
+      />
+      <Box
+        sx={{
+          flex: 1,
+          borderRadius: "16px 16px 16px 4px",
+          overflow: "hidden",
+          border: `1px solid ${CYAN}25`,
+          background: `${CYAN}04`,
+        }}
+      >
+        <Box
+          sx={{
+            px: 2.5,
+            py: "14px",
+            background: `${CYAN}08`,
+            borderBottom: `1px solid ${CYAN}15`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box
+            sx={{
+              height: 12,
+              width: 200,
+              borderRadius: 6,
+              background: skBg,
+              ...pulse(0.1),
+            }}
+          />
+          <Box
+            sx={{
+              height: 18,
+              width: 100,
+              borderRadius: 6,
+              background: skBg,
+              ...pulse(0.2),
+            }}
+          />
         </Box>
         <Box sx={{ p: "16px 20px" }}>
-          <Box sx={{ p: "14px 16px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, mb: 2 }}>
+          <Box
+            sx={{
+              p: "14px 16px",
+              borderRadius: "10px",
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              mb: 2,
+            }}
+          >
             {[92, 78, 60, 40].map((w, i) => (
-              <Box key={i} sx={{ height: 11, width: `${w}%`, borderRadius: 6, background: skBg, mb: i < 3 ? 1.1 : 0, ...pulse(i * 0.12) }} />
+              <Box
+                key={i}
+                sx={{
+                  height: 11,
+                  width: `${w}%`,
+                  borderRadius: 6,
+                  background: skBg,
+                  mb: i < 3 ? 1.1 : 0,
+                  ...pulse(i * 0.12),
+                }}
+              />
             ))}
           </Box>
-          <Box sx={{ height: 10, width: 220, borderRadius: 5, background: skBg, ...pulse(0.5) }} />
+          <Box
+            sx={{
+              height: 10,
+              width: 220,
+              borderRadius: 5,
+              background: skBg,
+              ...pulse(0.5),
+            }}
+          />
         </Box>
       </Box>
     </Box>
@@ -168,34 +247,86 @@ function SkeletonLoader({ t }: { t: any }) {
 }
 
 const suggestions = [
-  { icon: <SecurityIcon sx={{ fontSize: 16 }} />, iconColor: AMBER, text: "Alert when worker without helmet enters loading zone", tag: "PPE Safety", tagColor: AMBER },
-  { icon: <GroupsIcon sx={{ fontSize: 16 }} />, iconColor: CYAN, text: "Alert if more than 5 people are in the restricted area", tag: "Crowd Control", tagColor: CYAN },
-  { icon: <WarningAmberIcon sx={{ fontSize: 16 }} />, iconColor: "#FF4444", text: "Alert when forklift comes within 5 meters of a worker", tag: "Proximity", tagColor: "#FF4444" },
-  { icon: <BarChartIcon sx={{ fontSize: 16 }} />, iconColor: GREEN, text: "Alert if worker count exceeds 10 in warehouse zone", tag: "Count Logic", tagColor: GREEN },
+  {
+    icon: <SecurityIcon sx={{ fontSize: 16 }} />,
+    iconColor: AMBER,
+    text: "Alert when worker without helmet enters loading zone",
+    tag: "PPE Safety",
+    tagColor: AMBER,
+  },
+  {
+    icon: <GroupsIcon sx={{ fontSize: 16 }} />,
+    iconColor: CYAN,
+    text: "Alert if more than 5 people are in the restricted area",
+    tag: "Crowd Control",
+    tagColor: CYAN,
+  },
+  {
+    icon: <WarningAmberIcon sx={{ fontSize: 16 }} />,
+    iconColor: "#FF4444",
+    text: "Alert when forklift comes within 5 meters of a worker",
+    tag: "Proximity",
+    tagColor: "#FF4444",
+  },
+  {
+    icon: <BarChartIcon sx={{ fontSize: 16 }} />,
+    iconColor: GREEN,
+    text: "Alert if worker count exceeds 10 in warehouse zone",
+    tag: "Count Logic",
+    tagColor: GREEN,
+  },
 ];
 
 const howItWorks = [
-  { n: "01", icon: <EditNoteIcon sx={{ fontSize: 14 }} />, text: "Type your instruction in plain English", color: "#818cf8" },
-  { n: "02", icon: <PsychologyIcon sx={{ fontSize: 14 }} />, text: "AI extracts intent, objects & logic", color: "#a78bfa" },
-  { n: "03", icon: <AccountTreeIcon sx={{ fontSize: 14 }} />, text: "OMNIX generates JSON pipeline config", color: CYAN },
-  { n: "04", icon: <RocketLaunchIcon sx={{ fontSize: 14 }} />, text: "Reply 'yes' to deploy, or describe a change", color: GREEN },
+  {
+    n: "01",
+    icon: <EditNoteIcon sx={{ fontSize: 14 }} />,
+    text: "Type your instruction in plain English",
+    color: "#818cf8",
+  },
+  {
+    n: "02",
+    icon: <PsychologyIcon sx={{ fontSize: 14 }} />,
+    text: "AI extracts intent, objects & logic",
+    color: "#a78bfa",
+  },
+  {
+    n: "03",
+    icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
+    text: "OMNIX generates JSON pipeline config",
+    color: CYAN,
+  },
+  {
+    n: "04",
+    icon: <RocketLaunchIcon sx={{ fontSize: 14 }} />,
+    text: "Reply 'yes' to deploy, or describe a change",
+    color: GREEN,
+  },
 ];
 
 const markPendingAsDiscarded = (msgs: ChatMessage[]): ChatMessage[] =>
-  msgs.map((m) => m.role === "assistant" ? { ...m, role: "discarded" as const } : m);
+  msgs.map((m) =>
+    m.role === "assistant" ? { ...m, role: "discarded" as const } : m,
+  );
 
 export default function Rules() {
   const { user, logout } = useAuth();
 
   const [instruction, setInstruction] = useState(() => {
-    try { return localStorage.getItem(DRAFT_KEY) || ""; } catch { return ""; }
+    try {
+      return localStorage.getItem(DRAFT_KEY) || "";
+    } catch {
+      return "";
+    }
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     try {
       const s = localStorage.getItem(CHAT_HISTORY_KEY);
       return s ? JSON.parse(s) : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
   const [history, setHistory] = useState<RuleHistoryItem[]>([]);
@@ -204,14 +335,28 @@ export default function Rules() {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const [expandedTechIds, setExpandedTechIds] = useState<Set<number>>(new Set());
+  const [expandedTechIds, setExpandedTechIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [appliedToast, setAppliedToast] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [pendingAutoSend, setPendingAutoSend] = useState(false);
   const [snapTs] = useState(() => Date.now());
-  const [ruleContext, setRuleContext] = useState<{ camera: any | null; zone: any | null }>(() => {
-    try { return JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null") || { camera: null, zone: null }; }
-    catch { return { camera: null, zone: null }; }
+  const [ruleContext, setRuleContext] = useState<{
+    camera: any | null;
+    zone: any | null;
+  }>(() => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null") || {
+          camera: null,
+          zone: null,
+        }
+      );
+    } catch {
+      return { camera: null, zone: null };
+    }
   });
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -222,14 +367,39 @@ export default function Rules() {
   const lastMsg = chatHistory[chatHistory.length - 1];
   const hasPending = lastMsg?.role === "assistant" && !!lastMsg.config;
 
-  useEffect(() => { try { localStorage.setItem(DRAFT_KEY, instruction); } catch {} }, [instruction]);
-  useEffect(() => { try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); } catch {} }, [chatHistory]);
-  useEffect(() => { try { localStorage.setItem(CONTEXT_KEY, JSON.stringify(ruleContext)); } catch {} }, [ruleContext]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, instruction);
+    } catch {}
+  }, [instruction]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
+    } catch {}
+  }, [chatHistory]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONTEXT_KEY, JSON.stringify(ruleContext));
+    } catch {}
+  }, [ruleContext]);
+
+  // ── Flow fix: one helper that fully clears the per-rule context ──
+  const resetRuleContext = () => {
+    setRuleContext({ camera: null, zone: null });
+    try {
+      localStorage.removeItem(CONTEXT_KEY);
+    } catch {}
+  };
 
   // Load zones for the selected camera (all zones if none selected yet)
   useEffect(() => {
-    const q = ruleContext.camera?.id != null ? `?camera_id=${ruleContext.camera.id}` : "";
-    apiGet(`/api/zones${q}`).then((z: any[]) => setZones(z)).catch(() => {});
+    const q =
+      ruleContext.camera?.id != null
+        ? `?camera_id=${ruleContext.camera.id}`
+        : "";
+    apiGet(`/api/zones${q}`)
+      .then((z: any[]) => setZones(z))
+      .catch(() => {});
   }, [ruleContext.camera?.id]);
 
   // Load active rules from DB on mount
@@ -240,7 +410,12 @@ export default function Rules() {
           id: r.id,
           instruction: r.instruction,
           status: "active",
-          time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
+          time: r.created_at
+            ? new Date(r.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "",
           pipeline: r.pipeline_id || "YOLOv8 + ByteTrack",
           alerts: 0,
           config: r.config_json,
@@ -250,43 +425,75 @@ export default function Rules() {
       .catch((e) => console.error("Failed to load rules from DB", e));
   }, []);
 
-  useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatHistory, processing]);
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory, processing]);
 
   useEffect(() => {
     const newOnes = history.filter((h) => h.isNew);
     if (newOnes.length === 0) return;
     const tm = setTimeout(() => {
-      setHistory((prev) => prev.map((h) => (h.isNew ? { ...h, isNew: false } : h)));
+      setHistory((prev) =>
+        prev.map((h) => (h.isNew ? { ...h, isNew: false } : h)),
+      );
     }, 1800);
     return () => clearTimeout(tm);
   }, [history]);
 
-  useEffect(() => { if (!processing) inputRef.current?.focus(); }, [processing]);
+  useEffect(() => {
+    if (!processing) inputRef.current?.focus();
+  }, [processing]);
+
+  // ── Flow fix: after the wizard completes, auto-send the rule the user
+  // already typed (no more "select camera, then click Send again") ──
+  useEffect(() => {
+    if (pendingAutoSend && ruleContext.camera && !wizardOpen && !processing) {
+      setPendingAutoSend(false);
+      handleSend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoSend, ruleContext.camera, wizardOpen, processing]);
 
   const toggleTech = (id: number) => {
     setExpandedTechIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  const callLLM = async (llmInstruction: string, displayInstruction: string) => {
+  const callLLM = async (
+    llmInstruction: string,
+    displayInstruction: string,
+  ) => {
     setProcessing(true);
     setError(null);
     try {
-      const data = await apiPost("/api/rules/generate", { instruction: llmInstruction, camera_id: ruleContext.camera?.id });
+      const data = await apiPost("/api/rules/generate", {
+        instruction: llmInstruction,
+        camera_id: ruleContext.camera?.id,
+      });
       const assistantMsg: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
         text: buildSummary(data.config),
         config: data.config,
         instruction: displayInstruction,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       };
       setChatHistory((prev) => [...prev, assistantMsg]);
     } catch (e: any) {
       setError(e.message || "Failed to generate rule");
+      // ── Flow fix: a failed generation releases the camera + zone.
+      // The next send (retry or new rule) reopens the wizard for a
+      // fresh, explicit selection. ──
+      resetRuleContext();
+      // Put the instruction back in the box so retrying is one click.
+      setInstruction(displayInstruction);
     } finally {
       setProcessing(false);
     }
@@ -295,24 +502,33 @@ export default function Rules() {
   const applyPendingRule = async (config: any, instruction: string) => {
     setProcessing(true);
     try {
-      const data = await apiPost("/api/rules/apply", { config, instruction, camera_id: ruleContext.camera?.id ?? 1 });
+      const data = await apiPost("/api/rules/apply", {
+        config,
+        instruction,
+        camera_id: ruleContext.camera?.id ?? 1,
+      });
       const newRule: RuleHistoryItem = {
         id: Date.now(),
         instruction,
         status: "active",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        pipeline: data.pipeline_id || config.pipeline_id || "YOLOv8 + ByteTrack",
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        pipeline:
+          data.pipeline_id || config.pipeline_id || "YOLOv8 + ByteTrack",
         alerts: 0,
         config,
         isNew: true,
       };
       setHistory((prev) => [newRule, ...prev]);
       setChatHistory([]);
-      try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
+      try {
+        localStorage.removeItem(CHAT_HISTORY_KEY);
+      } catch {}
       setExpandedTechIds(new Set());
       setAppliedToast(instruction);
-      setRuleContext({ camera: null, zone: null });
-      try { localStorage.removeItem(CONTEXT_KEY); } catch {}
+      resetRuleContext();
     } catch (e: any) {
       setError(e.message || "Failed to apply rule");
     } finally {
@@ -322,8 +538,27 @@ export default function Rules() {
 
   const handleSend = async () => {
     if (!instruction.trim() || processing) return;
-    if (!ruleContext.camera) { setWizardOpen(true); return; }
+    // No camera yet → open the wizard and auto-send once it completes.
+    if (!ruleContext.camera) {
+      setWizardOpen(true);
+      setPendingAutoSend(true);
+      return;
+    }
     const userMsg = instruction.trim();
+
+    const intent = classifyIntent(userMsg, hasPending);
+
+    // ── Flow fix: a brand-new rule while another is pending gets its OWN
+    // camera + zone. Discard the pending one, clear context, reopen wizard.
+    // The typed rule stays in the box and auto-sends after the wizard. ──
+    if (intent === "fresh" && hasPending) {
+      setChatHistory((prev) => markPendingAsDiscarded(prev));
+      resetRuleContext();
+      setWizardOpen(true);
+      setPendingAutoSend(true);
+      return;
+    }
+
     setInstruction("");
     setError(null);
 
@@ -331,13 +566,16 @@ export default function Rules() {
       id: Date.now(),
       role: "user",
       text: userMsg,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
-    const intent = classifyIntent(userMsg, hasPending);
-
     if (!hasPending && (intent === "confirm" || intent === "negate")) {
-      setError('Type a complete rule to begin — e.g. "Alert when a worker without a helmet enters the loading zone".');
+      setError(
+        'Type a complete rule to begin — e.g. "Alert when a worker without a helmet enters the loading zone".',
+      );
       setInstruction(userMsg);
       return;
     }
@@ -348,11 +586,9 @@ export default function Rules() {
     }
     if (intent === "negate" && hasPending) {
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
-      return;
-    }
-    if (intent === "fresh" && hasPending) {
-      setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
-      await callLLM(userMsg, userMsg);
+      // ── Flow fix: discarding a rule also releases its camera + zone,
+      // so the next rule starts clean with its own wizard. ──
+      resetRuleContext();
       return;
     }
     if (intent === "refine" && hasPending) {
@@ -366,36 +602,71 @@ export default function Rules() {
   };
 
   const handleResetRules = async () => {
-    try { await apiPost("/api/rules/reset"); } catch (e) { console.error("Reset API call failed", e); }
+    try {
+      await apiPost("/api/rules/reset");
+    } catch (e) {
+      console.error("Reset API call failed", e);
+    }
     setHistory([]);
     setChatHistory([]);
     setInstruction("");
     setError(null);
     setExpandedTechIds(new Set());
-    try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {}
+    resetRuleContext();
+    try {
+      localStorage.removeItem(CHAT_HISTORY_KEY);
+    } catch {}
     setResetConfirmOpen(false);
   };
 
-  const handleSignOut = () => { logout(); };
+  const handleSignOut = () => {
+    logout();
+  };
 
   const canSend = !!instruction.trim() && !processing;
-  const inputBorder = processing ? t.border : hasPending ? `${CYAN}55` : instruction ? `${PURPLE}40` : t.border;
-  const inputShadow = hasPending && !processing ? `0 0 0 4px ${CYAN}12, 0 0 24px ${CYAN}20` : instruction ? `0 0 0 4px ${PURPLE}10` : "none";
-  const inputPlaceholder = hasPending ? "Type 'yes' to apply, or describe what to change..." : chatHistory.length > 0 ? "Continue refining, or start a new rule..." : "e.g. Alert me when a worker without a helmet enters the loading zone...";
+  const inputBorder = processing
+    ? t.border
+    : hasPending
+      ? `${CYAN}55`
+      : instruction
+        ? `${PURPLE}40`
+        : t.border;
+  const inputShadow =
+    hasPending && !processing
+      ? `0 0 0 4px ${CYAN}12, 0 0 24px ${CYAN}20`
+      : instruction
+        ? `0 0 0 4px ${PURPLE}10`
+        : "none";
+  const inputPlaceholder = hasPending
+    ? "Type 'yes' to apply, or describe what to change..."
+    : chatHistory.length > 0
+      ? "Continue refining, or start a new rule..."
+      : "e.g. Alert me when a worker without a helmet enters the loading zone...";
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", background: t.bg, fontFamily: '"Inter", system-ui, sans-serif', overflow: "hidden" }}>
-
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        background: t.bg,
+        fontFamily: '"Inter", system-ui, sans-serif',
+        overflow: "hidden",
+      }}
+    >
       {/* SIDEBAR (shared component) */}
       <Sidebar
         selected="Rules"
         onSelect={(item) => {
           if (item === "Rules") return;
           if (processing) {
-            setError("Please wait for the AI to finish before navigating away.");
+            setError(
+              "Please wait for the AI to finish before navigating away.",
+            );
             return;
           }
-          navigate(`/dashboard?page=${encodeURIComponent(item)}`, { replace: false });
+          navigate(`/dashboard?page=${encodeURIComponent(item)}`, {
+            replace: false,
+          });
         }}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((o) => !o)}
@@ -405,63 +676,328 @@ export default function Rules() {
       />
 
       {/* MAIN */}
-      <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: "flex", flexDirection: "column", transition: "margin-left .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden", height: "100vh" }}>
-        <Box sx={{ px: 4, height: 64, flexShrink: 0, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 2, background: t.topbarBg, backdropFilter: "blur(20px)", zIndex: 50, boxShadow: `0 -1px 0 0 ${PURPLE}50 inset` }}>
-          <Box sx={{ width: "1px", height: 20, background: t.border, flexShrink: 0 }} />
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-            <Box sx={{ width: 28, height: 28, borderRadius: "7px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Box
+        sx={{
+          flex: 1,
+          ml: `${drawerWidth}px`,
+          display: "flex",
+          flexDirection: "column",
+          transition: "margin-left .25s cubic-bezier(.4,0,.2,1)",
+          overflow: "hidden",
+          height: "100vh",
+        }}
+      >
+        <Box
+          sx={{
+            px: 4,
+            height: 64,
+            flexShrink: 0,
+            borderBottom: `1px solid ${t.border}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            background: t.topbarBg,
+            backdropFilter: "blur(20px)",
+            zIndex: 50,
+            boxShadow: `0 -1px 0 0 ${PURPLE}50 inset`,
+          }}
+        >
+          <Box
+            sx={{
+              width: "1px",
+              height: 20,
+              background: t.border,
+              flexShrink: 0,
+            }}
+          />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              flexShrink: 0,
+            }}
+          >
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: "7px",
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="white" strokeWidth="1.5" />
+                <ellipse
+                  cx="12"
+                  cy="12"
+                  rx="10"
+                  ry="6.5"
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
                 <circle cx="12" cy="12" r="3.5" fill="white" />
                 <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
               </svg>
             </Box>
-            <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem", letterSpacing: "-.2px" }}>OMNIX</Typography>
-            <Box sx={{ width: "1px", height: 16, background: t.border, flexShrink: 0 }} />
-            <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>Rule Creation</Typography>
+            <Typography
+              sx={{
+                color: t.text,
+                fontWeight: 700,
+                fontSize: ".92rem",
+                letterSpacing: "-.2px",
+              }}
+            >
+              OMNIX
+            </Typography>
+            <Box
+              sx={{
+                width: "1px",
+                height: 16,
+                background: t.border,
+                flexShrink: 0,
+              }}
+            />
+            <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>
+              Rule Creation
+            </Typography>
           </Box>
-          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-            <Tooltip title={mode === "dark" ? "Switch to Light mode" : "Switch to Dark mode"}>
-              <IconButton onClick={toggleMode} size="small" sx={{ border: `1px solid ${t.border}`, borderRadius: "8px", color: t.textMuted, "&:hover": { color: t.text } }}>
-                {mode === "dark" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          <Box
+            sx={{
+              ml: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              flexShrink: 0,
+            }}
+          >
+            <Tooltip
+              title={
+                mode === "dark" ? "Switch to Light mode" : "Switch to Dark mode"
+              }
+            >
+              <IconButton
+                onClick={toggleMode}
+                size="small"
+                sx={{
+                  border: `1px solid ${t.border}`,
+                  borderRadius: "8px",
+                  color: t.textMuted,
+                  "&:hover": { color: t.text },
+                }}
+              >
+                {mode === "dark" ? (
+                  <LightModeIcon fontSize="small" />
+                ) : (
+                  <DarkModeIcon fontSize="small" />
+                )}
               </IconButton>
             </Tooltip>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: "p 2s infinite", "@keyframes p": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } } }} />
-              <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>AI Engine Online</Typography>
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: GREEN,
+                  boxShadow: `0 0 8px ${GREEN}`,
+                  animation: "p 2s infinite",
+                  "@keyframes p": {
+                    "0%,100%": { opacity: 1 },
+                    "50%": { opacity: 0.3 },
+                  },
+                }}
+              />
+              <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>
+                AI Engine Online
+              </Typography>
             </Box>
-            <Box sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${GREEN}10`, border: `1px solid ${GREEN}25` }}>
-              <Typography sx={{ color: GREEN, fontSize: ".6rem", fontWeight: 800, letterSpacing: ".08em" }}>LIVE</Typography>
+            <Box
+              sx={{
+                px: 1.5,
+                py: 0.4,
+                borderRadius: "6px",
+                background: `${GREEN}10`,
+                border: `1px solid ${GREEN}25`,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: GREEN,
+                  fontSize: ".6rem",
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                }}
+              >
+                LIVE
+              </Typography>
             </Box>
           </Box>
         </Box>
 
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* LEFT panel */}
-          <Box sx={{ flex: 1, overflowY: "auto", borderRight: `1px solid ${t.border}`, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${PURPLE}35`, borderRadius: "4px" } }}>
+          <Box
+            sx={{
+              flex: 1,
+              overflowY: "auto",
+              borderRight: `1px solid ${t.border}`,
+              "&::-webkit-scrollbar": { width: "4px" },
+              "&::-webkit-scrollbar-thumb": {
+                background: `${PURPLE}35`,
+                borderRadius: "4px",
+              },
+            }}
+          >
             <Box sx={{ p: "40px 48px" }}>
               <Box sx={{ mb: 4 }}>
-                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, px: 1.5, py: 0.6, borderRadius: "20px", mb: 2.5, background: `${PURPLE}15`, border: `1px solid ${PURPLE}40`, boxShadow: `0 0 16px ${PURPLE}20` }}>
-                  <AutoFixHighIcon sx={{ fontSize: 12, color: mode === "dark" ? "#c4b5fd" : "#5b21b6" }} />
-                  <Typography sx={{ color: mode === "dark" ? "#c4b5fd" : "#5b21b6", fontSize: ".7rem", fontWeight: 600, letterSpacing: ".04em" }}>Powered by OMNIX AI Engine</Typography>
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1,
+                    px: 1.5,
+                    py: 0.6,
+                    borderRadius: "20px",
+                    mb: 2.5,
+                    background: `${PURPLE}15`,
+                    border: `1px solid ${PURPLE}40`,
+                    boxShadow: `0 0 16px ${PURPLE}20`,
+                  }}
+                >
+                  <AutoFixHighIcon
+                    sx={{
+                      fontSize: 12,
+                      color: mode === "dark" ? "#c4b5fd" : "#5b21b6",
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: mode === "dark" ? "#c4b5fd" : "#5b21b6",
+                      fontSize: ".7rem",
+                      fontWeight: 600,
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    Powered by OMNIX AI Engine
+                  </Typography>
                 </Box>
-                <Typography sx={{ color: t.text, fontSize: "2.2rem", fontWeight: 800, letterSpacing: "-1.2px", lineHeight: 1.1, mb: 1.5 }}>Create Detection Rule</Typography>
-                <Typography sx={{ color: t.textMuted, fontSize: ".9rem", lineHeight: 1.7, maxWidth: 480 }}>
-                  Type a plain English instruction. OMNIX converts it into a production-grade YOLOv8 + ByteTrack computer vision pipeline automatically.
+                <Typography
+                  sx={{
+                    color: t.text,
+                    fontSize: "2.2rem",
+                    fontWeight: 800,
+                    letterSpacing: "-1.2px",
+                    lineHeight: 1.1,
+                    mb: 1.5,
+                  }}
+                >
+                  Create Detection Rule
+                </Typography>
+                <Typography
+                  sx={{
+                    color: t.textMuted,
+                    fontSize: ".9rem",
+                    lineHeight: 1.7,
+                    maxWidth: 480,
+                  }}
+                >
+                  Type a plain English instruction. OMNIX converts it into a
+                  production-grade YOLOv8 + ByteTrack computer vision pipeline
+                  automatically.
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 4 }}>
-                <Typography sx={{ color: t.textMuted, fontSize: ".65rem", textTransform: "uppercase", letterSpacing: ".12em", mb: 2 }}>Quick examples — click to use</Typography>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                <Typography
+                  sx={{
+                    color: t.textMuted,
+                    fontSize: ".65rem",
+                    textTransform: "uppercase",
+                    letterSpacing: ".12em",
+                    mb: 2,
+                  }}
+                >
+                  Quick examples — click to use
+                </Typography>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 1.5,
+                  }}
+                >
                   {suggestions.map((s, i) => (
-                    <Box key={i} onClick={() => setInstruction(s.text)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, p: "14px 16px", borderRadius: "14px", background: t.surface, border: `1px solid ${t.border}`, cursor: "pointer", transition: "all .2s", "&:hover": { background: `${s.iconColor}08`, borderColor: `${s.iconColor}30`, transform: "translateY(-2px)" } }}>
-                      <Box sx={{ width: 32, height: 32, borderRadius: "9px", background: `${s.iconColor}18`, border: `1px solid ${s.iconColor}35`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: s.iconColor }}>{s.icon}</Box>
+                    <Box
+                      key={i}
+                      onClick={() => setInstruction(s.text)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 1.5,
+                        p: "14px 16px",
+                        borderRadius: "14px",
+                        background: t.surface,
+                        border: `1px solid ${t.border}`,
+                        cursor: "pointer",
+                        transition: "all .2s",
+                        "&:hover": {
+                          background: `${s.iconColor}08`,
+                          borderColor: `${s.iconColor}30`,
+                          transform: "translateY(-2px)",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "9px",
+                          background: `${s.iconColor}18`,
+                          border: `1px solid ${s.iconColor}35`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          color: s.iconColor,
+                        }}
+                      >
+                        {s.icon}
+                      </Box>
                       <Box>
-                        <Box sx={{ display: "inline-flex", px: 1, py: 0.2, borderRadius: "5px", background: `${s.tagColor}15`, border: `1px solid ${s.tagColor}30`, mb: 0.7 }}>
-                          <Typography sx={{ color: s.tagColor, fontSize: ".6rem", fontWeight: 700 }}>{s.tag}</Typography>
+                        <Box
+                          sx={{
+                            display: "inline-flex",
+                            px: 1,
+                            py: 0.2,
+                            borderRadius: "5px",
+                            background: `${s.tagColor}15`,
+                            border: `1px solid ${s.tagColor}30`,
+                            mb: 0.7,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: s.tagColor,
+                              fontSize: ".6rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {s.tag}
+                          </Typography>
                         </Box>
-                        <Typography sx={{ color: t.textSecondary, fontSize: ".8rem", lineHeight: 1.5 }}>{s.text}</Typography>
+                        <Typography
+                          sx={{
+                            color: t.textSecondary,
+                            fontSize: ".8rem",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {s.text}
+                        </Typography>
                       </Box>
                     </Box>
                   ))}
@@ -469,87 +1005,416 @@ export default function Rules() {
               </Box>
 
               {chatHistory.length > 0 && (
-                <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box
+                  sx={{
+                    mb: 3,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                  }}
+                >
                   {chatHistory.map((msg) => (
                     <Box key={msg.id}>
                       {msg.role === "user" && (
-                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5 }}>
-                          <Box sx={{ maxWidth: "80%", p: "12px 16px", borderRadius: "16px 16px 4px 16px", background: `linear-gradient(135deg, ${PURPLE}, #5B21B6)`, boxShadow: `0 4px 12px ${PURPLE}30` }}>
-                            <Typography sx={{ color: "#fff", fontSize: ".85rem", lineHeight: 1.6 }}>{msg.text}</Typography>
-                            <Typography sx={{ color: "rgba(255,255,255,0.45)", fontSize: ".62rem", mt: 0.5, textAlign: "right" }}>{msg.time}</Typography>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 1.5,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              maxWidth: "80%",
+                              p: "12px 16px",
+                              borderRadius: "16px 16px 4px 16px",
+                              background: `linear-gradient(135deg, ${PURPLE}, #5B21B6)`,
+                              boxShadow: `0 4px 12px ${PURPLE}30`,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color: "#fff",
+                                fontSize: ".85rem",
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {msg.text}
+                            </Typography>
+                            <Typography
+                              sx={{
+                                color: "rgba(255,255,255,0.45)",
+                                fontSize: ".62rem",
+                                mt: 0.5,
+                                textAlign: "right",
+                              }}
+                            >
+                              {msg.time}
+                            </Typography>
                           </Box>
-                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5 }}>
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: "50%",
+                              background:
+                                "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              mt: 0.5,
+                            }}
+                          >
                             <PersonIcon sx={{ fontSize: 15, color: "#fff" }} />
                           </Box>
                         </Box>
                       )}
-                      {(msg.role === "assistant" || msg.role === "discarded") && msg.config && (
-                        <Box sx={{ display: "flex", gap: 1.5 }}>
-                          <Box sx={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${CYAN}40, ${PURPLE}40)`, border: `1px solid ${CYAN}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.5, opacity: msg.role === "assistant" ? 1 : 0.45 }}>
-                            <SmartToyIcon sx={{ fontSize: 15, color: CYAN }} />
-                          </Box>
-                          <Box sx={{ flex: 1, maxWidth: "90%" }}>
-                            {msg.role === "discarded" ? (
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, p: "8px 14px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, opacity: 0.4, transition: "opacity .2s", "&:hover": { opacity: 0.8 } }}>
-                                <Box sx={{ width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${t.textMuted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                  <Box sx={{ width: 6, height: 1.5, background: t.textMuted, borderRadius: 1 }} />
-                                </Box>
-                                <Typography sx={{ color: t.textMuted, fontSize: ".78rem", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "line-through" }}>
-                                  <Box component="span" sx={{ fontWeight: 600, mr: 0.5 }}>Discarded:</Box>
-                                  {msg.instruction}
-                                </Typography>
-                                <Typography sx={{ color: t.textMuted, fontSize: ".62rem", flexShrink: 0, fontFamily: "monospace" }}>{msg.time}</Typography>
-                              </Box>
-                            ) : (
-                              <Box sx={{ borderRadius: "16px 16px 16px 4px", overflow: "hidden", border: `1px solid ${CYAN}30`, background: `${CYAN}05` }}>
-                                <Box sx={{ px: 2.5, py: "12px", background: `${CYAN}10`, borderBottom: `1px solid ${CYAN}20`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <Typography sx={{ color: t.text, fontSize: ".82rem", fontWeight: 700 }}>OMNIX understood your instruction</Typography>
-                                  <Box sx={{ px: 1, py: 0.2, borderRadius: "5px", background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
-                                    <Typography sx={{ color: mode === "dark" ? "#c4b5fd" : "#5b21b6", fontSize: ".58rem", fontWeight: 700 }}>{msg.config.pipeline_id || "auto_rule"}</Typography>
+                      {(msg.role === "assistant" || msg.role === "discarded") &&
+                        msg.config && (
+                          <Box sx={{ display: "flex", gap: 1.5 }}>
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: "50%",
+                                background: `linear-gradient(135deg, ${CYAN}40, ${PURPLE}40)`,
+                                border: `1px solid ${CYAN}40`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                mt: 0.5,
+                                opacity: msg.role === "assistant" ? 1 : 0.45,
+                              }}
+                            >
+                              <SmartToyIcon
+                                sx={{ fontSize: 15, color: CYAN }}
+                              />
+                            </Box>
+                            <Box sx={{ flex: 1, maxWidth: "90%" }}>
+                              {msg.role === "discarded" ? (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1.2,
+                                    p: "8px 14px",
+                                    borderRadius: "10px",
+                                    background: t.surface,
+                                    border: `1px solid ${t.border}`,
+                                    opacity: 0.4,
+                                    transition: "opacity .2s",
+                                    "&:hover": { opacity: 0.8 },
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 14,
+                                      height: 14,
+                                      borderRadius: "50%",
+                                      border: `1.5px solid ${t.textMuted}`,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        width: 6,
+                                        height: 1.5,
+                                        background: t.textMuted,
+                                        borderRadius: 1,
+                                      }}
+                                    />
                                   </Box>
-                                </Box>
-                                <Box sx={{ p: "16px 20px" }}>
-                                  <Box sx={{ p: "14px 16px", borderRadius: "10px", background: t.surface, border: `1px solid ${t.border}`, mb: 2 }}>
-                                    <SummaryText text={msg.text} color={t.text} />
-                                  </Box>
-                                  {/* Zone reference chips */}
-                                  {msg.config.zones && msg.config.zones.length > 0 && (
-                                    <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mb: 1.5 }}>
-                                      {msg.config.zones.map((z: any, zi: number) => {
-                                        const matchedZone = zones.find((dz) => dz.name === z.name);
-                                        return (
-                                          <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1.2, py: 0.4, borderRadius: "6px", background: matchedZone ? `${matchedZone.color}15` : `${CYAN}10`, border: `1px solid ${matchedZone ? matchedZone.color + "30" : CYAN + "25"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}25` } : {} }}>
-                                            <MyLocationIcon sx={{ fontSize: 11, color: matchedZone ? matchedZone.color : CYAN }} />
-                                            <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".65rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
-                                            {matchedZone && <Typography sx={{ color: matchedZone.color, fontSize: ".55rem", opacity: 0.7 }}>↗</Typography>}
-                                          </Box>
-                                        );
-                                      })}
+                                  <Typography
+                                    sx={{
+                                      color: t.textMuted,
+                                      fontSize: ".78rem",
+                                      flex: 1,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      textDecoration: "line-through",
+                                    }}
+                                  >
+                                    <Box
+                                      component="span"
+                                      sx={{ fontWeight: 600, mr: 0.5 }}
+                                    >
+                                      Discarded:
                                     </Box>
-                                  )}
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5, p: "8px 12px", borderRadius: "8px", background: `${CYAN}08`, border: `1px solid ${CYAN}20` }}>
-                                    <SubdirectoryArrowRightIcon sx={{ fontSize: 14, color: CYAN }} />
-                                    <Typography sx={{ color: t.textSecondary, fontSize: ".75rem" }}>
-                                      Reply below — type <Box component="span" sx={{ color: GREEN, fontWeight: 700 }}>"yes"</Box> to apply, or describe what to change.
+                                    {msg.instruction}
+                                  </Typography>
+                                  <Typography
+                                    sx={{
+                                      color: t.textMuted,
+                                      fontSize: ".62rem",
+                                      flexShrink: 0,
+                                      fontFamily: "monospace",
+                                    }}
+                                  >
+                                    {msg.time}
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Box
+                                  sx={{
+                                    borderRadius: "16px 16px 16px 4px",
+                                    overflow: "hidden",
+                                    border: `1px solid ${CYAN}30`,
+                                    background: `${CYAN}05`,
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      px: 2.5,
+                                      py: "12px",
+                                      background: `${CYAN}10`,
+                                      borderBottom: `1px solid ${CYAN}20`,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      sx={{
+                                        color: t.text,
+                                        fontSize: ".82rem",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      OMNIX understood your instruction
                                     </Typography>
-                                  </Box>
-                                  <Box onClick={() => toggleTech(msg.id)} sx={{ display: "flex", alignItems: "center", gap: 0.8, cursor: "pointer", width: "fit-content", py: 0.5, px: 1, borderRadius: "6px", "&:hover": { background: t.surfaceHover } }}>
-                                    {expandedTechIds.has(msg.id) ? <ExpandLessIcon sx={{ fontSize: 14, color: t.textMuted }} /> : <ExpandMoreIcon sx={{ fontSize: 14, color: t.textMuted }} />}
-                                    <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>{expandedTechIds.has(msg.id) ? "Hide" : "Show"} technical details</Typography>
-                                  </Box>
-                                  <Collapse in={expandedTechIds.has(msg.id)}>
-                                    <Box sx={{ mt: 1 }}>
-                                      <pre style={{ margin: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: "0.68rem", lineHeight: 1.5, color: t.textSecondary, background: "rgba(0,0,0,0.2)", padding: "12px 14px", borderRadius: "8px", maxHeight: 220, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", border: `1px solid ${t.border}` }}>
-                                        {JSON.stringify(msg.config, null, 2)}
-                                      </pre>
+                                    <Box
+                                      sx={{
+                                        px: 1,
+                                        py: 0.2,
+                                        borderRadius: "5px",
+                                        background: `${PURPLE}15`,
+                                        border: `1px solid ${PURPLE}30`,
+                                      }}
+                                    >
+                                      <Typography
+                                        sx={{
+                                          color:
+                                            mode === "dark"
+                                              ? "#c4b5fd"
+                                              : "#5b21b6",
+                                          fontSize: ".58rem",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        {msg.config.pipeline_id || "auto_rule"}
+                                      </Typography>
                                     </Box>
-                                  </Collapse>
+                                  </Box>
+                                  <Box sx={{ p: "16px 20px" }}>
+                                    <Box
+                                      sx={{
+                                        p: "14px 16px",
+                                        borderRadius: "10px",
+                                        background: t.surface,
+                                        border: `1px solid ${t.border}`,
+                                        mb: 2,
+                                      }}
+                                    >
+                                      <SummaryText
+                                        text={msg.text}
+                                        color={t.text}
+                                      />
+                                    </Box>
+                                    {/* Zone reference chips */}
+                                    {msg.config.zones &&
+                                      msg.config.zones.length > 0 && (
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            gap: 0.8,
+                                            flexWrap: "wrap",
+                                            mb: 1.5,
+                                          }}
+                                        >
+                                          {msg.config.zones.map(
+                                            (z: any, zi: number) => {
+                                              const matchedZone = zones.find(
+                                                (dz) => dz.name === z.name,
+                                              );
+                                              return (
+                                                <Box
+                                                  key={zi}
+                                                  onClick={
+                                                    matchedZone
+                                                      ? () =>
+                                                          navigate(
+                                                            "/dashboard?page=Zones",
+                                                          )
+                                                      : undefined
+                                                  }
+                                                  sx={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 0.6,
+                                                    px: 1.2,
+                                                    py: 0.4,
+                                                    borderRadius: "6px",
+                                                    background: matchedZone
+                                                      ? `${matchedZone.color}15`
+                                                      : `${CYAN}10`,
+                                                    border: `1px solid ${matchedZone ? matchedZone.color + "30" : CYAN + "25"}`,
+                                                    cursor: matchedZone
+                                                      ? "pointer"
+                                                      : "default",
+                                                    "&:hover": matchedZone
+                                                      ? {
+                                                          background: `${matchedZone.color}25`,
+                                                        }
+                                                      : {},
+                                                  }}
+                                                >
+                                                  <MyLocationIcon
+                                                    sx={{
+                                                      fontSize: 11,
+                                                      color: matchedZone
+                                                        ? matchedZone.color
+                                                        : CYAN,
+                                                    }}
+                                                  />
+                                                  <Typography
+                                                    sx={{
+                                                      color: matchedZone
+                                                        ? matchedZone.color
+                                                        : CYAN,
+                                                      fontSize: ".65rem",
+                                                      fontWeight: 600,
+                                                    }}
+                                                  >
+                                                    {z.name.replace(/_/g, " ")}
+                                                  </Typography>
+                                                  {matchedZone && (
+                                                    <Typography
+                                                      sx={{
+                                                        color:
+                                                          matchedZone.color,
+                                                        fontSize: ".55rem",
+                                                        opacity: 0.7,
+                                                      }}
+                                                    >
+                                                      ↗
+                                                    </Typography>
+                                                  )}
+                                                </Box>
+                                              );
+                                            },
+                                          )}
+                                        </Box>
+                                      )}
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        mb: 1.5,
+                                        p: "8px 12px",
+                                        borderRadius: "8px",
+                                        background: `${CYAN}08`,
+                                        border: `1px solid ${CYAN}20`,
+                                      }}
+                                    >
+                                      <SubdirectoryArrowRightIcon
+                                        sx={{ fontSize: 14, color: CYAN }}
+                                      />
+                                      <Typography
+                                        sx={{
+                                          color: t.textSecondary,
+                                          fontSize: ".75rem",
+                                        }}
+                                      >
+                                        Reply below — type{" "}
+                                        <Box
+                                          component="span"
+                                          sx={{ color: GREEN, fontWeight: 700 }}
+                                        >
+                                          "yes"
+                                        </Box>{" "}
+                                        to apply, or describe what to change.
+                                      </Typography>
+                                    </Box>
+                                    <Box
+                                      onClick={() => toggleTech(msg.id)}
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.8,
+                                        cursor: "pointer",
+                                        width: "fit-content",
+                                        py: 0.5,
+                                        px: 1,
+                                        borderRadius: "6px",
+                                        "&:hover": {
+                                          background: t.surfaceHover,
+                                        },
+                                      }}
+                                    >
+                                      {expandedTechIds.has(msg.id) ? (
+                                        <ExpandLessIcon
+                                          sx={{
+                                            fontSize: 14,
+                                            color: t.textMuted,
+                                          }}
+                                        />
+                                      ) : (
+                                        <ExpandMoreIcon
+                                          sx={{
+                                            fontSize: 14,
+                                            color: t.textMuted,
+                                          }}
+                                        />
+                                      )}
+                                      <Typography
+                                        sx={{
+                                          color: t.textMuted,
+                                          fontSize: ".72rem",
+                                        }}
+                                      >
+                                        {expandedTechIds.has(msg.id)
+                                          ? "Hide"
+                                          : "Show"}{" "}
+                                        technical details
+                                      </Typography>
+                                    </Box>
+                                    <Collapse in={expandedTechIds.has(msg.id)}>
+                                      <Box sx={{ mt: 1 }}>
+                                        <pre
+                                          style={{
+                                            margin: 0,
+                                            fontFamily:
+                                              '"JetBrains Mono", monospace',
+                                            fontSize: "0.68rem",
+                                            lineHeight: 1.5,
+                                            color: t.textSecondary,
+                                            background: "rgba(0,0,0,0.2)",
+                                            padding: "12px 14px",
+                                            borderRadius: "8px",
+                                            maxHeight: 220,
+                                            overflow: "auto",
+                                            whiteSpace: "pre-wrap",
+                                            wordBreak: "break-word",
+                                            border: `1px solid ${t.border}`,
+                                          }}
+                                        >
+                                          {JSON.stringify(msg.config, null, 2)}
+                                        </pre>
+                                      </Box>
+                                    </Collapse>
+                                  </Box>
                                 </Box>
-                              </Box>
-                            )}
+                              )}
+                            </Box>
                           </Box>
-                        </Box>
-                      )}
+                        )}
                     </Box>
                   ))}
                   {processing && <SkeletonLoader t={t} />}
@@ -558,70 +1423,327 @@ export default function Rules() {
               )}
 
               {/* Rule context — camera + zone */}
-              <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+              <Box
+                sx={{
+                  mb: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  flexWrap: "wrap",
+                }}
+              >
                 {ruleContext.camera ? (
                   <>
-                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${CYAN}10`, border: `1px solid ${CYAN}30`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
+                    <Box
+                      onClick={() => setWizardOpen(true)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.7,
+                        px: 1.4,
+                        py: 0.5,
+                        borderRadius: "8px",
+                        background: `${CYAN}10`,
+                        border: `1px solid ${CYAN}30`,
+                        cursor: "pointer",
+                        "&:hover": { background: `${CYAN}20` },
+                      }}
+                    >
                       <CameraAltIcon sx={{ fontSize: 13, color: CYAN }} />
-                      <Typography sx={{ color: CYAN, fontSize: ".7rem", fontWeight: 700 }}>{ruleContext.camera.name}</Typography>
-                    </Box>
-                    <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.7, px: 1.4, py: 0.5, borderRadius: "8px", background: `${PURPLE}10`, border: `1px solid ${PURPLE}30`, cursor: "pointer", "&:hover": { background: `${PURPLE}20` } }}>
-                      <MyLocationIcon sx={{ fontSize: 13, color: mode === "dark" ? "#a78bfa" : "#5b21b6" }} />
-                      <Typography sx={{ color: mode === "dark" ? "#a78bfa" : "#5b21b6", fontSize: ".7rem", fontWeight: 700 }}>
-                        {ruleContext.zone ? ruleContext.zone.name.replace(/_/g, " ") : "whole frame"}
+                      <Typography
+                        sx={{ color: CYAN, fontSize: ".7rem", fontWeight: 700 }}
+                      >
+                        {ruleContext.camera.name}
                       </Typography>
                     </Box>
-                    <Typography sx={{ color: t.textMuted, fontSize: ".68rem" }}>click to change</Typography>
+                    <Box
+                      onClick={() => setWizardOpen(true)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.7,
+                        px: 1.4,
+                        py: 0.5,
+                        borderRadius: "8px",
+                        background: `${PURPLE}10`,
+                        border: `1px solid ${PURPLE}30`,
+                        cursor: "pointer",
+                        "&:hover": { background: `${PURPLE}20` },
+                      }}
+                    >
+                      <MyLocationIcon
+                        sx={{
+                          fontSize: 13,
+                          color: mode === "dark" ? "#a78bfa" : "#5b21b6",
+                        }}
+                      />
+                      <Typography
+                        sx={{
+                          color: mode === "dark" ? "#a78bfa" : "#5b21b6",
+                          fontSize: ".7rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {ruleContext.zone
+                          ? ruleContext.zone.name.replace(/_/g, " ")
+                          : "whole frame"}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ color: t.textMuted, fontSize: ".68rem" }}>
+                      click to change
+                    </Typography>
                   </>
                 ) : (
-                  <Box onClick={() => setWizardOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.8, py: 0.7, borderRadius: "9px", background: `linear-gradient(135deg, ${PURPLE}18, ${CYAN}10)`, border: `1px dashed ${PURPLE}50`, cursor: "pointer", "&:hover": { borderColor: PURPLE } }}>
-                    <CameraAltIcon sx={{ fontSize: 15, color: mode === "dark" ? "#a78bfa" : "#5b21b6" }} />
-                    <Typography sx={{ color: mode === "dark" ? "#a78bfa" : "#5b21b6", fontSize: ".78rem", fontWeight: 700 }}>Select camera & zone to start</Typography>
+                  <Box
+                    onClick={() => setWizardOpen(true)}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.8,
+                      px: 1.8,
+                      py: 0.7,
+                      borderRadius: "9px",
+                      background: `linear-gradient(135deg, ${PURPLE}18, ${CYAN}10)`,
+                      border: `1px dashed ${PURPLE}50`,
+                      cursor: "pointer",
+                      "&:hover": { borderColor: PURPLE },
+                    }}
+                  >
+                    <CameraAltIcon
+                      sx={{
+                        fontSize: 15,
+                        color: mode === "dark" ? "#a78bfa" : "#5b21b6",
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        color: mode === "dark" ? "#a78bfa" : "#5b21b6",
+                        fontSize: ".78rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Select camera & zone to start
+                    </Typography>
                   </Box>
                 )}
               </Box>
 
               {error && (
-                <Box sx={{ mb: 2, p: "14px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "flex-start", gap: 1.5 }}>
-                  <ErrorOutlineIcon sx={{ color: "#fca5a5", fontSize: 18, mt: 0.2 }} />
+                <Box
+                  sx={{
+                    mb: 2,
+                    p: "14px 18px",
+                    borderRadius: "12px",
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1.5,
+                  }}
+                >
+                  <ErrorOutlineIcon
+                    sx={{ color: "#fca5a5", fontSize: 18, mt: 0.2 }}
+                  />
                   <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ color: "#fca5a5", fontSize: ".85rem", fontWeight: 600, mb: 0.5 }}>Heads up</Typography>
-                    <Typography sx={{ color: t.textSecondary, fontSize: ".78rem" }}>{error}</Typography>
+                    <Typography
+                      sx={{
+                        color: "#fca5a5",
+                        fontSize: ".85rem",
+                        fontWeight: 600,
+                        mb: 0.5,
+                      }}
+                    >
+                      Heads up
+                    </Typography>
+                    <Typography
+                      sx={{ color: t.textSecondary, fontSize: ".78rem" }}
+                    >
+                      {error}
+                    </Typography>
                   </Box>
-                  <Box onClick={() => setError(null)} sx={{ cursor: "pointer", color: t.textMuted, px: 1, "&:hover": { color: t.text } }}>✕</Box>
+                  <Box
+                    onClick={() => setError(null)}
+                    sx={{
+                      cursor: "pointer",
+                      color: t.textMuted,
+                      px: 1,
+                      "&:hover": { color: t.text },
+                    }}
+                  >
+                    ✕
+                  </Box>
                 </Box>
               )}
 
-              <Box sx={{ borderRadius: "16px", background: t.surface, border: `1px solid ${inputBorder}`, overflow: "hidden", transition: "all .25s", boxShadow: inputShadow, ...(hasPending && !processing && { animation: "inputPulse 2.4s ease-in-out infinite", "@keyframes inputPulse": { "0%, 100%": { boxShadow: `0 0 0 4px ${CYAN}12, 0 0 18px ${CYAN}20` }, "50%": { boxShadow: `0 0 0 6px ${CYAN}18, 0 0 28px ${CYAN}30` } } }) }}>
+              <Box
+                sx={{
+                  borderRadius: "16px",
+                  background: t.surface,
+                  border: `1px solid ${inputBorder}`,
+                  overflow: "hidden",
+                  transition: "all .25s",
+                  boxShadow: inputShadow,
+                  ...(hasPending &&
+                    !processing && {
+                      animation: "inputPulse 2.4s ease-in-out infinite",
+                      "@keyframes inputPulse": {
+                        "0%, 100%": {
+                          boxShadow: `0 0 0 4px ${CYAN}12, 0 0 18px ${CYAN}20`,
+                        },
+                        "50%": {
+                          boxShadow: `0 0 0 6px ${CYAN}18, 0 0 28px ${CYAN}30`,
+                        },
+                      },
+                    }),
+                }}
+              >
                 <textarea
                   ref={inputRef}
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
                   placeholder={inputPlaceholder}
                   rows={hasPending ? 2 : chatHistory.length > 0 ? 3 : 5}
                   disabled={processing}
                   autoFocus
-                  style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", outline: "none", resize: "none", color: t.text, fontSize: "0.92rem", lineHeight: 1.75, padding: "16px 20px 10px", fontFamily: '"Inter", system-ui, sans-serif', opacity: processing ? 0.5 : 1 }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    resize: "none",
+                    color: t.text,
+                    fontSize: "0.92rem",
+                    lineHeight: 1.75,
+                    padding: "16px 20px 10px",
+                    fontFamily: '"Inter", system-ui, sans-serif',
+                    opacity: processing ? 0.5 : 1,
+                  }}
                 />
                 <style>{`textarea::placeholder { color: ${t.textMuted}; }`}</style>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 1.2, borderTop: `1px solid ${t.border}` }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    px: 2.5,
+                    py: 1.2,
+                    borderTop: `1px solid ${t.border}`,
+                  }}
+                >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Typography sx={{ color: t.textMuted, fontSize: ".7rem", opacity: 0.5 }}>↵ Enter to send</Typography>
-                    <Typography sx={{ color: t.textMuted, fontSize: ".7rem", opacity: 0.3 }}>⇧↵ New line</Typography>
+                    <Typography
+                      sx={{
+                        color: t.textMuted,
+                        fontSize: ".7rem",
+                        opacity: 0.5,
+                      }}
+                    >
+                      ↵ Enter to send
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: t.textMuted,
+                        fontSize: ".7rem",
+                        opacity: 0.3,
+                      }}
+                    >
+                      ⇧↵ New line
+                    </Typography>
                     {chatHistory.length > 0 && (
-                      <Box onClick={() => { setChatHistory([]); setInstruction(""); setError(null); try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch {} }} sx={{ cursor: "pointer", px: 1, py: 0.3, borderRadius: "5px", "&:hover": { background: t.surfaceHover } }}>
-                        <Typography sx={{ color: t.textMuted, fontSize: ".68rem", opacity: 0.6 }}>Clear chat</Typography>
+                      <Box
+                        onClick={() => {
+                          setChatHistory([]);
+                          setInstruction("");
+                          setError(null);
+                          resetRuleContext();
+                          try {
+                            localStorage.removeItem(CHAT_HISTORY_KEY);
+                          } catch {}
+                        }}
+                        sx={{
+                          cursor: "pointer",
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: "5px",
+                          "&:hover": { background: t.surfaceHover },
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: t.textMuted,
+                            fontSize: ".68rem",
+                            opacity: 0.6,
+                          }}
+                        >
+                          Clear chat
+                        </Typography>
                       </Box>
                     )}
                   </Box>
-                  <Box onClick={canSend ? handleSend : undefined} sx={{ display: "flex", alignItems: "center", gap: 1, px: "16px", py: "8px", borderRadius: "10px", background: processing ? `linear-gradient(135deg, ${CYAN}, #0099CC)` : canSend ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)` : t.surface, border: `1px solid ${processing ? CYAN : canSend ? PURPLE + "70" : t.border}`, cursor: canSend ? "pointer" : "default", boxShadow: canSend && !processing ? `0 4px 16px ${PURPLE}40` : processing ? `0 4px 16px ${CYAN}30` : "none", transition: "all .2s", "&:hover": canSend && !processing ? { transform: "translateY(-1px)" } : {} }}>
+                  <Box
+                    onClick={canSend ? handleSend : undefined}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      px: "16px",
+                      py: "8px",
+                      borderRadius: "10px",
+                      background: processing
+                        ? `linear-gradient(135deg, ${CYAN}, #0099CC)`
+                        : canSend
+                          ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)`
+                          : t.surface,
+                      border: `1px solid ${processing ? CYAN : canSend ? PURPLE + "70" : t.border}`,
+                      cursor: canSend ? "pointer" : "default",
+                      boxShadow:
+                        canSend && !processing
+                          ? `0 4px 16px ${PURPLE}40`
+                          : processing
+                            ? `0 4px 16px ${CYAN}30`
+                            : "none",
+                      transition: "all .2s",
+                      "&:hover":
+                        canSend && !processing
+                          ? { transform: "translateY(-1px)" }
+                          : {},
+                    }}
+                  >
                     {processing ? (
-                      <SettingsIcon sx={{ fontSize: 15, color: "#fff", animation: "gearSpin 1.4s linear infinite", "@keyframes gearSpin": { "100%": { transform: "rotate(360deg)" } } }} />
+                      <SettingsIcon
+                        sx={{
+                          fontSize: 15,
+                          color: "#fff",
+                          animation: "gearSpin 1.4s linear infinite",
+                          "@keyframes gearSpin": {
+                            "100%": { transform: "rotate(360deg)" },
+                          },
+                        }}
+                      />
                     ) : (
-                      <SendIcon sx={{ fontSize: 14, color: canSend ? "#fff" : t.textMuted }} />
+                      <SendIcon
+                        sx={{
+                          fontSize: 14,
+                          color: canSend ? "#fff" : t.textMuted,
+                        }}
+                      />
                     )}
-                    <Typography sx={{ fontSize: ".82rem", fontWeight: 600, color: processing || canSend ? "#fff" : t.textMuted }}>{processing ? "Calling AI Engine" : "Send"}</Typography>
+                    <Typography
+                      sx={{
+                        fontSize: ".82rem",
+                        fontWeight: 600,
+                        color: processing || canSend ? "#fff" : t.textMuted,
+                      }}
+                    >
+                      {processing ? "Calling AI Engine" : "Send"}
+                    </Typography>
                   </Box>
                 </Box>
               </Box>
@@ -630,24 +1752,107 @@ export default function Rules() {
           </Box>
 
           {/* RIGHT panel */}
-          <Box sx={{ width: 380, flexShrink: 0, overflowY: "auto", background: t.surface, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: `${PURPLE}35`, borderRadius: "4px" } }}>
+          <Box
+            sx={{
+              width: 380,
+              flexShrink: 0,
+              overflowY: "auto",
+              background: t.surface,
+              "&::-webkit-scrollbar": { width: "4px" },
+              "&::-webkit-scrollbar-thumb": {
+                background: `${PURPLE}35`,
+                borderRadius: "4px",
+              },
+            }}
+          >
             <Box sx={{ p: "40px 28px" }}>
-
               {/* Active Rules */}
-              <Box sx={{ borderRadius: "16px", overflow: "hidden", mb: 3, background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${PURPLE}12 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box
+                sx={{
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  mb: 3,
+                  background: t.bgSecondary,
+                  border: `1px solid ${t.border}`,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 3,
+                    py: "16px",
+                    background: `linear-gradient(135deg, ${PURPLE}12 0%, transparent 60%)`,
+                    borderBottom: `1px solid ${t.border}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
-                    <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Active Rules</Typography>
-                    <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>Applied to pipeline</Typography>
+                    <Typography
+                      sx={{
+                        color: t.text,
+                        fontWeight: 700,
+                        fontSize: ".95rem",
+                      }}
+                    >
+                      Active Rules
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: t.textMuted,
+                        fontSize: ".72rem",
+                        mt: ".2rem",
+                      }}
+                    >
+                      Applied to pipeline
+                    </Typography>
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: "20px", background: `${GREEN}12`, border: `1px solid ${GREEN}25` }}>
-                      <Typography sx={{ color: GREEN, fontSize: ".65rem", fontWeight: 700 }}>{history.length} rules</Typography>
+                    <Box
+                      sx={{
+                        px: 1.5,
+                        py: 0.4,
+                        borderRadius: "20px",
+                        background: `${GREEN}12`,
+                        border: `1px solid ${GREEN}25`,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: GREEN,
+                          fontSize: ".65rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {history.length} rules
+                      </Typography>
                     </Box>
                     {history.length > 0 && (
                       <Tooltip title="Clear all rules and start fresh">
-                        <Box onClick={() => setResetConfirmOpen(true)} sx={{ px: 1, py: 0.3, borderRadius: "6px", cursor: "pointer", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.4)" }, transition: "all .2s" }}>
-                          <Typography sx={{ color: "rgba(239,68,68,0.8)", fontSize: ".6rem", fontWeight: 600 }}>Reset</Typography>
+                        <Box
+                          onClick={() => setResetConfirmOpen(true)}
+                          sx={{
+                            px: 1,
+                            py: 0.3,
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                            "&:hover": {
+                              background: "rgba(239,68,68,0.08)",
+                              borderColor: "rgba(239,68,68,0.4)",
+                            },
+                            transition: "all .2s",
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "rgba(239,68,68,0.8)",
+                              fontSize: ".6rem",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Reset
+                          </Typography>
                         </Box>
                       </Tooltip>
                     )}
@@ -656,40 +1861,205 @@ export default function Rules() {
                 <Box sx={{ p: "8px 12px 12px" }}>
                   {history.length === 0 ? (
                     <Box sx={{ p: "24px 16px", textAlign: "center" }}>
-                      <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>No rules generated yet</Typography>
-                      <Typography sx={{ color: t.textMuted, fontSize: ".7rem", mt: 0.5, opacity: 0.7 }}>Type an instruction to begin</Typography>
+                      <Typography
+                        sx={{ color: t.textMuted, fontSize: ".82rem" }}
+                      >
+                        No rules generated yet
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: t.textMuted,
+                          fontSize: ".7rem",
+                          mt: 0.5,
+                          opacity: 0.7,
+                        }}
+                      >
+                        Type an instruction to begin
+                      </Typography>
                     </Box>
                   ) : (
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                    >
                       {history.map((item) => {
                         const ruleZones = item.config?.zones || [];
                         return (
-                          <Box key={item.id} sx={{ p: "14px 16px", borderRadius: "12px", background: t.surface, border: `1px solid ${item.isNew ? GREEN : t.border}`, transition: "all .25s", ...(item.isNew && { animation: "ruleFlash 1.6s ease-out", "@keyframes ruleFlash": { "0%": { borderColor: GREEN, boxShadow: `0 0 0 0 ${GREEN}80, 0 0 18px ${GREEN}55` }, "70%": { borderColor: GREEN, boxShadow: `0 0 0 6px ${GREEN}00, 0 0 6px ${GREEN}30` }, "100%": { borderColor: t.border, boxShadow: "none" } } }), "&:hover": { borderColor: `${PURPLE}25` } }}>
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.8 }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.7 }}>
-                                <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
-                                <Typography sx={{ color: GREEN, fontSize: ".62rem", fontWeight: 700, letterSpacing: ".05em" }}>ACTIVE</Typography>
+                          <Box
+                            key={item.id}
+                            sx={{
+                              p: "14px 16px",
+                              borderRadius: "12px",
+                              background: t.surface,
+                              border: `1px solid ${item.isNew ? GREEN : t.border}`,
+                              transition: "all .25s",
+                              ...(item.isNew && {
+                                animation: "ruleFlash 1.6s ease-out",
+                                "@keyframes ruleFlash": {
+                                  "0%": {
+                                    borderColor: GREEN,
+                                    boxShadow: `0 0 0 0 ${GREEN}80, 0 0 18px ${GREEN}55`,
+                                  },
+                                  "70%": {
+                                    borderColor: GREEN,
+                                    boxShadow: `0 0 0 6px ${GREEN}00, 0 0 6px ${GREEN}30`,
+                                  },
+                                  "100%": {
+                                    borderColor: t.border,
+                                    boxShadow: "none",
+                                  },
+                                },
+                              }),
+                              "&:hover": { borderColor: `${PURPLE}25` },
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                mb: 0.8,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.7,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: "50%",
+                                    background: GREEN,
+                                    boxShadow: `0 0 6px ${GREEN}`,
+                                  }}
+                                />
+                                <Typography
+                                  sx={{
+                                    color: GREEN,
+                                    fontSize: ".62rem",
+                                    fontWeight: 700,
+                                    letterSpacing: ".05em",
+                                  }}
+                                >
+                                  ACTIVE
+                                </Typography>
                               </Box>
-                              <Typography sx={{ color: t.textMuted, fontSize: ".65rem", fontFamily: "monospace" }}>{item.time}</Typography>
+                              <Typography
+                                sx={{
+                                  color: t.textMuted,
+                                  fontSize: ".65rem",
+                                  fontFamily: "monospace",
+                                }}
+                              >
+                                {item.time}
+                              </Typography>
                             </Box>
-                            <Typography sx={{ color: t.textSecondary, fontSize: ".82rem", lineHeight: 1.55, mb: 1 }}>{item.instruction}</Typography>
+                            <Typography
+                              sx={{
+                                color: t.textSecondary,
+                                fontSize: ".82rem",
+                                lineHeight: 1.55,
+                                mb: 1,
+                              }}
+                            >
+                              {item.instruction}
+                            </Typography>
                             {/* Zone links on active rules */}
                             {ruleZones.length > 0 && (
-                              <Box sx={{ display: "flex", gap: 0.6, flexWrap: "wrap", mb: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 0.6,
+                                  flexWrap: "wrap",
+                                  mb: 1,
+                                }}
+                              >
                                 {ruleZones.map((z: any, zi: number) => {
-                                  const matchedZone = zones.find((dz) => dz.name === z.name);
+                                  const matchedZone = zones.find(
+                                    (dz) => dz.name === z.name,
+                                  );
                                   return (
-                                    <Box key={zi} onClick={matchedZone ? () => navigate("/dashboard?page=Zones") : undefined} sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: "5px", background: matchedZone ? `${matchedZone.color}12` : `${CYAN}08`, border: `1px solid ${matchedZone ? matchedZone.color + "25" : CYAN + "20"}`, cursor: matchedZone ? "pointer" : "default", "&:hover": matchedZone ? { background: `${matchedZone.color}20` } : {} }}>
-                                      <MyLocationIcon sx={{ fontSize: 10, color: matchedZone ? matchedZone.color : CYAN }} />
-                                      <Typography sx={{ color: matchedZone ? matchedZone.color : CYAN, fontSize: ".6rem", fontWeight: 600 }}>{z.name.replace(/_/g, " ")}</Typography>
+                                    <Box
+                                      key={zi}
+                                      onClick={
+                                        matchedZone
+                                          ? () =>
+                                              navigate("/dashboard?page=Zones")
+                                          : undefined
+                                      }
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        px: 1,
+                                        py: 0.2,
+                                        borderRadius: "5px",
+                                        background: matchedZone
+                                          ? `${matchedZone.color}12`
+                                          : `${CYAN}08`,
+                                        border: `1px solid ${matchedZone ? matchedZone.color + "25" : CYAN + "20"}`,
+                                        cursor: matchedZone
+                                          ? "pointer"
+                                          : "default",
+                                        "&:hover": matchedZone
+                                          ? {
+                                              background: `${matchedZone.color}20`,
+                                            }
+                                          : {},
+                                      }}
+                                    >
+                                      <MyLocationIcon
+                                        sx={{
+                                          fontSize: 10,
+                                          color: matchedZone
+                                            ? matchedZone.color
+                                            : CYAN,
+                                        }}
+                                      />
+                                      <Typography
+                                        sx={{
+                                          color: matchedZone
+                                            ? matchedZone.color
+                                            : CYAN,
+                                          fontSize: ".6rem",
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {z.name.replace(/_/g, " ")}
+                                      </Typography>
                                     </Box>
                                   );
                                 })}
                               </Box>
                             )}
                             <Tooltip title={item.pipeline}>
-                              <Box sx={{ px: 1, py: 0.3, borderRadius: "5px", background: t.surface, border: `1px solid ${t.border}`, display: "block", maxWidth: "100%", overflow: "hidden" }}>
-                                <Typography sx={{ color: t.textMuted, fontSize: ".6rem", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.pipeline}</Typography>
+                              <Box
+                                sx={{
+                                  px: 1,
+                                  py: 0.3,
+                                  borderRadius: "5px",
+                                  background: t.surface,
+                                  border: `1px solid ${t.border}`,
+                                  display: "block",
+                                  maxWidth: "100%",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color: t.textMuted,
+                                    fontSize: ".6rem",
+                                    fontFamily: "monospace",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {item.pipeline}
+                                </Typography>
                               </Box>
                             </Tooltip>
                           </Box>
@@ -701,55 +2071,197 @@ export default function Rules() {
               </Box>
 
               {/* Camera Zones Preview */}
-              <Box sx={{ borderRadius: "16px", overflow: "hidden", mb: 3, background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box
+                sx={{
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  mb: 3,
+                  background: t.bgSecondary,
+                  border: `1px solid ${t.border}`,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 3,
+                    py: "16px",
+                    background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`,
+                    borderBottom: `1px solid ${t.border}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
-                    <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>Camera Zones</Typography>
-                    <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>{zones.length} zone{zones.length !== 1 ? "s" : ""} defined</Typography>
+                    <Typography
+                      sx={{
+                        color: t.text,
+                        fontWeight: 700,
+                        fontSize: ".95rem",
+                      }}
+                    >
+                      Camera Zones
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: t.textMuted,
+                        fontSize: ".72rem",
+                        mt: ".2rem",
+                      }}
+                    >
+                      {zones.length} zone{zones.length !== 1 ? "s" : ""} defined
+                    </Typography>
                   </Box>
-                  <Box onClick={() => setWizardOpen(true)} sx={{ px: 1.5, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25`, cursor: "pointer", "&:hover": { background: `${CYAN}20` } }}>
-                    <Typography sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}>Change →</Typography>
+                  <Box
+                    onClick={() => setWizardOpen(true)}
+                    sx={{
+                      px: 1.5,
+                      py: 0.4,
+                      borderRadius: "6px",
+                      background: `${CYAN}10`,
+                      border: `1px solid ${CYAN}25`,
+                      cursor: "pointer",
+                      "&:hover": { background: `${CYAN}20` },
+                    }}
+                  >
+                    <Typography
+                      sx={{ color: CYAN, fontSize: ".6rem", fontWeight: 700 }}
+                    >
+                      Change →
+                    </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ position: "relative", background: "#000", aspectRatio: "16/9" }}>
-                  <img src={`${API_BASE}/api/video/snapshot?camera_id=${ruleContext.camera?.id ?? 1}&t=${snapTs}`} alt="Camera" style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }} />
-                  <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 854 480" preserveAspectRatio="none">
-                    {zones.map((zone) => zone.polygon.length >= 3 && (
-                      <g key={zone.id}>
-                        <polygon
-                          points={zone.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
-                          fill={zone.color + "30"}
-                          stroke={zone.color}
-                          strokeWidth="2"
-                        />
-                        <text
-                          x={zone.polygon.reduce((s, p) => s + p[0], 0) / zone.polygon.length}
-                          y={zone.polygon.reduce((s, p) => s + p[1], 0) / zone.polygon.length}
-                          fill="#fff"
-                          fontSize="14"
-                          fontWeight="600"
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
-                        >
-                          {zone.name}
-                        </text>
-                      </g>
-                    ))}
+                <Box
+                  sx={{
+                    position: "relative",
+                    background: "#000",
+                    aspectRatio: "16/9",
+                  }}
+                >
+                  <img
+                    src={`${API_BASE}/api/video/snapshot?camera_id=${ruleContext.camera?.id ?? 1}&t=${snapTs}`}
+                    alt="Camera"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      position: "absolute",
+                      inset: 0,
+                    }}
+                  />
+                  <svg
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    viewBox="0 0 854 480"
+                    preserveAspectRatio="none"
+                  >
+                    {zones.map(
+                      (zone) =>
+                        zone.polygon.length >= 3 && (
+                          <g key={zone.id}>
+                            <polygon
+                              points={zone.polygon
+                                .map(([x, y]) => `${x},${y}`)
+                                .join(" ")}
+                              fill={zone.color + "30"}
+                              stroke={zone.color}
+                              strokeWidth="2"
+                            />
+                            <text
+                              x={
+                                zone.polygon.reduce((s, p) => s + p[0], 0) /
+                                zone.polygon.length
+                              }
+                              y={
+                                zone.polygon.reduce((s, p) => s + p[1], 0) /
+                                zone.polygon.length
+                              }
+                              fill="#fff"
+                              fontSize="14"
+                              fontWeight="600"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              style={{
+                                filter:
+                                  "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
+                              }}
+                            >
+                              {zone.name}
+                            </text>
+                          </g>
+                        ),
+                    )}
                   </svg>
                   {zones.length === 0 && (
-                    <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 1 }}>
-                      <MyLocationIcon sx={{ fontSize: 28, color: "rgba(255,255,255,0.2)" }} />
-                      <Typography sx={{ color: "rgba(255,255,255,0.3)", fontSize: ".72rem" }}>No zones defined yet</Typography>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexDirection: "column",
+                        gap: 1,
+                      }}
+                    >
+                      <MyLocationIcon
+                        sx={{ fontSize: 28, color: "rgba(255,255,255,0.2)" }}
+                      />
+                      <Typography
+                        sx={{
+                          color: "rgba(255,255,255,0.3)",
+                          fontSize: ".72rem",
+                        }}
+                      >
+                        No zones defined yet
+                      </Typography>
                     </Box>
                   )}
                 </Box>
                 {zones.length > 0 && (
-                  <Box sx={{ p: "8px 12px", display: "flex", flexWrap: "wrap", gap: 0.8 }}>
+                  <Box
+                    sx={{
+                      p: "8px 12px",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 0.8,
+                    }}
+                  >
                     {zones.map((zone) => (
-                      <Box key={zone.id} sx={{ display: "flex", alignItems: "center", gap: 0.6, px: 1, py: 0.3, borderRadius: "6px", background: zone.color + "15", border: `1px solid ${zone.color}30` }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: "2px", background: zone.color, flexShrink: 0 }} />
-                        <Typography sx={{ color: zone.color, fontSize: ".65rem", fontWeight: 600 }}>{zone.name}</Typography>
+                      <Box
+                        key={zone.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.6,
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: "6px",
+                          background: zone.color + "15",
+                          border: `1px solid ${zone.color}30`,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "2px",
+                            background: zone.color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            color: zone.color,
+                            fontSize: ".65rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {zone.name}
+                        </Typography>
                       </Box>
                     ))}
                   </Box>
@@ -757,21 +2269,106 @@ export default function Rules() {
               </Box>
 
               {/* How It Works */}
-              <Box sx={{ borderRadius: "16px", overflow: "hidden", background: t.bgSecondary, border: `1px solid ${t.border}` }}>
-                <Box sx={{ px: 3, py: "16px", background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`, borderBottom: `1px solid ${t.border}` }}>
-                  <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}>How It Works</Typography>
-                  <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}>From words to pipeline in seconds</Typography>
+              <Box
+                sx={{
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  background: t.bgSecondary,
+                  border: `1px solid ${t.border}`,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 3,
+                    py: "16px",
+                    background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <Typography
+                    sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}
+                  >
+                    How It Works
+                  </Typography>
+                  <Typography
+                    sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}
+                  >
+                    From words to pipeline in seconds
+                  </Typography>
                 </Box>
-                <Box sx={{ p: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 0.5 }}>
+                <Box
+                  sx={{
+                    p: "12px 16px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.5,
+                  }}
+                >
                   {howItWorks.map((s, i) => (
-                    <Box key={i} sx={{ display: "flex", gap: 1.5, alignItems: "center", p: "10px 12px", borderRadius: "10px", transition: "background .2s", "&:hover": { background: t.surfaceHover } }}>
-                      <Box sx={{ width: 34, height: 34, borderRadius: "10px", background: `${s.color}18`, border: `1px solid ${s.color}35`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: s.color, position: "relative" }}>
+                    <Box
+                      key={i}
+                      sx={{
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        p: "10px 12px",
+                        borderRadius: "10px",
+                        transition: "background .2s",
+                        "&:hover": { background: t.surfaceHover },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "10px",
+                          background: `${s.color}18`,
+                          border: `1px solid ${s.color}35`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          color: s.color,
+                          position: "relative",
+                        }}
+                      >
                         {s.icon}
-                        <Box sx={{ position: "absolute", top: -5, right: -5, width: 14, height: 14, borderRadius: "50%", background: t.bg, border: `1px solid ${s.color}40`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Typography sx={{ color: s.color, fontSize: ".48rem", fontWeight: 800, lineHeight: 1 }}>{s.n}</Typography>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: -5,
+                            right: -5,
+                            width: 14,
+                            height: 14,
+                            borderRadius: "50%",
+                            background: t.bg,
+                            border: `1px solid ${s.color}40`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: s.color,
+                              fontSize: ".48rem",
+                              fontWeight: 800,
+                              lineHeight: 1,
+                            }}
+                          >
+                            {s.n}
+                          </Typography>
                         </Box>
                       </Box>
-                      <Typography sx={{ color: t.textSecondary, fontSize: ".8rem", lineHeight: 1.5 }}>{s.text}</Typography>
+                      <Typography
+                        sx={{
+                          color: t.textSecondary,
+                          fontSize: ".8rem",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {s.text}
+                      </Typography>
                     </Box>
                   ))}
                 </Box>
@@ -782,41 +2379,146 @@ export default function Rules() {
         </Box>
       </Box>
 
-      <Snackbar open={!!appliedToast} autoHideDuration={3000} onClose={() => setAppliedToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-        <MuiAlert onClose={() => setAppliedToast(null)} severity="success" icon={<CheckCircleIcon sx={{ color: GREEN }} />} sx={{ background: `${GREEN}12`, border: `1px solid ${GREEN}30`, color: GREEN, fontWeight: 600 }}>
+      <Snackbar
+        open={!!appliedToast}
+        autoHideDuration={3000}
+        onClose={() => setAppliedToast(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <MuiAlert
+          onClose={() => setAppliedToast(null)}
+          severity="success"
+          icon={<CheckCircleIcon sx={{ color: GREEN }} />}
+          sx={{
+            background: `${GREEN}12`,
+            border: `1px solid ${GREEN}30`,
+            color: GREEN,
+            fontWeight: 600,
+          }}
+        >
           Rule applied: {appliedToast}
         </MuiAlert>
       </Snackbar>
 
-      <Dialog open={resetConfirmOpen} onClose={() => setResetConfirmOpen(false)} sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "16px", minWidth: 400 } }}>
-        <DialogTitle sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}>Reset all rules?</DialogTitle>
+      <Dialog
+        open={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        sx={{
+          "& .MuiDialog-paper": {
+            background: t.bgSecondary,
+            border: `1px solid ${t.border}`,
+            borderRadius: "16px",
+            minWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
+        >
+          Reset all rules?
+        </DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}>This will clear all active rules from the pipeline and reset the chat. Detection will stop until you create a new rule. This action cannot be undone.</Typography>
+          <Typography
+            sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}
+          >
+            This will clear all active rules from the pipeline and reset the
+            chat. Detection will stop until you create a new rule. This action
+            cannot be undone.
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setResetConfirmOpen(false)} sx={{ color: t.textSecondary, borderRadius: "9px", textTransform: "none", border: `1px solid ${t.border}`, px: 2.5 }}>Cancel</Button>
-          <Button onClick={handleResetRules} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", px: 2.5 }}>Reset Everything</Button>
+          <Button
+            onClick={() => setResetConfirmOpen(false)}
+            sx={{
+              color: t.textSecondary,
+              borderRadius: "9px",
+              textTransform: "none",
+              border: `1px solid ${t.border}`,
+              px: 2.5,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleResetRules}
+            variant="contained"
+            sx={{
+              borderRadius: "9px",
+              textTransform: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              px: 2.5,
+            }}
+          >
+            Reset Everything
+          </Button>
         </DialogActions>
       </Dialog>
 
       <RuleSetupWizard
         open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
+        onClose={() => {
+          setWizardOpen(false);
+          // Wizard dismissed without completing → don't auto-send a rule
+          // against a half-selected context.
+          setPendingAutoSend(false);
+        }}
         onComplete={({ camera, zone }) => {
           setRuleContext({ camera, zone });
           setWizardOpen(false);
           setTimeout(() => inputRef.current?.focus(), 50);
         }}
+        ruleText={instruction}
       />
 
-      <Dialog open={signOutOpen} onClose={() => setSignOutOpen(false)} sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "16px", minWidth: 360 } }}>
-        <DialogTitle sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}>Sign out of OMNIX?</DialogTitle>
+      <Dialog
+        open={signOutOpen}
+        onClose={() => setSignOutOpen(false)}
+        sx={{
+          "& .MuiDialog-paper": {
+            background: t.bgSecondary,
+            border: `1px solid ${t.border}`,
+            borderRadius: "16px",
+            minWidth: 360,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
+        >
+          Sign out of OMNIX?
+        </DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}>You'll be returned to the login screen.</Typography>
+          <Typography
+            sx={{ color: t.textSecondary, fontSize: ".88rem", lineHeight: 1.6 }}
+          >
+            You'll be returned to the login screen.
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setSignOutOpen(false)} sx={{ color: t.textSecondary, borderRadius: "9px", textTransform: "none", border: `1px solid ${t.border}`, px: 2.5 }}>Cancel</Button>
-          <Button onClick={handleSignOut} variant="contained" sx={{ borderRadius: "9px", textTransform: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", px: 2.5 }}>Sign Out</Button>
+          <Button
+            onClick={() => setSignOutOpen(false)}
+            sx={{
+              color: t.textSecondary,
+              borderRadius: "9px",
+              textTransform: "none",
+              border: `1px solid ${t.border}`,
+              px: 2.5,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSignOut}
+            variant="contained"
+            sx={{
+              borderRadius: "9px",
+              textTransform: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              px: 2.5,
+            }}
+          >
+            Sign Out
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
