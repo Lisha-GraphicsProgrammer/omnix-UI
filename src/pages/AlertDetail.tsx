@@ -14,6 +14,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import GavelIcon from '@mui/icons-material/Gavel'
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../lib/api'
 
@@ -23,17 +24,24 @@ const GREEN   = '#27AE60'
 const AMBER   = '#D4891A'
 const CREAM   = '#E8D5B0'
 const RED     = '#E74C3C'
+const CYAN    = '#3498DB'
 
 interface ApiIncident {
   id: string
   timestamp: string
   frame: number
   camera: string
-  person_id: number
+  camera_id?: number
+  person_id: number | null
   violation: string
   zone: string
   bbox: number[]
   screenshot_url: string
+  severity?: string
+  reviewed?: boolean
+  review_status?: string | null
+  rule_id?: number | null
+  rule_instruction?: string | null
 }
 
 function titleCase(s: string): string {
@@ -112,6 +120,8 @@ export default function AlertDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [markedFP, setMarkedFP] = useState(false)
+  const [fpSaving, setFpSaving] = useState(false)
+  const [fpError, setFpError] = useState<string | null>(null)
   const [incident, setIncident] = useState<ApiIncident | null>(null)
   const [allIncidents, setAllIncidents] = useState<ApiIncident[]>([])
   const [loading, setLoading] = useState(true)
@@ -126,11 +136,33 @@ export default function AlertDetail() {
         setAllIncidents(data)
         const found = data.find((inc: ApiIncident) => String(inc.id) === String(id))
         setIncident(found || null)
+        // ── Review state persists: reflect an already-marked FP ──
+        setMarkedFP(found?.review_status === 'false_positive')
       } catch { }
       setLoading(false)
     }
     fetchData()
   }, [id])
+
+  // ── Task 9 wiring: the button actually calls the review endpoint now ──
+  const markFalsePositive = async () => {
+    if (!incident || fpSaving) return
+    setFpSaving(true)
+    setFpError(null)
+    try {
+      const res = await apiFetch(`/api/incidents/${incident.id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_status: 'false_positive' }),
+      })
+      if (!res.ok) throw new Error(`Review failed (${res.status})`)
+      setMarkedFP(true)
+    } catch (e: any) {
+      setFpError(e?.message || 'Could not save review')
+    } finally {
+      setFpSaving(false)
+    }
+  }
 
   const currentIdx = allIncidents.findIndex((inc) => String(inc.id) === String(id))
   const hasPrev = currentIdx > 0
@@ -155,6 +187,8 @@ export default function AlertDetail() {
 
   const time = new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour12: false })
   const date = new Date(incident.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const cameraLabel = `Camera ${incident.camera_id ?? 1} — ${titleCase(incident.zone || 'unknown')}`
+  const personLabel = incident.person_id != null ? `ByteTrack #${incident.person_id}` : 'Object detection (no person)'
 
   return (
     <Box sx={{ minHeight: '100vh', background: '#120e0c', fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -231,7 +265,9 @@ export default function AlertDetail() {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
               <Box sx={{ px: 2, py: .6, borderRadius: '8px', background: `${AMBER}18`, border: `1px solid ${AMBER}40` }}>
-                <Typography sx={{ color: AMBER, fontSize: '.72rem', fontWeight: 800, letterSpacing: '.08em' }}>HIGH SEVERITY</Typography>
+                <Typography sx={{ color: AMBER, fontSize: '.72rem', fontWeight: 800, letterSpacing: '.08em' }}>
+                  {(incident.severity || 'high').toUpperCase()} SEVERITY
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: .7, px: 1.5, py: .5, borderRadius: '8px', background: `${RED}12`, border: `1px solid ${RED}30` }}>
                 <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: RED, boxShadow: `0 0 8px ${RED}`, animation: 'bl 1s infinite', '@keyframes bl': { '0%,100%': { opacity: 1 }, '50%': { opacity: .2 } } }} />
@@ -246,11 +282,21 @@ export default function AlertDetail() {
               {titleCase(incident.violation || 'Violation')}
             </Typography>
 
+            {/* ── Attribution: the plain-English rule that fired this alert ── */}
+            {incident.rule_instruction && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, px: 1.8, py: 1, borderRadius: '10px', background: `${CYAN}0E`, border: `1px solid ${CYAN}30`, width: 'fit-content', maxWidth: '100%' }}>
+                <GavelIcon sx={{ fontSize: 14, color: CYAN, flexShrink: 0 }} />
+                <Typography sx={{ color: '#9ec9e8', fontSize: '.8rem', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  “{incident.rule_instruction}”
+                </Typography>
+              </Box>
+            )}
+
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               {[
                 { val: String(incident.id), label: 'Incident' },
-                { val: `Camera 1 — ${titleCase(incident.zone || 'unknown')}`, label: null },
-                { val: `ByteTrack #${incident.person_id}`, label: null },
+                { val: cameraLabel, label: null },
+                { val: personLabel, label: null },
               ].map((item, i, arr) => (
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.82rem' }}>
@@ -292,7 +338,7 @@ export default function AlertDetail() {
                   <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: RED, animation: 'blink 1s infinite', '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: .2 } } }} />
                   <Typography sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '.68rem', fontWeight: 700, letterSpacing: '.06em' }}>CAPTURED</Typography>
                   <Box sx={{ width: '1px', height: 10, background: 'rgba(255,255,255,0.2)', mx: .5 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.65rem' }}>Camera 1 — {titleCase(incident.zone || 'unknown')}</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.65rem' }}>{cameraLabel}</Typography>
                 </Box>
                 <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '.62rem', fontFamily: 'monospace' }}>Frame {incident.frame} · OMNIX CV Engine</Typography>
               </Box>
@@ -303,7 +349,7 @@ export default function AlertDetail() {
                   <Typography sx={{ color: '#fca5a5', fontSize: '.7rem', fontWeight: 700, letterSpacing: '.04em' }}>VIOLATION DETECTED</Typography>
                 </Box>
                 <Box sx={{ px: 1.5, py: .7, background: `${ACCENT}30`, border: `1px solid ${ACCENT}60`, borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
-                  <Typography sx={{ color: CREAM, fontSize: '.7rem', fontWeight: 600 }}>ByteTrack ID #{incident.person_id}</Typography>
+                  <Typography sx={{ color: CREAM, fontSize: '.7rem', fontWeight: 600 }}>{personLabel}</Typography>
                 </Box>
                 <Box sx={{ px: 1.5, py: .7, background: `${GREEN}18`, border: `1px solid ${GREEN}40`, borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
                   <Typography sx={{ color: GREEN, fontSize: '.7rem', fontWeight: 600 }}>Confidence {confidence}%</Typography>
@@ -313,11 +359,13 @@ export default function AlertDetail() {
           </Box>
 
           {/* Action buttons */}
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
             {!markedFP ? (
-              <Box onClick={() => setMarkedFP(true)} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '11px', px: '20px', borderRadius: '12px', fontWeight: 600, fontSize: '.85rem', color: '#fca5a5', border: `1px solid ${RED}25`, background: `${RED}08`, cursor: 'pointer', transition: 'all .2s', '&:hover': { background: `${RED}14`, border: `1px solid ${RED}45`, transform: 'translateY(-1px)' } }}>
+              <Box onClick={markFalsePositive} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '11px', px: '20px', borderRadius: '12px', fontWeight: 600, fontSize: '.85rem', color: '#fca5a5', border: `1px solid ${RED}25`, background: `${RED}08`, cursor: fpSaving ? 'default' : 'pointer', opacity: fpSaving ? 0.6 : 1, transition: 'all .2s', '&:hover': { background: `${RED}14`, border: `1px solid ${RED}45`, transform: 'translateY(-1px)' } }}>
                 <ThumbDownIcon sx={{ fontSize: 15 }} />
-                <Typography sx={{ color: 'inherit', fontSize: 'inherit', fontWeight: 'inherit' }}>Mark as False Positive</Typography>
+                <Typography sx={{ color: 'inherit', fontSize: 'inherit', fontWeight: 'inherit' }}>
+                  {fpSaving ? 'Saving...' : 'Mark as False Positive'}
+                </Typography>
               </Box>
             ) : (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: '20px', py: '11px', borderRadius: '12px', background: `${GREEN}10`, border: `1px solid ${GREEN}30` }}>
@@ -325,6 +373,7 @@ export default function AlertDetail() {
                 <Typography sx={{ color: GREEN, fontSize: '.85rem', fontWeight: 600 }}>Marked as False Positive</Typography>
               </Box>
             )}
+            {fpError && <Typography sx={{ color: '#fca5a5', fontSize: '.75rem' }}>{fpError}</Typography>}
             <Box onClick={() => navigate('/dashboard')} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '11px', px: '20px', borderRadius: '12px', color: 'rgba(245,240,235,0.5)', border: '1px solid rgba(255,200,170,0.1)', background: 'rgba(255,235,220,0.03)', cursor: 'pointer', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.2)', color: '#F5F0EB', transform: 'translateY(-1px)' } }}>
               <ArrowBackIcon sx={{ fontSize: 14 }} />
               <Typography sx={{ color: 'inherit', fontSize: '.85rem', fontWeight: 600 }}>Back to Dashboard</Typography>
@@ -350,10 +399,13 @@ export default function AlertDetail() {
         }}>
 
           <DetailCard title="Alert Details" accentColor={ACCENT}>
-            <DetailRow icon={<CameraAltIcon fontSize="small" />}    label="Camera"        value={`Camera 1 — ${titleCase(incident.zone || 'unknown')}`} accentColor={CREAM} />
-            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Rule Violated" value={titleCase(incident.violation || 'violation')}           accentColor={AMBER} />
+            <DetailRow icon={<CameraAltIcon fontSize="small" />}    label="Camera"        value={cameraLabel} accentColor={CREAM} />
+            {incident.rule_instruction && (
+              <DetailRow icon={<GavelIcon fontSize="small" />}      label="Triggered by Rule" value={incident.rule_instruction} accentColor={CYAN} />
+            )}
+            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Violation"     value={titleCase(incident.violation || 'violation')}           accentColor={AMBER} />
             <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
-            <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={`ByteTrack #${incident.person_id}`}                       accentColor={ACCENT} />
+            <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={personLabel}                       accentColor={ACCENT} />
           </DetailCard>
 
           <DetailCard title="Detection Metrics" accentColor={GREEN}>
