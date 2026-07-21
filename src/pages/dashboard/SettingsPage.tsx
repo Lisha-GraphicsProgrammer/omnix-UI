@@ -33,6 +33,7 @@ export default function SettingsPage() {
   const [dedup, setDedup] = useState(true);
   const [alertChannel, setAlertChannel] = useState("dashboard");
   const [emailAlerts, setEmailAlerts] = useState(false);
+  const [emailSeverityThreshold, setEmailSeverityThreshold] = useState("high");
   const [frameSampling, setFrameSampling] = useState("every");
   const [modelPrecision, setModelPrecision] = useState("balanced");
   const [siteName, setSiteName] = useState("Site A — Construction");
@@ -47,7 +48,7 @@ export default function SettingsPage() {
         if (!res.ok) return;
         const data = await res.json();
         if (data.detection) { setCooldown(data.detection.alert_cooldown_frames ?? 150); setConfidence(data.detection.detection_confidence ?? 0.5); setBytetrackBuffer(data.detection.bytetrack_buffer ?? 30); setPersistenceFrames(data.detection.persistence_frames ?? 5); }
-        if (data.alerts) { setAlertChannel(data.alerts.channels ?? "dashboard"); setDedup(data.alerts.deduplication_enabled ?? true); setEmailAlerts(data.alerts.email_notifications_enabled ?? false); }
+        if (data.alerts) { setAlertChannel(data.alerts.channels ?? "dashboard"); setDedup(data.alerts.deduplication_enabled ?? true); setEmailAlerts(data.alerts.email_notifications_enabled ?? false); setEmailSeverityThreshold(data.alerts.email_severity_threshold ?? "high"); }
         if (data.ai_model) { setFrameSampling(data.ai_model.frame_sampling ?? "every"); setModelPrecision(data.ai_model.model_precision ?? "balanced"); }
         if (data.platform) { setLlmModel(data.platform.llm_model ?? "claude-haiku"); setSiteName(data.platform.site_name ?? "Site A — Construction"); setApiEndpoint(data.platform.api_endpoint ?? "http://localhost:8000"); }
       } catch {}
@@ -58,11 +59,11 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ detection: { alert_cooldown_frames: cooldown, detection_confidence: confidence, bytetrack_buffer: bytetrackBuffer, persistence_frames: persistenceFrames }, alerts: { channels: alertChannel, deduplication_enabled: dedup, email_notifications_enabled: emailAlerts }, ai_model: { frame_sampling: frameSampling, model_precision: modelPrecision }, platform: { llm_model: llmModel, site_name: siteName, api_endpoint: apiEndpoint } }) });
+      await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ detection: { alert_cooldown_frames: cooldown, detection_confidence: confidence, bytetrack_buffer: bytetrackBuffer, persistence_frames: persistenceFrames }, alerts: { channels: alertChannel, deduplication_enabled: dedup, email_notifications_enabled: emailAlerts, email_severity_threshold: emailSeverityThreshold }, ai_model: { frame_sampling: frameSampling, model_precision: modelPrecision }, platform: { llm_model: llmModel, site_name: siteName, api_endpoint: apiEndpoint } }) });
     } catch {} finally { setSaving(false); setDirty(false); setSaved(true); }
   };
 
-  const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setPersistenceFrames(5); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
+  const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setPersistenceFrames(5); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setEmailSeverityThreshold("high"); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
 
   const selectSx = {
     minWidth: 160, fontSize: "0.82rem", background: t.surface,
@@ -175,6 +176,16 @@ export default function SettingsPage() {
           </SettingRow>
           <SettingRow label="Email Notifications" description="Send alert emails to registered admin address" tag="Optional" tagColor="rgba(255,200,170,0.4)">
             <Switch checked={emailAlerts} onChange={(e) => { setEmailAlerts(e.target.checked); mark(); }} size="small" sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: ACCENT }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { background: ACCENT } }} />
+          </SettingRow>
+          <SettingRow label="Email Severity Threshold" description="Minimum severity that triggers an email" tag="SMTP" tooltip="Only incidents at or above this severity will send an email, even when Email Notifications is on">
+            <FormControl size="small" disabled={!emailAlerts}>
+              <Select value={emailSeverityThreshold} onChange={(e) => { setEmailSeverityThreshold(e.target.value); mark(); }} sx={{ ...selectSx, opacity: emailAlerts ? 1 : 0.5 }}>
+                <MenuItem value="low">Low and above</MenuItem>
+                <MenuItem value="medium">Medium and above</MenuItem>
+                <MenuItem value="high">High and above</MenuItem>
+                <MenuItem value="critical">Critical only</MenuItem>
+              </Select>
+            </FormControl>
           </SettingRow>
         </SectionCard>
 
