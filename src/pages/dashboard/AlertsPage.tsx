@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Box, Typography, Select, MenuItem, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -8,6 +8,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PersonIcon from "@mui/icons-material/Person";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import NotificationBell from "../../components/layout/NotificationBell";
 import { useTheme } from "../../context/ThemeContext";
 import { useStats } from "../../hooks/queries";
 import { apiGet } from "../../lib/api";
@@ -26,17 +27,38 @@ export default function AlertsPage({
   navigate: (p: string) => void;
 }) {
   const { t } = useTheme();
-  const [filter, setFilter] = useState("All"); // severity chips
-  const [page, setPage] = useState(1);
+
+  // ── Filter bug fix: read initial filter state from the URL, so navigating
+  // back from Alert Detail (via browser history) restores exactly what was applied ──
+  const initParams = new URLSearchParams(window.location.search);
+  const [filter, setFilter] = useState(initParams.get("f_sev") || "All"); // severity chips
+  const [page, setPage] = useState(Number(initParams.get("f_page")) || 1);
   const [pageSize, setPageSize] = useState(25);
 
   // ── Alert usability: filter state ──
-  const [ruleId, setRuleId] = useState<string>(""); // "" = any
-  const [cameraId, setCameraId] = useState<string>("");
-  const [violation, setViolation] = useState<string>("");
-  const [review, setReview] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [ruleId, setRuleId] = useState<string>(initParams.get("f_rule") || ""); // "" = any
+  const [cameraId, setCameraId] = useState<string>(initParams.get("f_camera") || "");
+  const [violation, setViolation] = useState<string>(initParams.get("f_violation") || "");
+  const [review, setReview] = useState<string>(initParams.get("f_review") || "");
+  const [dateFrom, setDateFrom] = useState<string>(initParams.get("f_from") || "");
+  const [dateTo, setDateTo] = useState<string>(initParams.get("f_to") || "");
+
+  // ── Filter bug fix: keep the URL's query string in sync with current filters,
+  // using replaceState (not a router navigation) so this doesn't spam browser
+  // history — only the "View" click to Alert Detail adds a real history entry. ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (ruleId) params.set("f_rule", ruleId); else params.delete("f_rule");
+    if (cameraId) params.set("f_camera", cameraId); else params.delete("f_camera");
+    if (violation) params.set("f_violation", violation); else params.delete("f_violation");
+    if (review) params.set("f_review", review); else params.delete("f_review");
+    if (dateFrom) params.set("f_from", dateFrom); else params.delete("f_from");
+    if (dateTo) params.set("f_to", dateTo); else params.delete("f_to");
+    if (filter !== "All") params.set("f_sev", filter); else params.delete("f_sev");
+    if (page !== 1) params.set("f_page", String(page)); else params.delete("f_page");
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  }, [ruleId, cameraId, violation, review, dateFrom, dateTo, filter, page]);
 
   const resetFilters = () => {
     setRuleId("");
@@ -288,6 +310,7 @@ export default function AlertsPage({
               {apiError ? "Offline" : "Live"}
             </Typography>
           </Box>
+          <NotificationBell />
           <Box
             onClick={() => navigate("/rules")}
             sx={{

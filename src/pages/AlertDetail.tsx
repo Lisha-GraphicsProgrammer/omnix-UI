@@ -15,7 +15,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GavelIcon from '@mui/icons-material/Gavel'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { apiFetch } from '../lib/api'
 
 const ACCENT  = '#C0392B'
@@ -46,6 +46,127 @@ interface ApiIncident {
 
 function titleCase(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+// ── Bbox pulse overlay: computes the actual rendered rect of an image inside
+// a box using object-fit:contain sizing math, so the overlay lines up correctly
+// even when the image is letterboxed (e.g. a portrait screenshot in a wide box). ──
+interface RenderedImageRect {
+  offsetX: number
+  offsetY: number
+  width: number
+  height: number
+}
+
+function computeContainRect(
+  naturalW: number,
+  naturalH: number,
+  boxW: number,
+  boxH: number
+): RenderedImageRect {
+  if (!naturalW || !naturalH || !boxW || !boxH) {
+    return { offsetX: 0, offsetY: 0, width: boxW, height: boxH }
+  }
+  const naturalRatio = naturalW / naturalH
+  const boxRatio = boxW / boxH
+  let width: number
+  let height: number
+  if (naturalRatio > boxRatio) {
+    // Image is relatively wider than the box — width-limited, letterboxed top/bottom
+    width = boxW
+    height = boxW / naturalRatio
+  } else {
+    // Image is relatively taller than the box — height-limited, letterboxed left/right
+    height = boxH
+    width = boxH * naturalRatio
+  }
+  return {
+    offsetX: (boxW - width) / 2,
+    offsetY: (boxH - height) / 2,
+    width,
+    height,
+  }
+}
+
+function BBoxOverlay({
+  bbox,
+  containerRef,
+  imgRef,
+}: {
+  bbox: number[] | undefined
+  containerRef: React.RefObject<HTMLDivElement>
+  imgRef: React.RefObject<HTMLImageElement>
+}) {
+  const [rect, setRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
+
+  const recompute = useCallback(() => {
+    const container = containerRef.current
+    const img = imgRef.current
+    if (!container || !img || !bbox || bbox.length < 4) {
+      setRect(null)
+      return
+    }
+    const naturalW = img.naturalWidth
+    const naturalH = img.naturalHeight
+    if (!naturalW || !naturalH) {
+      setRect(null)
+      return
+    }
+    const boxW = container.clientWidth
+    const boxH = container.clientHeight
+    const displayed = computeContainRect(naturalW, naturalH, boxW, boxH)
+
+    const [x1, y1, x2, y2] = bbox
+    const scaleX = displayed.width / naturalW
+    const scaleY = displayed.height / naturalH
+
+    setRect({
+      left: displayed.offsetX + x1 * scaleX,
+      top: displayed.offsetY + y1 * scaleY,
+      width: (x2 - x1) * scaleX,
+      height: (y2 - y1) * scaleY,
+    })
+  }, [bbox, containerRef, imgRef])
+
+  useEffect(() => {
+    recompute()
+    window.addEventListener('resize', recompute)
+    return () => window.removeEventListener('resize', recompute)
+  }, [recompute])
+
+  useEffect(() => {
+    const img = imgRef.current
+    if (!img) return
+    if (img.complete) {
+      recompute()
+    } else {
+      img.addEventListener('load', recompute)
+      return () => img.removeEventListener('load', recompute)
+    }
+  }, [imgRef, recompute])
+
+  if (!rect) return null
+
+  return (
+    <Box
+      sx={{
+        position: 'absolute',
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        border: `3px solid ${RED}`,
+        borderRadius: '4px',
+        boxShadow: `0 0 0 1px rgba(0,0,0,0.4), 0 0 16px ${RED}90`,
+        pointerEvents: 'none',
+        animation: 'bboxPulse 1s ease-in-out infinite',
+        '@keyframes bboxPulse': {
+          '0%, 100%': { opacity: 1, boxShadow: `0 0 0 1px rgba(0,0,0,0.4), 0 0 16px ${RED}90` },
+          '50%': { opacity: 0.45, boxShadow: `0 0 0 1px rgba(0,0,0,0.2), 0 0 4px ${RED}40` },
+        },
+      }}
+    />
+  )
 }
 
 function DetailCard({
@@ -126,6 +247,8 @@ export default function AlertDetail() {
   const [allIncidents, setAllIncidents] = useState<ApiIncident[]>([])
   const [loading, setLoading] = useState(true)
   const [imgError, setImgError] = useState(false)
+  const screenshotContainerRef = useRef<HTMLDivElement>(null)
+  const screenshotImgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -203,7 +326,7 @@ export default function AlertDetail() {
         position: 'sticky', top: 0, zIndex: 50,
         boxShadow: `0 -1px 0 0 ${ACCENT}40 inset, 0 1px 0 rgba(255,200,170,0.04)`,
       }}>
-        <Box onClick={() => navigate('/dashboard')} sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: .7, borderRadius: '8px', border: '1px solid rgba(255,200,170,0.08)', background: 'rgba(255,235,220,0.03)', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.15)' } }}>
+        <Box onClick={() => navigate(-1)} sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: .7, borderRadius: '8px', border: '1px solid rgba(255,200,170,0.08)', background: 'rgba(255,235,220,0.03)', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.15)' } }}>
           <ArrowBackIcon sx={{ fontSize: 14, color: 'rgba(245,240,235,0.5)' }} />
           <Typography sx={{ color: 'rgba(245,240,235,0.5)', fontSize: '.78rem' }}>Dashboard</Typography>
         </Box>
@@ -287,7 +410,7 @@ export default function AlertDetail() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, px: 1.8, py: 1, borderRadius: '10px', background: `${CYAN}0E`, border: `1px solid ${CYAN}30`, width: 'fit-content', maxWidth: '100%' }}>
                 <GavelIcon sx={{ fontSize: 14, color: CYAN, flexShrink: 0 }} />
                 <Typography sx={{ color: '#9ec9e8', fontSize: '.8rem', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  “{incident.rule_instruction}”
+                  "{incident.rule_instruction}"
                 </Typography>
               </Box>
             )}
@@ -322,15 +445,28 @@ export default function AlertDetail() {
               </Box>
             </Box>
 
-            <Box sx={{ borderRadius: '20px', overflow: 'hidden', border: `1px solid rgba(255,200,170,0.1)`, background: '#0a0806', position: 'relative', boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px ${ACCENT}15` }}>
+            <Box
+              ref={screenshotContainerRef}
+              sx={{ borderRadius: '20px', overflow: 'hidden', border: `1px solid rgba(255,200,170,0.1)`, background: '#0a0806', position: 'relative', boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px ${ACCENT}15` }}
+            >
               {!imgError && incident.screenshot_url ? (
-                <img src={incident.screenshot_url} alt="Violation screenshot" onError={() => setImgError(true)}
-                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '520px', objectFit: 'contain' }} />
+                <img
+                  ref={screenshotImgRef}
+                  src={incident.screenshot_url}
+                  alt="Violation screenshot"
+                  onError={() => setImgError(true)}
+                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '520px', objectFit: 'contain' }}
+                />
               ) : (
                 <Box sx={{ height: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, background: 'linear-gradient(135deg, #1a0f0c, #2a1510)' }}>
                   <CameraAltIcon sx={{ fontSize: 48, color: 'rgba(245,240,235,0.08)' }} />
                   <Typography sx={{ color: 'rgba(245,240,235,0.2)', fontSize: '.82rem' }}>Screenshot unavailable</Typography>
                 </Box>
+              )}
+
+              {/* ── Violator bbox pulse overlay — positioned using incident.bbox, accounting for object-fit:contain letterboxing ── */}
+              {!imgError && incident.screenshot_url && (
+                <BBoxOverlay bbox={incident.bbox} containerRef={screenshotContainerRef} imgRef={screenshotImgRef} />
               )}
 
               <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, px: 2.5, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
@@ -374,7 +510,7 @@ export default function AlertDetail() {
               </Box>
             )}
             {fpError && <Typography sx={{ color: '#fca5a5', fontSize: '.75rem' }}>{fpError}</Typography>}
-            <Box onClick={() => navigate('/dashboard')} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '11px', px: '20px', borderRadius: '12px', color: 'rgba(245,240,235,0.5)', border: '1px solid rgba(255,200,170,0.1)', background: 'rgba(255,235,220,0.03)', cursor: 'pointer', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.2)', color: '#F5F0EB', transform: 'translateY(-1px)' } }}>
+            <Box onClick={() => navigate(-1)} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '11px', px: '20px', borderRadius: '12px', color: 'rgba(245,240,235,0.5)', border: '1px solid rgba(255,200,170,0.1)', background: 'rgba(255,235,220,0.03)', cursor: 'pointer', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.2)', color: '#F5F0EB', transform: 'translateY(-1px)' } }}>
               <ArrowBackIcon sx={{ fontSize: 14 }} />
               <Typography sx={{ color: 'inherit', fontSize: '.85rem', fontWeight: 600 }}>Back to Dashboard</Typography>
             </Box>
