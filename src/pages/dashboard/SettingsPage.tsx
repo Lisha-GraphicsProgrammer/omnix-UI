@@ -15,6 +15,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import SettingsIcon from "@mui/icons-material/Settings";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import NotificationBell from "../../components/layout/NotificationBell";
 import { useTheme } from "../../context/ThemeContext";
 import { apiFetch } from "../../lib/api";
 import { ACCENT, GREEN, AMBER } from "../../lib/constants";
@@ -82,6 +83,7 @@ export default function SettingsPage() {
           <Typography sx={{ fontSize: "0.8rem", color: t.textMuted, mt: "4px" }}>Platform configuration — OMNIX POC v0.1</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <NotificationBell />
           {dirty && (
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mr: 1 }}>
               <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: AMBER, boxShadow: `0 0 8px ${AMBER}` }} />

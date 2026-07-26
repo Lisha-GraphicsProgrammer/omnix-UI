@@ -9,6 +9,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Cell
 } from "recharts";
+import NotificationBell from "../../components/layout/NotificationBell";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useAnalytics } from "../../hooks/queries";
@@ -87,28 +88,31 @@ export default function AnalyticsPage() {
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Analytics</Typography>
           <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>Historical safety monitoring insights</Typography>
         </Box>
-        {isAdmin && (
-          <Box sx={{ position: "relative" }}>
-            <Box
-              onClick={() => setShowExportMenu(o => !o)}
-              sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
-            >
-              <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
-              <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>
-                {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
-              </Typography>
-            </Box>
-            {showExportMenu && (
-              <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
-                {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
-                  <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
-                  </Box>
-                ))}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <NotificationBell />
+          {isAdmin && (
+            <Box sx={{ position: "relative" }}>
+              <Box
+                onClick={() => setShowExportMenu(o => !o)}
+                sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
+              >
+                <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
+                <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>
+                  {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
+                </Typography>
               </Box>
-            )}
-          </Box>
-        )}
+              {showExportMenu && (
+                <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
+                  {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
+                    <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
       </Box>
 
       <Box sx={{ p: 4 }}>

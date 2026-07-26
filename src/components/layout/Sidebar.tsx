@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.tsx
 import { Box, Typography, Tooltip, IconButton } from "@mui/material";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleIcon from "@mui/icons-material/Rule";
@@ -27,7 +28,7 @@ export default function Sidebar({ selected, onSelect, open, onToggle, onSignOut,
 
   return (
     <Box sx={{ width: open ? DRAWER_OPEN : 56, flexShrink: 0, display: "flex", flexDirection: "column", background: t.sidebarBg, borderRight: `1px solid ${t.sidebarBorder}`, position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100, transition: "width .25s cubic-bezier(.4,0,.2,1)", overflow: "hidden" }}>
-      
+
       {/* Logo */}
       <Box sx={{ px: open ? 3 : 1.5, py: 3, borderBottom: `1px solid ${t.sidebarBorder}`, display: "flex", alignItems: "center", gap: 1.5, minHeight: 72 }}>
         <Box sx={{ width: 30, height: 30, borderRadius: "8px", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${ACCENT}50`, flexShrink: 0 }}>

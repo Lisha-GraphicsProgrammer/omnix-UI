@@ -17,6 +17,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GavelIcon from '@mui/icons-material/Gavel'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { apiFetch } from '../lib/api'
+import { humanizeViolation } from '../lib/humanize'
+import NotificationBell from '../components/layout/NotificationBell'
 
 const ACCENT  = '#C0392B'
 const ACCENT2 = '#8B2E1F'
@@ -351,6 +353,7 @@ export default function AlertDetail() {
         </Box>
 
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
+          <NotificationBell />
           <Typography sx={{ color: 'rgba(245,240,235,0.2)', fontSize: '.72rem', mr: 1 }}>
             {currentIdx + 1} / {allIncidents.length}
           </Typography>
@@ -402,7 +405,7 @@ export default function AlertDetail() {
             </Box>
 
             <Typography sx={{ color: '#F5F0EB', fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-1.2px', lineHeight: 1.1, mb: 1.2 }}>
-              {titleCase(incident.violation || 'Violation')}
+              {humanizeViolation({ violation: incident.violation, person_id: incident.person_id, zone: incident.zone })}
             </Typography>
 
             {/* ── Attribution: the plain-English rule that fired this alert ── */}
@@ -539,7 +542,7 @@ export default function AlertDetail() {
             {incident.rule_instruction && (
               <DetailRow icon={<GavelIcon fontSize="small" />}      label="Triggered by Rule" value={incident.rule_instruction} accentColor={CYAN} />
             )}
-            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Violation"     value={titleCase(incident.violation || 'violation')}           accentColor={AMBER} />
+            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Violation"     value={humanizeViolation({ violation: incident.violation, person_id: incident.person_id, zone: incident.zone })}           accentColor={AMBER} />
             <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
             <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={personLabel}                       accentColor={ACCENT} />
           </DetailCard>
