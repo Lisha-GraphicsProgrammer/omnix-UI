@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Dialog, Box, Typography } from "@mui/material";
+import { Dialog, Box, Typography, Slider } from "@mui/material";
+import BoltIcon from "@mui/icons-material/Bolt";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -20,12 +21,15 @@ export default function RuleSetupWizard({
 }: {
   open: boolean;
   onClose: () => void;
-  onComplete: (ctx: { camera: ApiCamera; zone: ZoneLite | null }) => void;
+  onComplete: (ctx: { camera: ApiCamera; zone: ZoneLite | null; persistence: number; proximity: number }) => void;
   ruleText?: string;
 }) {
   const { t } = useTheme();
   const { data: cameras } = useCameras();
-  const [step, setStep] = useState<"camera" | "zone">("camera");
+  const [step, setStep] = useState<"camera" | "zone" | "sensitivity">("camera");
+  const [persistence, setPersistence] = useState(5);
+  const [proximity, setProximity] = useState(120);
+  const [pendingZone, setPendingZone] = useState<ZoneLite | null>(null);
   const [camera, setCamera] = useState<ApiCamera | null>(null);
   const [zones, setZones] = useState<ZoneLite[]>([]);
   const [selectedZone, setSelectedZone] = useState<ZoneLite | null>(null);
@@ -38,6 +42,9 @@ export default function RuleSetupWizard({
       setCamera(null);
       setZones([]);
       setSelectedZone(null);
+      setPersistence(5);
+      setProximity(120);
+      setPendingZone(null);
     }
   }, [open]);
 
@@ -54,7 +61,13 @@ export default function RuleSetupWizard({
 
   const finish = (zone: ZoneLite | null) => {
     if (!camera) return;
-    onComplete({ camera, zone });
+    setPendingZone(zone);
+    setStep("sensitivity");
+  };
+
+  const finishAll = () => {
+    if (!camera) return;
+    onComplete({ camera, zone: pendingZone, persistence, proximity });
   };
 
   return (
@@ -63,118 +76,48 @@ export default function RuleSetupWizard({
       onClose={onClose}
       fullWidth
       maxWidth="md"
-      sx={{
-        "& .MuiDialog-paper": {
-          background: t.bgSecondary,
-          border: `1px solid ${t.border}`,
-          borderRadius: "18px",
-          backgroundImage: "none",
-          maxHeight: "88vh",
-          display: "flex",
-          flexDirection: "column",
-        },
-      }}
+      sx={{ "& .MuiDialog-paper": { background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "18px", backgroundImage: "none", maxHeight: "88vh", display: "flex", flexDirection: "column" } }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          px: 3,
-          py: 2.2,
-          borderBottom: `1px solid ${t.border}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          flexShrink: 0,
-        }}
-      >
-        {step === "zone" && (
-          <Box
-            onClick={() => setStep("camera")}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-              color: t.textMuted,
-              "&:hover": { color: t.text },
-            }}
-          >
+      <Box sx={{ px: 3, py: 2.2, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
+        {step !== "camera" && (
+          <Box onClick={() => setStep(step === "sensitivity" ? "zone" : "camera")} sx={{ display: "flex", alignItems: "center", cursor: "pointer", color: t.textMuted, "&:hover": { color: t.text } }}>
             <ArrowBackIcon sx={{ fontSize: 18 }} />
           </Box>
         )}
         <Box sx={{ flex: 1 }}>
           <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1rem" }}>
-            {step === "camera"
-              ? "Select a camera"
-              : `Zone on ${camera?.name || "camera"}`}
+            {step === "camera" ? "Select a camera" : step === "zone" ? `Zone on ${camera?.name || "camera"}` : "Rule sensitivity"}
           </Typography>
           <Typography sx={{ color: t.textMuted, fontSize: ".74rem", mt: 0.2 }}>
             {step === "camera"
               ? "Which camera should this rule watch?"
-              : ruleText.trim()
-                ? "Zones mentioned in your rule are shown — pick one, or draw a new area"
-                : "Pick a zone, draw a new one, or skip to watch the whole frame"}
+              : step === "zone"
+                ? (ruleText.trim()
+                  ? "Zones mentioned in your rule are shown — pick one, or draw a new area"
+                  : "Pick a zone, draw a new one, or skip to watch the whole frame")
+                : "How fast should this rule fire? Urgent hazards deserve instant alerts."}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 0.6 }}>
-          {["camera", "zone"].map((s) => (
-            <Box
-              key={s}
-              sx={{
-                width: 26,
-                height: 4,
-                borderRadius: 2,
-                background: step === s ? PURPLE : t.border,
-              }}
-            />
+          {["camera", "zone", "sensitivity"].map((s) => (
+            <Box key={s} sx={{ width: 26, height: 4, borderRadius: 2, background: step === s ? PURPLE : t.border }} />
           ))}
         </Box>
-        <Box
-          onClick={onClose}
-          sx={{
-            ml: 1,
-            width: 30,
-            height: 30,
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: t.textMuted,
-            border: `1px solid ${t.border}`,
-            "&:hover": { color: t.text, background: t.surfaceHover },
-          }}
-        >
+        <Box onClick={onClose} sx={{ ml: 1, width: 30, height: 30, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.textMuted, border: `1px solid ${t.border}`, "&:hover": { color: t.text, background: t.surfaceHover } }}>
           <CloseIcon sx={{ fontSize: 17 }} />
         </Box>
       </Box>
 
       {/* Body */}
-      <Box
-        sx={{
-          p: 3,
-          overflowY: "auto",
-          minHeight: 0,
-          scrollbarWidth: "thin",
-          scrollbarColor: "rgba(99,102,241,0.4) transparent",
-          "&::-webkit-scrollbar": { width: "6px" },
-          "&::-webkit-scrollbar-track": { background: "transparent" },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(99,102,241,0.35)",
-            borderRadius: "8px",
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            background: "rgba(99,102,241,0.6)",
-          },
-        }}
-      >
+      <Box sx={{ p: 3, overflowY: "auto", minHeight: 0,
+        scrollbarWidth: "thin", scrollbarColor: "rgba(99,102,241,0.4) transparent",
+        "&::-webkit-scrollbar": { width: "6px" },
+        "&::-webkit-scrollbar-track": { background: "transparent" },
+        "&::-webkit-scrollbar-thumb": { background: "rgba(99,102,241,0.35)", borderRadius: "8px" },
+        "&::-webkit-scrollbar-thumb:hover": { background: "rgba(99,102,241,0.6)" } }}>
         {step === "camera" && (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: 2,
-            }}
-          >
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 2 }}>
             {(cameras ?? []).map((cam) => {
               const online = cam.status === "online";
               return (
@@ -182,96 +125,31 @@ export default function RuleSetupWizard({
                   key={cam.id}
                   onClick={online ? () => pickCamera(cam) : undefined}
                   sx={{
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    border: `1px solid ${t.border}`,
-                    background: t.surface,
-                    cursor: online ? "pointer" : "default",
-                    opacity: online ? 1 : 0.45,
-                    transition: "all .15s",
-                    "&:hover": online
-                      ? {
-                          borderColor: `${CYAN}60`,
-                          transform: "translateY(-2px)",
-                        }
-                      : {},
+                    borderRadius: "12px", overflow: "hidden", border: `1px solid ${t.border}`,
+                    background: t.surface, cursor: online ? "pointer" : "default",
+                    opacity: online ? 1 : 0.45, transition: "all .15s",
+                    "&:hover": online ? { borderColor: `${CYAN}60`, transform: "translateY(-2px)" } : {},
                   }}
                 >
-                  <Box
-                    sx={{
-                      position: "relative",
-                      aspectRatio: "16/9",
-                      background: "#000",
-                    }}
-                  >
+                  <Box sx={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
                     <img
-                      src={
-                        online
-                          ? `${API_BASE}/api/video/stream?camera_id=${cam.id}&t=${snapTs}`
-                          : `${API_BASE}/api/video/snapshot?camera_id=${cam.id}&t=${snapTs}`
-                      }
+                      src={online
+                        ? `${API_BASE}/api/video/stream?camera_id=${cam.id}&t=${snapTs}`
+                        : `${API_BASE}/api/video/snapshot?camera_id=${cam.id}&t=${snapTs}`}
                       alt={cam.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        position: "absolute",
-                        inset: 0,
-                      }}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
                     />
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        top: 8,
-                        left: 8,
-                        px: 1,
-                        py: 0.2,
-                        borderRadius: "6px",
-                        background: online
-                          ? `${GREEN}22`
-                          : "rgba(239,68,68,0.18)",
-                        border: `1px solid ${online ? GREEN + "50" : "rgba(239,68,68,0.35)"}`,
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          color: online ? GREEN : "#fca5a5",
-                          fontSize: ".6rem",
-                          fontWeight: 700,
-                        }}
-                      >
+                    <Box sx={{ position: "absolute", top: 8, left: 8, px: 1, py: 0.2, borderRadius: "6px", background: online ? `${GREEN}22` : "rgba(239,68,68,0.18)", border: `1px solid ${online ? GREEN + "50" : "rgba(239,68,68,0.35)"}` }}>
+                      <Typography sx={{ color: online ? GREEN : "#fca5a5", fontSize: ".6rem", fontWeight: 700 }}>
                         {online ? "LIVE" : "OFFLINE"}
                       </Typography>
                     </Box>
                   </Box>
-                  <Box
-                    sx={{
-                      px: 1.5,
-                      py: 1.2,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
-                  >
+                  <Box sx={{ px: 1.5, py: 1.2, display: "flex", alignItems: "center", gap: 1 }}>
                     <CameraAltIcon sx={{ fontSize: 15, color: t.textMuted }} />
                     <Box sx={{ minWidth: 0 }}>
-                      <Typography
-                        sx={{
-                          color: t.text,
-                          fontSize: ".78rem",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {cam.name}
-                      </Typography>
-                      <Typography
-                        sx={{ color: t.textMuted, fontSize: ".65rem" }}
-                      >
-                        {cam.location}
-                      </Typography>
+                      <Typography sx={{ color: t.text, fontSize: ".78rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cam.name}</Typography>
+                      <Typography sx={{ color: t.textMuted, fontSize: ".65rem" }}>{cam.location}</Typography>
                     </Box>
                   </Box>
                 </Box>
@@ -294,76 +172,78 @@ export default function RuleSetupWizard({
               }}
               ruleText={ruleText}
             />
-            <Box
-              sx={{
-                mt: 2.5,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 1.5,
-              }}
-            >
-              <Box
-                onClick={() => finish(null)}
-                sx={{
-                  px: 2.2,
-                  py: 1,
-                  borderRadius: "10px",
-                  border: `1px solid ${t.border}`,
-                  cursor: "pointer",
-                  "&:hover": { background: t.surfaceHover },
-                }}
-              >
-                <Typography
-                  sx={{
-                    color: t.textSecondary,
-                    fontSize: ".82rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  Skip — watch whole frame
-                </Typography>
+            <Box sx={{ mt: 2.5, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5 }}>
+              <Box onClick={() => finish(null)} sx={{ px: 2.2, py: 1, borderRadius: "10px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { background: t.surfaceHover } }}>
+                <Typography sx={{ color: t.textSecondary, fontSize: ".82rem", fontWeight: 600 }}>Skip — watch whole frame</Typography>
               </Box>
               <Box
                 onClick={selectedZone ? () => finish(selectedZone) : undefined}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.8,
-                  px: 2.2,
-                  py: 1,
-                  borderRadius: "10px",
-                  background: selectedZone
-                    ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)`
-                    : t.surface,
+                  display: "flex", alignItems: "center", gap: 0.8, px: 2.2, py: 1, borderRadius: "10px",
+                  background: selectedZone ? `linear-gradient(135deg, ${PURPLE}, #5B21B6)` : t.surface,
                   border: `1px solid ${selectedZone ? PURPLE + "70" : t.border}`,
                   cursor: selectedZone ? "pointer" : "default",
                   boxShadow: selectedZone ? `0 4px 16px ${PURPLE}40` : "none",
-                  "&:hover": selectedZone
-                    ? { transform: "translateY(-1px)" }
-                    : {},
+                  "&:hover": selectedZone ? { transform: "translateY(-1px)" } : {},
                 }}
               >
-                <CheckCircleIcon
-                  sx={{
-                    fontSize: 16,
-                    color: selectedZone ? "#fff" : t.textMuted,
-                  }}
-                />
-                <Typography
-                  sx={{
-                    color: selectedZone ? "#fff" : t.textMuted,
-                    fontSize: ".82rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  {selectedZone
-                    ? `Use "${selectedZone.name.replace(/_/g, " ")}"`
-                    : "Select a zone"}
+                <CheckCircleIcon sx={{ fontSize: 16, color: selectedZone ? "#fff" : t.textMuted }} />
+                <Typography sx={{ color: selectedZone ? "#fff" : t.textMuted, fontSize: ".82rem", fontWeight: 700 }}>
+                  {selectedZone ? `Use "${selectedZone.name.replace(/_/g, " ")}"` : "Select a zone"}
                 </Typography>
               </Box>
             </Box>
           </>
+        )}
+
+        {step === "sensitivity" && camera && (
+          <Box>
+            {/* Trigger speed presets */}
+            <Typography sx={{ color: t.textSecondary, fontSize: ".82rem", fontWeight: 700, mb: 1 }}>Trigger speed</Typography>
+            <Box sx={{ display: "flex", gap: 1.2, mb: 2, flexWrap: "wrap" }}>
+              {[
+                { label: "Instant", frames: 2, desc: "hazards: acid, fire (~0.1s)", color: "#ef4444" },
+                { label: "Normal", frames: 5, desc: "default (~0.2s)", color: CYAN },
+                { label: "Strict", frames: 10, desc: "fewer false alarms (~0.4s)", color: GREEN },
+              ].map((p) => (
+                <Box key={p.label} onClick={() => setPersistence(p.frames)}
+                  sx={{ px: 2, py: 1.2, borderRadius: "12px", border: `1.5px solid ${persistence === p.frames ? p.color : t.border}`, background: persistence === p.frames ? `${p.color}12` : t.surface, cursor: "pointer", minWidth: 130, "&:hover": { borderColor: p.color } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
+                    {p.label === "Instant" && <BoltIcon sx={{ fontSize: 14, color: p.color }} />}
+                    <Typography sx={{ color: persistence === p.frames ? p.color : t.text, fontSize: ".82rem", fontWeight: 700 }}>{p.label}</Typography>
+                  </Box>
+                  <Typography sx={{ color: t.textMuted, fontSize: ".66rem", mt: 0.3 }}>{p.desc}</Typography>
+                </Box>
+              ))}
+            </Box>
+            <Box sx={{ px: 1, mb: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>Fine-tune: violation must hold for</Typography>
+                <Typography sx={{ color: CYAN, fontSize: ".74rem", fontWeight: 700 }}>{persistence} frame{persistence !== 1 ? "s" : ""} (≈{(persistence / 25).toFixed(1)}s live)</Typography>
+              </Box>
+              <Slider value={persistence} min={1} max={30} step={1} onChange={(_, v) => setPersistence(v as number)}
+                sx={{ color: CYAN, "& .MuiSlider-thumb": { width: 14, height: 14 } }} />
+            </Box>
+
+            {/* Proximity distance (used by "near X" rules) */}
+            <Typography sx={{ color: t.textSecondary, fontSize: ".82rem", fontWeight: 700, mb: 0.4 }}>Alert distance</Typography>
+            <Typography sx={{ color: t.textMuted, fontSize: ".7rem", mb: 1 }}>Used when this rule is about being NEAR something (spill, forklift...). Ignored otherwise.</Typography>
+            <Box sx={{ px: 1, mb: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>Fire when person is within</Typography>
+                <Typography sx={{ color: "#a78bfa", fontSize: ".74rem", fontWeight: 700 }}>{proximity} px</Typography>
+              </Box>
+              <Slider value={proximity} min={20} max={400} step={10} onChange={(_, v) => setProximity(v as number)}
+                sx={{ color: PURPLE, "& .MuiSlider-thumb": { width: 14, height: 14 } }} />
+            </Box>
+
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5 }}>
+              <Box onClick={finishAll} sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 2.4, py: 1.1, borderRadius: "10px", background: `linear-gradient(135deg, ${PURPLE}, #5B21B6)`, border: `1px solid ${PURPLE}70`, cursor: "pointer", boxShadow: `0 4px 16px ${PURPLE}40`, "&:hover": { transform: "translateY(-1px)" } }}>
+                <CheckCircleIcon sx={{ fontSize: 16, color: "#fff" }} />
+                <Typography sx={{ color: "#fff", fontSize: ".84rem", fontWeight: 700 }}>Done — use these settings</Typography>
+              </Box>
+            </Box>
+          </Box>
         )}
       </Box>
     </Dialog>
