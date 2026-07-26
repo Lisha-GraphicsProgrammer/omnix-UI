@@ -9,6 +9,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import NotificationBell from "../../components/layout/NotificationBell";
+import { humanizeViolation } from "../../lib/humanize";
 import { useTheme } from "../../context/ThemeContext";
 import { useStats } from "../../hooks/queries";
 import { apiGet } from "../../lib/api";
@@ -19,6 +20,8 @@ import type { ApiStats, DashboardAlert } from "../../types";
 type AlertRow = DashboardAlert & {
   rule_instruction?: string | null;
   violationRaw?: string;
+  personId?: number | null;
+  zoneRaw?: string | null;
 };
 
 export default function AlertsPage({
@@ -125,6 +128,8 @@ export default function AlertsPage({
     ...transformIncident(i),
     rule_instruction: i.rule_instruction,
     violationRaw: i.violation,
+    personId: i.person_id,
+    zoneRaw: i.zone,
   }));
   const stats: ApiStats = statsData ?? {
     total: 0,
@@ -858,7 +863,11 @@ export default function AlertsPage({
                       <Typography
                         sx={{ color: t.textSecondary, fontSize: ".82rem" }}
                       >
-                        {alert.rule}
+                        {humanizeViolation({
+                          violation: alert.violationRaw,
+                          person_id: alert.personId,
+                          zone: alert.zoneRaw,
+                        })}
                       </Typography>
                       {alert.rule_instruction && (
                         <Tooltip title={alert.rule_instruction}>

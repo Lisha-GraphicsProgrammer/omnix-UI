@@ -42,6 +42,7 @@ import RuleSetupWizard from "../components/rules/RuleSetupWizard";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
+import NotificationBell from "../components/layout/NotificationBell";
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
@@ -794,6 +795,7 @@ export default function Rules() {
               flexShrink: 0,
             }}
           >
+            <NotificationBell />
             <Tooltip
               title={
                 mode === "dark" ? "Switch to Light mode" : "Switch to Dark mode"

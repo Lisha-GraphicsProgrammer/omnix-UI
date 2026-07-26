@@ -4,6 +4,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import WifiIcon from "@mui/icons-material/Wifi";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import NotificationBell from "../../components/layout/NotificationBell";
 import { useTheme } from "../../context/ThemeContext";
 import { useCameras, useLatestIncident } from "../../hooks/queries";
 import { ACCENT, GREEN, AMBER } from "../../lib/constants";
@@ -60,6 +61,7 @@ export default function CamerasPage() {
             <Box sx={{ width: 7, height: 7, borderRadius: "50%", background: apiError ? "#ef4444" : "#22c55e", boxShadow: `0 0 8px ${apiError ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)"}`, animation: "pg 2s infinite", "@keyframes pg": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } } }} />
             <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>{apiError ? "Offline" : "Live"}</Typography>
           </Box>
+          <NotificationBell />
           <Tooltip title="Coming in V2" arrow>
             <Box sx={{ px: 2.5, py: 1, borderRadius: "10px", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: "not-allowed", opacity: 0.5, boxShadow: `0 4px 14px ${ACCENT}25` }}>
               <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>+ Add Camera</Typography>
