@@ -346,6 +346,8 @@ export default function Rules() {
   const [ruleContext, setRuleContext] = useState<{
     camera: any | null;
     zone: any | null;
+    persistence?: number;
+    proximity?: number;
   }>(() => {
     try {
       return (
@@ -488,12 +490,15 @@ export default function Rules() {
       setChatHistory((prev) => [...prev, assistantMsg]);
     } catch (e: any) {
       setError(e.message || "Failed to generate rule");
-      // ── Flow fix: a failed generation releases the camera + zone.
-      // The next send (retry or new rule) reopens the wizard for a
-      // fresh, explicit selection. ──
-      resetRuleContext();
-      // Put the instruction back in the box so retrying is one click.
+      // ── Failed generate: remove the just-sent user bubble from history,
+      // restore the text to the input box, and release camera/zone/sensitivity
+      // so the next attempt selects fresh. ──
+      setChatHistory((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.role === "user" ? prev.slice(0, -1) : prev;
+      });
       setInstruction(displayInstruction);
+      resetRuleContext();
     } finally {
       setProcessing(false);
     }
@@ -502,6 +507,20 @@ export default function Rules() {
   const applyPendingRule = async (config: any, instruction: string) => {
     setProcessing(true);
     try {
+      // ── Per-rule sensitivity: stamp the wizard's choices into every rule ──
+      if (config?.rules?.length) {
+        config = {
+          ...config,
+          rules: config.rules.map((r: any) => ({
+            ...r,
+            persistence_frames:
+              ruleContext.persistence ?? r.persistence_frames ?? 5,
+            ...(r.type === "person_near_object"
+              ? { proximity_px: ruleContext.proximity ?? r.proximity_px ?? 120 }
+              : {}),
+          })),
+        };
+      }
       const data = await apiPost("/api/rules/apply", {
         config,
         instruction,
@@ -531,6 +550,7 @@ export default function Rules() {
       resetRuleContext();
     } catch (e: any) {
       setError(e.message || "Failed to apply rule");
+      resetRuleContext();
     } finally {
       setProcessing(false);
     }
@@ -1489,6 +1509,30 @@ export default function Rules() {
                           : "whole frame"}
                       </Typography>
                     </Box>
+                    {ruleContext.persistence != null && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          px: 1.2,
+                          py: 0.5,
+                          borderRadius: "8px",
+                          background: `${AMBER}10`,
+                          border: `1px solid ${AMBER}30`,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: AMBER,
+                            fontSize: ".7rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ⚡ {ruleContext.persistence}f
+                        </Typography>
+                      </Box>
+                    )}
                     <Typography sx={{ color: t.textMuted, fontSize: ".68rem" }}>
                       click to change
                     </Typography>
@@ -2462,8 +2506,8 @@ export default function Rules() {
           // against a half-selected context.
           setPendingAutoSend(false);
         }}
-        onComplete={({ camera, zone }) => {
-          setRuleContext({ camera, zone });
+        onComplete={({ camera, zone, persistence, proximity }) => {
+          setRuleContext({ camera, zone, persistence, proximity });
           setWizardOpen(false);
           setTimeout(() => inputRef.current?.focus(), 50);
         }}
