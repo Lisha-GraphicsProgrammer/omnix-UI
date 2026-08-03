@@ -46,6 +46,21 @@ interface ApiIncident {
   rule_instruction?: string | null
 }
 
+// ── Incident Inspector: every tracked person + detected object for this
+// incident's frame, from GET /api/incidents/{id}/objects ──
+interface DetectedObject {
+  type: string
+  track_id: number | null
+  bbox: number[]
+  confidence: number | null
+  is_violator: boolean
+}
+
+const OBJECT_TYPE_COLORS: Record<string, string> = {
+  person: CYAN,
+}
+const DEFAULT_OBJECT_COLOR = AMBER
+
 function titleCase(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -171,6 +186,108 @@ function BBoxOverlay({
   )
 }
 
+// ── Incident Inspector overlay: draws a box for every non-violator tracked
+// person/object using an SVG viewBox matching the screenshot's natural
+// resolution, so each bbox (in native pixel coords, same space as
+// incident.bbox) lines up correctly without per-box scale math — the SVG
+// viewBox does the scaling for us. The violator itself isn't drawn here since
+// the existing pulsing red BBoxOverlay above already covers it; this overlay
+// is strictly the "who else was in frame" layer. ──
+function ObjectsOverlay({
+  objects,
+  containerRef,
+  imgRef,
+  hoveredIdx,
+  selectedIdx,
+  onHover,
+  onClick,
+}: {
+  objects: DetectedObject[]
+  containerRef: React.RefObject<HTMLDivElement>
+  imgRef: React.RefObject<HTMLImageElement>
+  hoveredIdx: number | null
+  selectedIdx: number | null
+  onHover: (idx: number | null) => void
+  onClick: (idx: number | null) => void
+}) {
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
+  const [rect, setRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
+
+  const recompute = useCallback(() => {
+    const container = containerRef.current
+    const img = imgRef.current
+    if (!container || !img) { setRect(null); return }
+    const naturalW = img.naturalWidth
+    const naturalH = img.naturalHeight
+    if (!naturalW || !naturalH) { setRect(null); return }
+    setNatural({ w: naturalW, h: naturalH })
+    const boxW = container.clientWidth
+    const boxH = container.clientHeight
+    const displayed = computeContainRect(naturalW, naturalH, boxW, boxH)
+    setRect({ left: displayed.offsetX, top: displayed.offsetY, width: displayed.width, height: displayed.height })
+  }, [containerRef, imgRef])
+
+  useEffect(() => {
+    recompute()
+    window.addEventListener('resize', recompute)
+    return () => window.removeEventListener('resize', recompute)
+  }, [recompute])
+
+  useEffect(() => {
+    const img = imgRef.current
+    if (!img) return
+    if (img.complete) {
+      recompute()
+    } else {
+      img.addEventListener('load', recompute)
+      return () => img.removeEventListener('load', recompute)
+    }
+  }, [imgRef, recompute])
+
+  if (!rect || !natural || !objects.length) return null
+
+  return (
+    <svg
+      viewBox={`0 0 ${natural.w} ${natural.h}`}
+      preserveAspectRatio="none"
+      style={{
+        position: 'absolute',
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        pointerEvents: 'none',
+      }}
+    >
+      {objects.map((obj, idx) => {
+        if (obj.is_violator || !obj.bbox || obj.bbox.length < 4) return null
+        const [x1, y1, x2, y2] = obj.bbox
+        const isActive = hoveredIdx === idx || selectedIdx === idx
+        const color = OBJECT_TYPE_COLORS[obj.type] || DEFAULT_OBJECT_COLOR
+        return (
+          <rect
+            key={idx}
+            x={x1}
+            y={y1}
+            width={Math.max(x2 - x1, 0)}
+            height={Math.max(y2 - y1, 0)}
+            fill={isActive ? `${color}25` : 'transparent'}
+            stroke={color}
+            strokeWidth={isActive ? 3 : 1.6}
+            strokeOpacity={isActive ? 1 : 0.6}
+            rx={3}
+            vectorEffect="non-scaling-stroke"
+            style={{ pointerEvents: 'all', cursor: 'pointer', transition: 'fill .15s, stroke-width .15s, stroke-opacity .15s' }}
+            onMouseEnter={() => onHover(idx)}
+            onMouseLeave={() => onHover(null)}
+            onClick={() => onClick(selectedIdx === idx ? null : idx)}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
 function DetailCard({
   title, accentColor = ACCENT, children, headerRight,
 }: {
@@ -251,8 +368,17 @@ export default function AlertDetail() {
   const [imgError, setImgError] = useState(false)
   const screenshotContainerRef = useRef<HTMLDivElement>(null)
   const screenshotImgRef = useRef<HTMLImageElement>(null)
+  // ── Incident Inspector state ──
+  const [objects, setObjects] = useState<DetectedObject[]>([])
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
 
   useEffect(() => {
+    // ── Reset Incident Inspector selection state on navigating incidents ──
+    setObjects([])
+    setHoveredIdx(null)
+    setSelectedIdx(null)
+
     const fetchData = async () => {
       try {
         const res = await apiFetch('/api/incidents?limit=200&offset=0')
@@ -263,6 +389,19 @@ export default function AlertDetail() {
         setIncident(found || null)
         // ── Review state persists: reflect an already-marked FP ──
         setMarkedFP(found?.review_status === 'false_positive')
+
+        if (found) {
+          try {
+            const objRes = await apiFetch(`/api/incidents/${found.id}/objects`)
+            if (objRes.ok) {
+              const objData = await objRes.json()
+              setObjects(objData.objects || [])
+            }
+          } catch {
+            // Non-fatal — Incident Inspector panel just won't populate;
+            // the rest of the page (screenshot, violator bbox) still works.
+          }
+        }
       } catch { }
       setLoading(false)
     }
@@ -472,6 +611,19 @@ export default function AlertDetail() {
                 <BBoxOverlay bbox={incident.bbox} containerRef={screenshotContainerRef} imgRef={screenshotImgRef} />
               )}
 
+              {/* ── Incident Inspector: every other tracked person/object, two-way linked with the list panel ── */}
+              {!imgError && incident.screenshot_url && objects.length > 0 && (
+                <ObjectsOverlay
+                  objects={objects}
+                  containerRef={screenshotContainerRef}
+                  imgRef={screenshotImgRef}
+                  hoveredIdx={hoveredIdx}
+                  selectedIdx={selectedIdx}
+                  onHover={setHoveredIdx}
+                  onClick={setSelectedIdx}
+                />
+              )}
+
               <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, px: 2.5, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: RED, animation: 'blink 1s infinite', '@keyframes blink': { '0%,100%': { opacity: 1 }, '50%': { opacity: .2 } } }} />
@@ -546,6 +698,60 @@ export default function AlertDetail() {
             <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
             <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={personLabel}                       accentColor={ACCENT} />
           </DetailCard>
+
+          {objects.length > 0 && (
+            <DetailCard
+              title="Incident Inspector"
+              accentColor={CYAN}
+              headerRight={
+                <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.68rem', fontFamily: 'monospace' }}>
+                  {objects.length} detected
+                </Typography>
+              }
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                {objects.map((obj, idx) => {
+                  const isActive = hoveredIdx === idx || selectedIdx === idx
+                  const color = obj.is_violator ? RED : (OBJECT_TYPE_COLORS[obj.type] || DEFAULT_OBJECT_COLOR)
+                  const label = obj.type === 'person'
+                    ? (obj.track_id != null ? `ByteTrack #${obj.track_id}` : 'Person')
+                    : titleCase(obj.type)
+                  return (
+                    <Box
+                      key={idx}
+                      onMouseEnter={() => setHoveredIdx(idx)}
+                      onMouseLeave={() => setHoveredIdx(null)}
+                      onClick={() => setSelectedIdx(selectedIdx === idx ? null : idx)}
+                      sx={{
+                        display: 'flex', alignItems: 'center', gap: 1.5,
+                        px: '18px', py: '13px',
+                        borderBottom: 'rgba(255,200,170,0.06) solid 1px',
+                        borderLeft: `3px solid ${isActive ? color : 'transparent'}`,
+                        cursor: 'pointer',
+                        background: isActive ? `${color}12` : 'transparent',
+                        transition: 'background .15s, border-color .15s',
+                        '&:last-child': { borderBottom: 'none' },
+                        '&:hover': { background: `${color}12` },
+                      }}
+                    >
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}`, flexShrink: 0 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ color: '#F5F0EB', fontSize: '.8rem', fontWeight: 600 }}>{label}</Typography>
+                        {obj.is_violator && (
+                          <Typography sx={{ color: RED, fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', mt: '2px' }}>
+                            Violator
+                          </Typography>
+                        )}
+                      </Box>
+                      <Typography sx={{ color, fontSize: '.78rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                        {obj.confidence != null ? `${Math.round(obj.confidence * 100)}%` : '—'}
+                      </Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
+            </DetailCard>
+          )}
 
           <DetailCard title="Detection Metrics" accentColor={GREEN}>
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
