@@ -216,9 +216,14 @@ export default function ZoneCanvas({
     setSaving(true);
     setErr(null);
     try {
+      // ── Issue #26 fix: normalize to 0-1 relative coords at save time,
+      // instead of storing raw 854x480-canvas pixels. This removes the
+      // silent mis-placement risk on any camera whose actual resolution
+      // differs from the drawing canvas's fixed size. ──
+      const normalizedPolygon = points.map(([x, y]) => [x / VIEW_W, y / VIEW_H]);
       const zone = await createZone({
         name,
-        polygon: points,
+        polygon: normalizedPolygon,
         camera_id: cameraId,
       });
       onZoneCreated(zone);
@@ -385,7 +390,7 @@ export default function ZoneCanvas({
               zone.polygon?.length >= 3 && (
                 <g key={zone.id}>
                   <polygon
-                    points={zone.polygon.map(([x, y]) => `${x},${y}`).join(" ")}
+                    points={zone.polygon.map(([x, y]) => `${x * VIEW_W},${y * VIEW_H}`).join(" ")}
                     fill={
                       (zone.color || CYAN) +
                       (zone.id === selectedZoneId ? "55" : "22")
