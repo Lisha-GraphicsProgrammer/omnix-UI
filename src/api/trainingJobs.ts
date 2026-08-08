@@ -4,6 +4,8 @@ export interface TrainingJobStage {
   name: string
   status: 'done' | 'running' | 'failed' | 'pending'
   detail?: string
+  progress_current?: number
+  progress_total?: number
   started_at?: string
   finished_at?: string
 }
