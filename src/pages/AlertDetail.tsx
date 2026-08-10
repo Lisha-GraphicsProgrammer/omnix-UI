@@ -16,7 +16,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GavelIcon from '@mui/icons-material/Gavel'
 import MapIcon from '@mui/icons-material/Map'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { apiFetch } from '../lib/api'
 import { humanizeViolation } from '../lib/humanize'
 import NotificationBell from '../components/layout/NotificationBell'
@@ -248,6 +248,7 @@ function ObjectsOverlay({
 }) {
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
   const [rect, setRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
+  const filterId = useId()
 
   const recompute = useCallback(() => {
     const container = containerRef.current
@@ -282,6 +283,9 @@ function ObjectsOverlay({
 
   if (!rect || !natural || !objects.length) return null
 
+  const anyActive = hoveredIdx !== null || selectedIdx !== null
+  const glowId = `objects-overlay-glow-${filterId}`
+
   return (
     <svg
       viewBox={`0 0 ${natural.w} ${natural.h}`}
@@ -295,10 +299,21 @@ function ObjectsOverlay({
         pointerEvents: 'none',
       }}
     >
+      <defs>
+        <filter id={glowId} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       {objects.map((obj, idx) => {
         if (obj.is_violator || !obj.bbox || obj.bbox.length < 4) return null
         const [x1, y1, x2, y2] = obj.bbox
         const isActive = hoveredIdx === idx || selectedIdx === idx
+        const dimmed = anyActive && !isActive
         const color = OBJECT_TYPE_COLORS[obj.type] || DEFAULT_OBJECT_COLOR
         return (
           <rect
@@ -307,12 +322,13 @@ function ObjectsOverlay({
             y={y1}
             width={Math.max(x2 - x1, 0)}
             height={Math.max(y2 - y1, 0)}
-            fill={isActive ? `${color}25` : 'transparent'}
+            fill={isActive ? `${color}30` : 'transparent'}
             stroke={color}
-            strokeWidth={isActive ? 3 : 1.6}
-            strokeOpacity={isActive ? 1 : 0.6}
+            strokeWidth={isActive ? 4.5 : 1.6}
+            strokeOpacity={dimmed ? 0.15 : (isActive ? 1 : 0.6)}
             rx={3}
             vectorEffect="non-scaling-stroke"
+            filter={isActive ? `url(#${glowId})` : undefined}
             style={{ pointerEvents: 'all', cursor: 'pointer', transition: 'fill .15s, stroke-width .15s, stroke-opacity .15s' }}
             onMouseEnter={() => onHover(idx)}
             onMouseLeave={() => onHover(null)}
