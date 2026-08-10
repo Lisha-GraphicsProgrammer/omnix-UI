@@ -24,6 +24,7 @@ export async function fetchAnalytics(fromDate: string, toDate: string, period: "
   };
 }
 
+
 export async function exportIncidents(format: "csv" | "pdf", fromDate: string, toDate: string): Promise<Blob> {
   const res = await apiFetch(`/api/export/incidents?format=${format}&from_date=${fromDate}&to_date=${toDate}`);
   if (!res.ok) throw new Error("Export failed");

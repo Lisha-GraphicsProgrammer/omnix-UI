@@ -15,6 +15,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GavelIcon from '@mui/icons-material/Gavel'
+import MapIcon from '@mui/icons-material/Map'
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { apiFetch } from '../lib/api'
 import { humanizeViolation } from '../lib/humanize'
@@ -56,10 +57,45 @@ interface DetectedObject {
   is_violator: boolean
 }
 
+// ── Incident Inspector map: zone polygons + normalized incident positions,
+// from GET /api/incidents/map ──
+interface MapZone {
+  id: number
+  name: string
+  polygon: number[][]
+  color: string
+  camera_id: number | null
+}
+
+interface MapIncidentPoint {
+  id: number
+  camera_id: number
+  zone: string
+  severity: string | null
+  violation: string | null
+  timestamp: string | null
+  x: number
+  y: number
+}
+
 const OBJECT_TYPE_COLORS: Record<string, string> = {
   person: CYAN,
 }
 const DEFAULT_OBJECT_COLOR = AMBER
+
+const MAP_SEVERITY_COLORS: Record<string, string> = {
+  critical: RED,
+  high: RED,
+  medium: AMBER,
+  low: GREEN,
+}
+
+// ── Native resolution the zone-editor canvas and incident bboxes are both
+// normalized against (see the zone-coordinate normalization migration) —
+// used here purely to give the map SVG a correctly-proportioned viewBox so
+// incident dots render as true circles instead of squashed ellipses. ──
+const MAP_VIEW_W = 854
+const MAP_VIEW_H = 480
 
 function titleCase(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -304,6 +340,119 @@ function ObjectsOverlay({
   )
 }
 
+// ── Incident Inspector site map: draws every zone polygon as a light
+// background shape, plots every incident as a severity-colored dot, and
+// highlights the incident currently being viewed with a white pulsing ring
+// so a safety manager sees it in context of everywhere else things have
+// happened. Uses a viewBox matching the real 854x480 canvas (rather than a
+// squashed 0-1 unit square) so dots render as true circles, not ellipses. ──
+function SiteIncidentMap({
+  zones,
+  incidents,
+  currentId,
+  onSelect,
+}: {
+  zones: MapZone[]
+  incidents: MapIncidentPoint[]
+  currentId: string | undefined
+  onSelect: (id: number) => void
+}) {
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
+
+  if (!zones.length && !incidents.length) return null
+
+  // ── Zones with the same name are almost certainly redraws from earlier
+  // testing, not genuinely distinct areas — dedupe by name, keeping the
+  // highest id (most recently created) per name, so the map doesn't render
+  // a stack of near-identical overlapping outlines. ──
+  const dedupedZonesMap = new Map<string, MapZone>()
+  for (const z of zones) {
+    const existing = dedupedZonesMap.get(z.name)
+    if (!existing || z.id > existing.id) {
+      dedupedZonesMap.set(z.name, z)
+    }
+  }
+  const dedupedZones = Array.from(dedupedZonesMap.values())
+
+  const hovered = incidents.find(i => i.id === hoveredId)
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%', aspectRatio: `${MAP_VIEW_W} / ${MAP_VIEW_H}`, borderRadius: '12px', overflow: 'hidden', background: 'rgba(255,235,220,0.02)', border: '1px solid rgba(255,200,170,0.08)' }}>
+      <svg viewBox={`0 0 ${MAP_VIEW_W} ${MAP_VIEW_H}`} style={{ width: '100%', height: '100%', display: 'block' }}>
+        {dedupedZones.map(z => {
+          if (!z.polygon || z.polygon.length < 3) return null
+          const points = z.polygon.map(([x, y]) => `${x * MAP_VIEW_W},${y * MAP_VIEW_H}`).join(' ')
+          return (
+            <polygon
+              key={z.id}
+              points={points}
+              fill={`${z.color}08`}
+              stroke={`${z.color}30`}
+              strokeWidth={0.75}
+            />
+          )
+        })}
+        {incidents.map(inc => {
+          const isCurrent = String(inc.id) === String(currentId)
+          const isHovered = hoveredId === inc.id
+          const color = MAP_SEVERITY_COLORS[(inc.severity || 'high').toLowerCase()] || CYAN
+          const cx = inc.x * MAP_VIEW_W
+          const cy = inc.y * MAP_VIEW_H
+          const r = isCurrent ? 6 : (isHovered ? 5 : 3.5)
+          return (
+            <g key={inc.id}>
+              {isCurrent && (
+                <circle cx={cx} cy={cy} r={9} fill="none" stroke="#fff" strokeWidth={1.5} opacity={0.7}>
+                  <animate attributeName="r" values="7;14;7" dur="1.6s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0.1;0.7" dur="1.6s" repeatCount="indefinite" />
+                </circle>
+              )}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={r}
+                fill={color}
+                stroke={isCurrent ? '#fff' : 'rgba(0,0,0,0.4)'}
+                strokeWidth={isCurrent ? 1.5 : 0.8}
+                style={{ cursor: 'pointer', transition: 'r .15s' }}
+                onMouseEnter={() => setHoveredId(inc.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => onSelect(inc.id)}
+              />
+            </g>
+          )
+        })}
+      </svg>
+      {hovered && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: `${hovered.x * 100}%`,
+            top: `${hovered.y * 100}%`,
+            transform: 'translate(-50%, -135%)',
+            background: 'rgba(10,8,6,0.95)',
+            border: '1px solid rgba(255,200,170,0.15)',
+            borderRadius: '8px',
+            px: 1.2,
+            py: 0.7,
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            zIndex: 5,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          }}
+        >
+          <Typography sx={{ color: '#F5F0EB', fontSize: '.68rem', fontWeight: 600 }}>
+            {titleCase(hovered.violation || 'incident')}
+          </Typography>
+          <Typography sx={{ color: 'rgba(245,240,235,0.4)', fontSize: '.6rem' }}>
+            {hovered.timestamp ? new Date(hovered.timestamp).toLocaleString() : ''}
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
 function DetailCard({
   title, accentColor = ACCENT, children, headerRight,
 }: {
@@ -388,6 +537,9 @@ export default function AlertDetail() {
   const [objects, setObjects] = useState<DetectedObject[]>([])
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  // ── Incident Inspector map state ──
+  const [mapZones, setMapZones] = useState<MapZone[]>([])
+  const [mapIncidents, setMapIncidents] = useState<MapIncidentPoint[]>([])
 
   useEffect(() => {
     // ── Reset Incident Inspector selection state on navigating incidents ──
@@ -422,6 +574,20 @@ export default function AlertDetail() {
       setLoading(false)
     }
     fetchData()
+
+    const fetchMap = async () => {
+      try {
+        const res = await apiFetch('/api/incidents/map')
+        if (res.ok) {
+          const data = await res.json()
+          setMapZones(data.zones || [])
+          setMapIncidents(data.incidents || [])
+        }
+      } catch {
+        // Non-fatal — map panel just won't render; rest of the page is unaffected.
+      }
+    }
+    fetchMap()
   }, [id])
 
   // ── Task 9 wiring: the button actually calls the review endpoint now ──
@@ -714,6 +880,33 @@ export default function AlertDetail() {
             <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
             <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={personLabel}                       accentColor={ACCENT} />
           </DetailCard>
+
+          {(mapZones.length > 0 || mapIncidents.length > 0) && (
+            <DetailCard
+              title="Site Map"
+              accentColor={CYAN}
+              headerRight={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                  <MapIcon sx={{ fontSize: 13, color: 'rgba(245,240,235,0.3)' }} />
+                  <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.68rem', fontFamily: 'monospace' }}>
+                    {mapIncidents.length} incidents
+                  </Typography>
+                </Box>
+              }
+            >
+              <Box sx={{ p: 2 }}>
+                <SiteIncidentMap
+                  zones={mapZones}
+                  incidents={mapIncidents}
+                  currentId={id}
+                  onSelect={(incId) => navigate(`/alert/${incId}`)}
+                />
+                <Typography sx={{ color: 'rgba(245,240,235,0.25)', fontSize: '.64rem', mt: 1, lineHeight: 1.5 }}>
+                  White pulsing ring marks this incident. Colored by severity — click any dot to jump to it.
+                </Typography>
+              </Box>
+            </DetailCard>
+          )}
 
           {objects.length > 0 && (
             <DetailCard
