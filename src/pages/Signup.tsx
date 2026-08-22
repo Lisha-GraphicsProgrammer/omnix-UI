@@ -63,14 +63,14 @@ export default function Signup() {
               <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1"/>
             </svg>
           </Box>
-          <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>OMNIX</Typography>
+          <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>ONVXP</Typography>
         </Box>
 
         <Typography sx={{ color: '#fff', fontSize: '2rem', fontWeight: 800, letterSpacing: '-1px', mb: 1 }}>
           Create your account
         </Typography>
         <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '.88rem', mb: 4 }}>
-          Set up your OMNIX monitoring workspace
+          Set up your ONVXP monitoring workspace
         </Typography>
 
         {err && (
@@ -126,7 +126,7 @@ export default function Signup() {
         </Box>
 
         <Typography sx={{ color: 'rgba(255,255,255,0.1)', fontSize: '.68rem', textAlign: 'center', mt: 4 }}>
-          © 2026 NGXP OMNIX · Enterprise Vision Intelligence Platform
+          © 2026 NGXP ONVXP · Enterprise Vision Intelligence Platform
         </Typography>
       </Box>
     </Box>

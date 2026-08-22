@@ -8,7 +8,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { useTheme } from "../../context/ThemeContext";
 import { fetchTrainingJobs, TrainingJob } from "../../api/trainingJobs";
 
-// ── OMNIX accent palette — matches AlertDetail / Alerts / Rules pages ──
+// ── ONVXP accent palette — matches AlertDetail / Alerts / Rules pages ──
 const ACCENT = "#C0392B";
 const GREEN = "#27AE60";
 const AMBER = "#D4891A";
@@ -238,7 +238,7 @@ function JobCard({ job }: { job: TrainingJob }) {
               Teaching itself: {humanizeClassName(job.class_name)}
             </Typography>
             <Typography sx={{ color: t.textMuted, fontSize: ".68rem", mt: "1px" }}>
-              OMNIX has never seen this before
+              ONVXP has never seen this before
             </Typography>
           </Box>
         </Box>
@@ -320,7 +320,7 @@ export default function TrainingJobsPanel() {
         </Typography>
       </Box>
       <Typography sx={{ color: t.textSecondary, fontSize: ".85rem", lineHeight: 1.6, mb: 3.5, maxWidth: 640 }}>
-        When a rule asks for something OMNIX hasn't been taught to see yet, it builds the ability itself —
+        When a rule asks for something ONVXP hasn't been taught to see yet, it builds the ability itself —
         finding a dataset, training a model, and evaluating it — no engineers, no manual training.
       </Typography>
 

@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `omnix_report_Site_A_${fromDate}_to_${toDate}.${format}`;
+      a.download = `onvxp_report_Site_A_${fromDate}_to_${toDate}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) { console.error("Export error", e); }

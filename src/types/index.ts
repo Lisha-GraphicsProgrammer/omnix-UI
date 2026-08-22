@@ -1,4 +1,4 @@
-// Shared API and view-model types for OMNIX.
+// Shared API and view-model types for ONVXP.
 
 export interface ApiIncident {
   id: string;

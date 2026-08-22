@@ -276,7 +276,7 @@ export default function Login() {
                 <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT}/>
               </svg>
             </Box>
-            <Typography sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-.2px' }}>OMNIX</Typography>
+            <Typography sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-.2px' }}>ONVXP</Typography>
             <Box sx={{ px: 1.2, py: .3, borderRadius: '5px', background: `${ACCENT}12`, border: `1px solid ${ACCENT}25` }}>
               <Typography sx={{ color: CREAM, fontSize: '.58rem', fontWeight: 700, letterSpacing: '.08em' }}>ENTERPRISE</Typography>
             </Box>
@@ -303,7 +303,7 @@ export default function Login() {
             </Box>
           </Typography>
           <Typography sx={{ color: 'rgba(245,240,235,0.35)', fontSize: '.9rem', lineHeight: 1.8, maxWidth: 400 }}>
-            Type what you want to detect. OMNIX converts your instruction into a production-grade CV pipeline instantly.
+            Type what you want to detect. ONVXP converts your instruction into a production-grade CV pipeline instantly.
           </Typography>
         </Box>
 
@@ -311,7 +311,7 @@ export default function Login() {
         <Box sx={{ mb: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT, boxShadow: `0 0 6px ${ACCENT}60` }} />
-            <Typography sx={{ color: 'rgba(245,240,235,0.25)', fontSize: '.7rem', letterSpacing: '.04em' }}>See how OMNIX works — live demo</Typography>
+            <Typography sx={{ color: 'rgba(245,240,235,0.25)', fontSize: '.7rem', letterSpacing: '.04em' }}>See how ONVXP works — live demo</Typography>
           </Box>
           <VisionMetaphor />
         </Box>
@@ -357,7 +357,7 @@ export default function Login() {
           <Box sx={{ width: '100%', maxWidth: 360 }}>
             <Box sx={{ mb: 6 }}>
               <Typography sx={{ color: '#F5F0EB', fontSize: '2.1rem', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1.1, mb: 1.5 }}>Welcome back</Typography>
-              <Typography sx={{ color: 'rgba(245,240,235,0.28)', fontSize: '.88rem', lineHeight: 1.6 }}>Sign in to access your OMNIX monitoring dashboard</Typography>
+              <Typography sx={{ color: 'rgba(245,240,235,0.28)', fontSize: '.88rem', lineHeight: 1.6 }}>Sign in to access your ONVXP monitoring dashboard</Typography>
             </Box>
 
             {err && (
@@ -456,7 +456,7 @@ export default function Login() {
                 ))}
               </Box>
               <Typography sx={{ color: 'rgba(245,240,235,0.15)', fontSize: '.68rem', textAlign: 'center' }}>
-                © 2026 NGXP OMNIX · Enterprise Vision Intelligence Platform
+                © 2026 NGXP ONVXP · Enterprise Vision Intelligence Platform
               </Typography>
             </Box>
           </Box>

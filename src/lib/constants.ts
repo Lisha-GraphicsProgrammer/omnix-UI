@@ -1,4 +1,4 @@
-// Shared design tokens and config used across OMNIX pages.
+// Shared design tokens and config used across ONVXP pages.
 
 export const DRAWER_OPEN = 220;
 export const DRAWER_CLOSED = 56;
