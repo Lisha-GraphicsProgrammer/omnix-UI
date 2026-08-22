@@ -113,7 +113,7 @@ export default function Sidebar({
                 lineHeight: 1,
               }}
             >
-              OMNIX
+              ONVXP
             </Typography>
             <Typography
               sx={{

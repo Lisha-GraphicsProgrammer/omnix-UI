@@ -294,7 +294,7 @@ const howItWorks = [
   {
     n: "03",
     icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
-    text: "OMNIX generates JSON pipeline config",
+    text: "ONVXP generates JSON pipeline config",
     color: CYAN,
   },
   {
@@ -772,7 +772,7 @@ export default function Rules() {
                 letterSpacing: "-.2px",
               }}
             >
-              OMNIX
+              ONVXP
             </Typography>
             <Box
               sx={{
@@ -904,7 +904,7 @@ export default function Rules() {
                       letterSpacing: ".04em",
                     }}
                   >
-                    Powered by OMNIX AI Engine
+                    Powered by ONVXP AI Engine
                   </Typography>
                 </Box>
                 <Typography
@@ -927,7 +927,7 @@ export default function Rules() {
                     maxWidth: 480,
                   }}
                 >
-                  Type a plain English instruction. OMNIX converts it into a
+                  Type a plain English instruction. ONVXP converts it into a
                   production-grade YOLOv8 + ByteTrack computer vision pipeline
                   automatically.
                 </Typography>
@@ -1208,7 +1208,7 @@ export default function Rules() {
                                         fontWeight: 700,
                                       }}
                                     >
-                                      OMNIX understood your instruction
+                                      ONVXP understood your instruction
                                     </Typography>
                                     <Box
                                       sx={{
@@ -2531,7 +2531,7 @@ export default function Rules() {
         <DialogTitle
           sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
         >
-          Sign out of OMNIX?
+          Sign out of ONVXP?
         </DialogTitle>
         <DialogContent>
           <Typography

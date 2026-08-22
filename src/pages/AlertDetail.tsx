@@ -664,7 +664,7 @@ export default function AlertDetail() {
               <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT}/>
             </svg>
           </Box>
-          <Typography sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '.92rem', letterSpacing: '-.2px' }}>OMNIX</Typography>
+          <Typography sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '.92rem', letterSpacing: '-.2px' }}>ONVXP</Typography>
           <Box sx={{ width: '1px', height: 16, background: 'rgba(255,200,170,0.1)', flexShrink: 0 }} />
           <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.82rem' }}>Alert Detail</Typography>
           <Box sx={{ width: '1px', height: 16, background: 'rgba(255,200,170,0.1)', flexShrink: 0 }} />
@@ -813,7 +813,7 @@ export default function AlertDetail() {
                   <Box sx={{ width: '1px', height: 10, background: 'rgba(255,255,255,0.2)', mx: .5 }} />
                   <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '.65rem' }}>{cameraLabel}</Typography>
                 </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '.62rem', fontFamily: 'monospace' }}>Frame {incident.frame} · OMNIX CV Engine</Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '.62rem', fontFamily: 'monospace' }}>Frame {incident.frame} · ONVXP CV Engine</Typography>
               </Box>
 
               <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, px: 2.5, py: 2, display: 'flex', gap: 1.5, alignItems: 'center', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)' }}>

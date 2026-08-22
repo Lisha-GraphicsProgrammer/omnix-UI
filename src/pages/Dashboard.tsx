@@ -103,7 +103,7 @@ export default function Dashboard() {
         <DialogTitle
           sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
         >
-          Sign out of OMNIX?
+          Sign out of ONVXP?
         </DialogTitle>
         <DialogContent>
           <Typography

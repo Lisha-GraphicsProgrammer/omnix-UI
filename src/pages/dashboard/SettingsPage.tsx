@@ -80,7 +80,7 @@ export default function SettingsPage() {
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 4 }}>
         <Box>
           <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: t.text, letterSpacing: "-0.02em" }}>Settings</Typography>
-          <Typography sx={{ fontSize: "0.8rem", color: t.textMuted, mt: "4px" }}>Platform configuration — OMNIX POC v0.1</Typography>
+          <Typography sx={{ fontSize: "0.8rem", color: t.textMuted, mt: "4px" }}>Platform configuration — ONVXP POC v0.1</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <NotificationBell />
