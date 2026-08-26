@@ -39,6 +39,7 @@ import { useTheme } from "../context/ThemeContext";
 import { apiGet, apiPost, API_BASE } from "../lib/api";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleSetupWizard from "../components/rules/RuleSetupWizard";
+import RotatingLoader from "../components/common/RotatingLoader";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
@@ -50,6 +51,17 @@ const AMBER = "#FFB300";
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
 const CONTEXT_KEY = "omnix_rule_context";
+
+// ── Rotating status messages shown under the skeleton loader while the
+// rule-generation request is in flight, instead of a silent/plain spinner. ──
+const RULE_LOADING_MESSAGES = [
+  "Reading your instruction...",
+  "Figuring out which zone and gear apply...",
+  "Checking available detection models...",
+  "Drafting the pipeline config...",
+  "Almost there...",
+];
+
 interface RuleHistoryItem {
   id: number;
   instruction: string;
@@ -1439,7 +1451,23 @@ export default function Rules() {
                         )}
                     </Box>
                   ))}
-                  {processing && <SkeletonLoader t={t} />}
+                  {processing && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1.5,
+                      }}
+                    >
+                      <SkeletonLoader t={t} />
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <RotatingLoader
+                          messages={RULE_LOADING_MESSAGES}
+                          accentColor={CYAN}
+                        />
+                      </Box>
+                    </Box>
+                  )}
                   <div ref={chatBottomRef} />
                 </Box>
               )}
