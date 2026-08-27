@@ -12,6 +12,7 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
+import { useSidebarOpen } from "../lib/sidebarState";
 import Sidebar from "../components/layout/Sidebar";
 import AnimatedBackground from "../components/layout/AnimatedBackground";
 import AlertsPage from "./dashboard/AlertsPage";
@@ -25,14 +26,14 @@ export default function Dashboard() {
   const location = useLocation();
   const { t } = useTheme();
   const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, toggleSidebar] = useSidebarOpen();
   const [signOutOpen, setSignOutOpen] = useState(false);
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED;
 
   const getPageFromUrl = () => {
     const params = new URLSearchParams(location.search);
-    const page = params.get("page") || "Alert Dashboard";
-    return page === "Zones" ? "Cameras" : page; // Zones page folded into the Rules wizard
+    const page = params.get("page") || "Alerts";
+    return page === "Zones" ? "Camera Management" : page; // Zones page folded into the Rules wizard
   };
 
   const [selected, setSelected] = useState(getPageFromUrl);
@@ -43,7 +44,7 @@ export default function Dashboard() {
   }, [location.search]);
 
   const handleSelect = (item: string) => {
-    if (item === "Rules") {
+    if (item === "Rule Creation") {
       navigate("/rules");
       return;
     }
@@ -65,7 +66,7 @@ export default function Dashboard() {
         selected={selected}
         onSelect={handleSelect}
         open={sidebarOpen}
-        onToggle={() => setSidebarOpen((o) => !o)}
+        onToggle={toggleSidebar}
         onSignOut={() => setSignOutOpen(true)}
         userName={user?.name || "Admin"}
         userEmail={user?.email || ""}
@@ -81,8 +82,8 @@ export default function Dashboard() {
           transition: "margin-left .25s cubic-bezier(.4,0,.2,1)",
         }}
       >
-        {selected === "Alert Dashboard" && <AlertsPage navigate={navigate} />}
-        {selected === "Cameras" && <CamerasPage />}
+        {selected === "Alerts" && <AlertsPage navigate={navigate} />}
+        {selected === "Camera Management" && <CamerasPage />}
         {selected === "Analytics" && <AnalyticsPage />}
         {selected === "Settings" && <SettingsPage />}
         {selected === "Self-Learning" && <TrainingJobsPanel />}

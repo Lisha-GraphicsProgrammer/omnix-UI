@@ -35,6 +35,8 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { useTheme } from "../context/ThemeContext";
 import { apiGet, apiPost, API_BASE } from "../lib/api";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
@@ -42,8 +44,9 @@ import RuleSetupWizard from "../components/rules/RuleSetupWizard";
 import RotatingLoader from "../components/common/RotatingLoader";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
+import PageHeader from "../components/layout/PageHeader";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
-import NotificationBell from "../components/layout/NotificationBell";
+import { useSidebarOpen } from "../lib/sidebarState";
 const CYAN = "#00D4FF";
 const PURPLE = "#7C3AED";
 const GREEN = "#00E676";
@@ -73,6 +76,13 @@ interface RuleHistoryItem {
   isNew?: boolean;
 }
 
+interface TrainingJobRef {
+  id: number;
+  class_name: string;
+  status: string;
+  reused: boolean;
+}
+
 interface ChatMessage {
   id: number;
   role: "user" | "assistant" | "discarded";
@@ -80,6 +90,12 @@ interface ChatMessage {
   config?: any;
   instruction?: string;
   time: string;
+  // ── unknown-model visibility: when the LLM's response mentions a class
+  // ONVXP hasn't been trained on yet, the generate call already kicks off
+  // training in the background — these fields let the chat message show
+  // that clearly instead of hiding it, with a direct link to watch it. ──
+  unknownClasses?: string[];
+  trainingJobs?: TrainingJobRef[];
 }
 
 interface ZoneData {
@@ -156,6 +172,108 @@ function SummaryText({ text, color }: { text: string; color: string }) {
         ),
       )}
     </Typography>
+  );
+}
+
+// ── Humanize a snake_case class name ("ear_protection" -> "Ear Protection")
+// same convention as the Self-Learning page, kept in sync deliberately. ──
+function humanizeClassName(name: string): string {
+  return name
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+// ── New: shown directly under the normal understanding-card whenever the
+// LLM's response mentions a class ONVXP hasn't been trained on yet. Training
+// already started automatically in the backend — this card exists so the
+// person actually SEES that, instead of it happening silently and only
+// being discoverable by clicking into Self-Learning on their own. ──
+function MissingModelCard({
+  classes,
+  jobs,
+  onView,
+}: {
+  classes: string[];
+  jobs: TrainingJobRef[];
+  onView: (jobId: number) => void;
+}) {
+  const primaryJob = jobs[0];
+  return (
+    <Box
+      sx={{
+        mt: 1.5,
+        borderRadius: "14px",
+        overflow: "hidden",
+        border: `1px solid ${AMBER}40`,
+        background: `${AMBER}08`,
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, px: 2.2, py: "12px", background: `${AMBER}12`, borderBottom: `1px solid ${AMBER}25` }}>
+        <Box
+          sx={{
+            width: 26,
+            height: 26,
+            borderRadius: "8px",
+            background: `${AMBER}20`,
+            border: `1px solid ${AMBER}45`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <ModelTrainingIcon sx={{ fontSize: 14, color: AMBER }} />
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: ".82rem", fontWeight: 700, color: "#fff" }}>
+            ONVXP is learning something new
+          </Typography>
+          <Typography sx={{ fontSize: ".68rem", color: "rgba(255,255,255,0.5)" }}>
+            Training started automatically — no action needed
+          </Typography>
+        </Box>
+      </Box>
+      <Box sx={{ px: 2.2, py: "14px" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.7, mb: 1.6 }}>
+          {classes.map((cls) => (
+            <Box key={cls} sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+              <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: AMBER, boxShadow: `0 0 6px ${AMBER}` }} />
+              <Typography sx={{ fontSize: ".8rem", fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>
+                {humanizeClassName(cls)}
+              </Typography>
+              <Typography sx={{ fontSize: ".68rem", color: "rgba(255,255,255,0.4)" }}>
+                not recognized yet
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+        {primaryJob && (
+          <Box
+            onClick={() => onView(primaryJob.id)}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.8,
+              px: 2,
+              py: "9px",
+              borderRadius: "10px",
+              background: `${AMBER}18`,
+              border: `1px solid ${AMBER}45`,
+              cursor: "pointer",
+              transition: "all .15s",
+              "&:hover": { background: `${AMBER}28` },
+            }}
+          >
+            <Typography sx={{ fontSize: ".78rem", fontWeight: 700, color: AMBER }}>
+              Watch it learn
+            </Typography>
+            <ArrowForwardIcon sx={{ fontSize: 13, color: AMBER }} />
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 }
 
@@ -306,7 +424,7 @@ const howItWorks = [
   {
     n: "03",
     icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
-    text: "ONVXP generates JSON pipeline config",
+    text: "OMNIX generates JSON pipeline config",
     color: CYAN,
   },
   {
@@ -346,7 +464,7 @@ export default function Rules() {
   const [zones, setZones] = useState<ZoneData[]>([]);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, toggleSidebar] = useSidebarOpen();
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [expandedTechIds, setExpandedTechIds] = useState<Set<number>>(
     new Set(),
@@ -355,6 +473,13 @@ export default function Rules() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [pendingAutoSend, setPendingAutoSend] = useState(false);
+  // ── Right-panel accordions — closed by default, per request ──
+  const [activeRulesOpen, setActiveRulesOpen] = useState(false);
+  const [cameraZonesOpen, setCameraZonesOpen] = useState(false);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  // Whole right panel (Active Rules / Camera Zones / How It Works column) —
+  // independent of each section's own open/closed state.
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [snapTs] = useState(() => Date.now());
   const [ruleContext, setRuleContext] = useState<{
     camera: any | null;
@@ -376,11 +501,18 @@ export default function Rules() {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
-  const { t, mode, toggleMode } = useTheme();
+  const { t, mode } = useTheme();
 
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED;
   const lastMsg = chatHistory[chatHistory.length - 1];
   const hasPending = lastMsg?.role === "assistant" && !!lastMsg.config;
+
+  // ── Navigate straight into the Self-Learning detail view for one job,
+  // same URL convention (?page=Self-Learning&job=<id>) TrainingJobsPanel
+  // reads on its own — no new routes needed. ──
+  const goToTrainingJob = (jobId: number) => {
+    navigate(`/dashboard?page=Self-Learning&job=${jobId}`);
+  };
 
   useEffect(() => {
     try {
@@ -499,6 +631,10 @@ export default function Rules() {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        // ── carry through which classes are new + their training job ids,
+        // so the render below can show the "learning something new" card ──
+        unknownClasses: data.unknown_classes || [],
+        trainingJobs: data.training_jobs || [],
       };
       setChatHistory((prev) => [...prev, assistantMsg]);
     } catch (e: any) {
@@ -688,9 +824,9 @@ export default function Rules() {
     >
       {/* SIDEBAR (shared component) */}
       <Sidebar
-        selected="Rules"
+        selected="Rule Creation"
         onSelect={(item) => {
-          if (item === "Rules") return;
+          if (item === "Rule Creation") return;
           if (processing) {
             setError(
               "Please wait for the AI to finish before navigating away.",
@@ -702,7 +838,7 @@ export default function Rules() {
           });
         }}
         open={sidebarOpen}
-        onToggle={() => setSidebarOpen((o) => !o)}
+        onToggle={toggleSidebar}
         onSignOut={() => setSignOutOpen(true)}
         userName={user?.name || "Admin"}
         userEmail={user?.email || ""}
@@ -720,157 +856,10 @@ export default function Rules() {
           height: "100vh",
         }}
       >
-        <Box
-          sx={{
-            px: 4,
-            height: 64,
-            flexShrink: 0,
-            borderBottom: `1px solid ${t.border}`,
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            background: t.topbarBg,
-            backdropFilter: "blur(20px)",
-            zIndex: 50,
-            boxShadow: `0 -1px 0 0 ${PURPLE}50 inset`,
-          }}
-        >
-          <Box
-            sx={{
-              width: "1px",
-              height: 20,
-              background: t.border,
-              flexShrink: 0,
-            }}
-          />
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flexShrink: 0,
-            }}
-          >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "7px",
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <ellipse
-                  cx="12"
-                  cy="12"
-                  rx="10"
-                  ry="6.5"
-                  stroke="white"
-                  strokeWidth="1.5"
-                />
-                <circle cx="12" cy="12" r="3.5" fill="white" />
-                <circle cx="13.5" cy="10.5" r="1.4" fill="#6366f1" />
-              </svg>
-            </Box>
-            <Typography
-              sx={{
-                color: t.text,
-                fontWeight: 700,
-                fontSize: ".92rem",
-                letterSpacing: "-.2px",
-              }}
-            >
-              ONVXP
-            </Typography>
-            <Box
-              sx={{
-                width: "1px",
-                height: 16,
-                background: t.border,
-                flexShrink: 0,
-              }}
-            />
-            <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>
-              Rule Creation
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              ml: "auto",
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flexShrink: 0,
-            }}
-          >
-            <NotificationBell />
-            <Tooltip
-              title={
-                mode === "dark" ? "Switch to Light mode" : "Switch to Dark mode"
-              }
-            >
-              <IconButton
-                onClick={toggleMode}
-                size="small"
-                sx={{
-                  border: `1px solid ${t.border}`,
-                  borderRadius: "8px",
-                  color: t.textMuted,
-                  "&:hover": { color: t.text },
-                }}
-              >
-                {mode === "dark" ? (
-                  <LightModeIcon fontSize="small" />
-                ) : (
-                  <DarkModeIcon fontSize="small" />
-                )}
-              </IconButton>
-            </Tooltip>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Box
-                sx={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: GREEN,
-                  boxShadow: `0 0 8px ${GREEN}`,
-                  animation: "p 2s infinite",
-                  "@keyframes p": {
-                    "0%,100%": { opacity: 1 },
-                    "50%": { opacity: 0.3 },
-                  },
-                }}
-              />
-              <Typography sx={{ color: t.textMuted, fontSize: ".72rem" }}>
-                AI Engine Online
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                px: 1.5,
-                py: 0.4,
-                borderRadius: "6px",
-                background: `${GREEN}10`,
-                border: `1px solid ${GREEN}25`,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: GREEN,
-                  fontSize: ".6rem",
-                  fontWeight: 800,
-                  letterSpacing: ".08em",
-                }}
-              >
-                LIVE
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+        <PageHeader
+          title="Rule Creation"
+          description="Describe what you want your cameras to watch for, and we'll set up the alert for you"
+        />
 
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* LEFT panel */}
@@ -916,7 +905,7 @@ export default function Rules() {
                       letterSpacing: ".04em",
                     }}
                   >
-                    Powered by ONVXP AI Engine
+                    Powered by OMNIX AI Engine
                   </Typography>
                 </Box>
                 <Typography
@@ -939,8 +928,8 @@ export default function Rules() {
                     maxWidth: 480,
                   }}
                 >
-                  Type a plain English instruction. ONVXP converts it into a
-                  production-grade YOLOv8 + ByteTrack computer vision pipeline
+                  Type a plain English instruction. OMNIX converts it into a
+                  production-grade YOLO26 + ByteTrack computer vision pipeline
                   automatically.
                 </Typography>
               </Box>
@@ -1220,7 +1209,7 @@ export default function Rules() {
                                         fontWeight: 700,
                                       }}
                                     >
-                                      ONVXP understood your instruction
+                                      OMNIX understood your instruction
                                     </Typography>
                                     <Box
                                       sx={{
@@ -1260,6 +1249,18 @@ export default function Rules() {
                                         color={t.text}
                                       />
                                     </Box>
+
+                                    {/* ── New: unknown-model visibility card ── */}
+                                    {msg.role === "assistant" &&
+                                      msg.unknownClasses &&
+                                      msg.unknownClasses.length > 0 && (
+                                        <MissingModelCard
+                                          classes={msg.unknownClasses}
+                                          jobs={msg.trainingJobs || []}
+                                          onView={goToTrainingJob}
+                                        />
+                                      )}
+
                                     {/* Zone reference chips */}
                                     {msg.config.zones &&
                                       msg.config.zones.length > 0 && (
@@ -1269,6 +1270,7 @@ export default function Rules() {
                                             gap: 0.8,
                                             flexWrap: "wrap",
                                             mb: 1.5,
+                                            mt: 1.5,
                                           }}
                                         >
                                           {msg.config.zones.map(
@@ -1452,19 +1454,10 @@ export default function Rules() {
                     </Box>
                   ))}
                   {processing && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 1.5,
-                      }}
-                    >
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                       <SkeletonLoader t={t} />
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
-                        <RotatingLoader
-                          messages={RULE_LOADING_MESSAGES}
-                          accentColor={CYAN}
-                        />
+                        <RotatingLoader messages={RULE_LOADING_MESSAGES} />
                       </Box>
                     </Box>
                   )}
@@ -1825,13 +1818,18 @@ export default function Rules() {
             </Box>
           </Box>
 
-          {/* RIGHT panel */}
+          {/* RIGHT panel — collapsible as a whole, independent of each
+          accordion's own open/closed state. Starts closed; the toggle is
+          a properly visible colored tab, not a barely-there outline, so
+          it's obvious there's something to open. */}
           <Box
             sx={{
-              width: 380,
+              width: rightPanelOpen ? 380 : 68,
               flexShrink: 0,
-              overflowY: "auto",
+              overflowY: rightPanelOpen ? "auto" : "hidden",
               background: t.surface,
+              borderLeft: `1px solid ${t.border}`,
+              transition: "width .22s cubic-bezier(.4,0,.2,1)",
               "&::-webkit-scrollbar": { width: "4px" },
               "&::-webkit-scrollbar-thumb": {
                 background: `${PURPLE}35`,
@@ -1839,18 +1837,92 @@ export default function Rules() {
               },
             }}
           >
-            <Box sx={{ p: "40px 28px" }}>
+            {rightPanelOpen ? (
+              // Header — separated from the accordion content below by the
+              // first accordion's own border (kept to exactly one line).
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  px: 2,
+                  py: "14px",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: ".7rem",
+                    fontWeight: 700,
+                    color: t.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: ".08em",
+                  }}
+                >
+                  Rule Info
+                </Typography>
+                <Tooltip title="Collapse panel">
+                  <Box
+                    onClick={() => setRightPanelOpen(false)}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "9px",
+                      background: `${PURPLE}18`,
+                      border: `1px solid ${PURPLE}45`,
+                      color: mode === "dark" ? "#c4b5fd" : "#5b21b6",
+                      cursor: "pointer",
+                      transition: "all .2s",
+                      "&:hover": { background: `${PURPLE}28`, borderColor: `${PURPLE}65` },
+                    }}
+                  >
+                    <ExpandMoreIcon sx={{ fontSize: 20, transform: "rotate(-90deg)" }} />
+                  </Box>
+                </Tooltip>
+              </Box>
+            ) : (
+              // Collapsed — same icon, same size, just rotated the other
+              // way (points left = "expand this way").
+              <Box sx={{ display: "flex", justifyContent: "center", pt: "20px" }}>
+                <Tooltip title="Show rule info & active rules" placement="left">
+                  <Box
+                    onClick={() => setRightPanelOpen(true)}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "9px",
+                      background: `${PURPLE}18`,
+                      border: `1px solid ${PURPLE}45`,
+                      color: mode === "dark" ? "#c4b5fd" : "#5b21b6",
+                      cursor: "pointer",
+                      transition: "all .2s",
+                      "&:hover": { background: `${PURPLE}28`, borderColor: `${PURPLE}65` },
+                    }}
+                  >
+                    <ExpandMoreIcon sx={{ fontSize: 20, transform: "rotate(90deg)" }} />
+                  </Box>
+                </Tooltip>
+              </Box>
+            )}
+            {rightPanelOpen && (
+            <Box sx={{ p: "6px" }}>
               {/* Active Rules */}
               <Box
                 sx={{
-                  borderRadius: "16px",
+                  borderRadius: "6px",
                   overflow: "hidden",
-                  mb: 3,
+                  mb: "10px",
                   background: t.bgSecondary,
                   border: `1px solid ${t.border}`,
                 }}
               >
                 <Box
+                  onClick={() => setActiveRulesOpen((o) => !o)}
                   sx={{
                     px: 3,
                     py: "16px",
@@ -1858,10 +1930,16 @@ export default function Rules() {
                     borderBottom: `1px solid ${t.border}`,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    gap: 1.5,
+                    cursor: "pointer",
+                    userSelect: "none",
+                    transition: "background .15s",
+                    "&:hover": {
+                      background: `linear-gradient(135deg, ${PURPLE}1c 0%, transparent 60%)`,
+                    },
                   }}
                 >
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
                       sx={{
                         color: t.text,
@@ -1881,7 +1959,7 @@ export default function Rules() {
                       Applied to pipeline
                     </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
                     <Box
                       sx={{
                         px: 1.5,
@@ -1904,7 +1982,10 @@ export default function Rules() {
                     {history.length > 0 && (
                       <Tooltip title="Clear all rules and start fresh">
                         <Box
-                          onClick={() => setResetConfirmOpen(true)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setResetConfirmOpen(true);
+                          }}
                           sx={{
                             px: 1,
                             py: 0.3,
@@ -1930,8 +2011,18 @@ export default function Rules() {
                         </Box>
                       </Tooltip>
                     )}
+                    <ExpandMoreIcon
+                      sx={{
+                        fontSize: 20,
+                        color: t.textMuted,
+                        transition: "transform .2s",
+                        transform: activeRulesOpen ? "rotate(180deg)" : "none",
+                        flexShrink: 0,
+                      }}
+                    />
                   </Box>
                 </Box>
+                <Collapse in={activeRulesOpen}>
                 <Box sx={{ p: "8px 12px 12px" }}>
                   {history.length === 0 ? (
                     <Box sx={{ p: "24px 16px", textAlign: "center" }}>
@@ -2142,19 +2233,21 @@ export default function Rules() {
                     </Box>
                   )}
                 </Box>
+                </Collapse>
               </Box>
 
               {/* Camera Zones Preview */}
               <Box
                 sx={{
-                  borderRadius: "16px",
+                  borderRadius: "6px",
                   overflow: "hidden",
-                  mb: 3,
+                  mb: "10px",
                   background: t.bgSecondary,
                   border: `1px solid ${t.border}`,
                 }}
               >
                 <Box
+                  onClick={() => setCameraZonesOpen((o) => !o)}
                   sx={{
                     px: 3,
                     py: "16px",
@@ -2162,10 +2255,16 @@ export default function Rules() {
                     borderBottom: `1px solid ${t.border}`,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    gap: 1.5,
+                    cursor: "pointer",
+                    userSelect: "none",
+                    transition: "background .15s",
+                    "&:hover": {
+                      background: `linear-gradient(135deg, ${CYAN}18 0%, transparent 60%)`,
+                    },
                   }}
                 >
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
                       sx={{
                         color: t.text,
@@ -2186,7 +2285,10 @@ export default function Rules() {
                     </Typography>
                   </Box>
                   <Box
-                    onClick={() => setWizardOpen(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWizardOpen(true);
+                    }}
                     sx={{
                       px: 1.5,
                       py: 0.4,
@@ -2194,6 +2296,7 @@ export default function Rules() {
                       background: `${CYAN}10`,
                       border: `1px solid ${CYAN}25`,
                       cursor: "pointer",
+                      flexShrink: 0,
                       "&:hover": { background: `${CYAN}20` },
                     }}
                   >
@@ -2203,7 +2306,17 @@ export default function Rules() {
                       Change →
                     </Typography>
                   </Box>
+                  <ExpandMoreIcon
+                    sx={{
+                      fontSize: 20,
+                      color: t.textMuted,
+                      transition: "transform .2s",
+                      transform: cameraZonesOpen ? "rotate(180deg)" : "none",
+                      flexShrink: 0,
+                    }}
+                  />
                 </Box>
+                <Collapse in={cameraZonesOpen}>
                 <Box
                   sx={{
                     position: "relative",
@@ -2340,36 +2453,59 @@ export default function Rules() {
                     ))}
                   </Box>
                 )}
+                </Collapse>
               </Box>
 
               {/* How It Works */}
               <Box
                 sx={{
-                  borderRadius: "16px",
+                  borderRadius: "6px",
                   overflow: "hidden",
                   background: t.bgSecondary,
                   border: `1px solid ${t.border}`,
                 }}
               >
                 <Box
+                  onClick={() => setHowItWorksOpen((o) => !o)}
                   sx={{
                     px: 3,
                     py: "16px",
                     background: `linear-gradient(135deg, ${CYAN}10 0%, transparent 60%)`,
                     borderBottom: `1px solid ${t.border}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    cursor: "pointer",
+                    userSelect: "none",
+                    transition: "background .15s",
+                    "&:hover": {
+                      background: `linear-gradient(135deg, ${CYAN}18 0%, transparent 60%)`,
+                    },
                   }}
                 >
-                  <Typography
-                    sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}
-                  >
-                    How It Works
-                  </Typography>
-                  <Typography
-                    sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}
-                  >
-                    From words to pipeline in seconds
-                  </Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      sx={{ color: t.text, fontWeight: 700, fontSize: ".95rem" }}
+                    >
+                      How It Works
+                    </Typography>
+                    <Typography
+                      sx={{ color: t.textMuted, fontSize: ".72rem", mt: ".2rem" }}
+                    >
+                      From words to pipeline in seconds
+                    </Typography>
+                  </Box>
+                  <ExpandMoreIcon
+                    sx={{
+                      fontSize: 20,
+                      color: t.textMuted,
+                      transition: "transform .2s",
+                      transform: howItWorksOpen ? "rotate(180deg)" : "none",
+                      flexShrink: 0,
+                    }}
+                  />
                 </Box>
+                <Collapse in={howItWorksOpen}>
                 <Box
                   sx={{
                     p: "12px 16px 16px",
@@ -2446,9 +2582,10 @@ export default function Rules() {
                     </Box>
                   ))}
                 </Box>
+                </Collapse>
               </Box>
-              <Box sx={{ height: 40 }} />
             </Box>
+            )}
           </Box>
         </Box>
       </Box>
@@ -2559,7 +2696,7 @@ export default function Rules() {
         <DialogTitle
           sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
         >
-          Sign out of ONVXP?
+          Sign out of OMNIX?
         </DialogTitle>
         <DialogContent>
           <Typography
