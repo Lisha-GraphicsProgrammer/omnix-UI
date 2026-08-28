@@ -1,5 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { Box, Typography, Button, Tooltip } from '@mui/material'
+import {
+  Box, Typography, Button, Tooltip, Collapse,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+} from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ThumbDownIcon from '@mui/icons-material/ThumbDown'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
@@ -19,7 +22,11 @@ import MapIcon from '@mui/icons-material/Map'
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { apiFetch } from '../lib/api'
 import { humanizeViolation } from '../lib/humanize'
-import NotificationBell from '../components/layout/NotificationBell'
+import { useAuth } from '../context/AuthContext'
+import { useSidebarOpen } from '../lib/sidebarState'
+import { DRAWER_OPEN, DRAWER_CLOSED } from '../lib/constants'
+import Sidebar from '../components/layout/Sidebar'
+import PageHeader from '../components/layout/PageHeader'
 
 const ACCENT  = '#C0392B'
 const ACCENT2 = '#8B2E1F'
@@ -454,34 +461,55 @@ function SiteIncidentMap({
 }
 
 function DetailCard({
-  title, accentColor = ACCENT, children, headerRight,
+  title, accentColor = ACCENT, children, headerRight, open, onToggle,
 }: {
   title: string
   accentColor?: string
   children: React.ReactNode
   headerRight?: React.ReactNode
+  open: boolean
+  onToggle: () => void
 }) {
   return (
     <Box sx={{
-      borderRadius: '16px',
+      borderRadius: '6px',
       background: 'rgba(255,235,220,0.03)',
       border: '1px solid rgba(255,200,170,0.08)',
       overflow: 'hidden',
-      mb: 2,
+      mb: '10px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
     }}>
-      <Box sx={{
-        px: 3, py: '16px',
-        background: `linear-gradient(135deg, ${accentColor}15 0%, transparent 60%)`,
-        borderBottom: `1px solid ${accentColor}25`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <Box
+        onClick={onToggle}
+        sx={{
+          px: 3, py: '16px',
+          background: `linear-gradient(135deg, ${accentColor}15 0%, transparent 60%)`,
+          borderBottom: `1px solid ${accentColor}25`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', userSelect: 'none',
+          transition: 'background .15s',
+          '&:hover': { background: `linear-gradient(135deg, ${accentColor}22 0%, transparent 60%)` },
+        }}
+      >
         <Typography sx={{ color: '#F5F0EB', fontSize: '.88rem', fontWeight: 700, letterSpacing: '-.2px' }}>
           {title}
         </Typography>
-        {headerRight}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {headerRight}
+          <ChevronRightIcon
+            sx={{
+              fontSize: 18,
+              color: 'rgba(245,240,235,0.3)',
+              transition: 'transform .2s',
+              transform: open ? 'rotate(90deg)' : 'none',
+              flexShrink: 0,
+            }}
+          />
+        </Box>
       </Box>
-      {children}
+      <Collapse in={open}>
+        {children}
+      </Collapse>
     </Box>
   )
 }
@@ -524,6 +552,19 @@ function DetailRow({
 export default function AlertDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
+  const [sidebarOpen, toggleSidebar] = useSidebarOpen()
+  const [signOutOpen, setSignOutOpen] = useState(false)
+  const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED
+  // Right panel — closed by default, same as Rules page. Each accordion
+  // inside it also starts closed independently.
+  const [rightPanelOpen, setRightPanelOpen] = useState(false)
+  const [alertDetailsOpen, setAlertDetailsOpen] = useState(false)
+  const [siteMapOpen, setSiteMapOpen] = useState(false)
+  const [inspectorOpen, setInspectorOpen] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
+  const [bboxOpen, setBboxOpen] = useState(false)
+  const [actionsOpen, setActionsOpen] = useState(false)
   const [markedFP, setMarkedFP] = useState(false)
   const [fpSaving, setFpSaving] = useState(false)
   const [fpError, setFpError] = useState<string | null>(null)
@@ -611,95 +652,98 @@ export default function AlertDetail() {
   }
 
   const currentIdx = allIncidents.findIndex((inc) => String(inc.id) === String(id))
-  const hasPrev = currentIdx > 0
-  const hasNext = currentIdx < allIncidents.length - 1
   const confidence = 85 + (currentIdx % 14)
 
   if (loading) return (
-    <Box sx={{ minHeight: '100vh', background: '#120e0c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${ACCENT}20`, borderTopColor: ACCENT, animation: 'sp 1s linear infinite', '@keyframes sp': { '100%': { transform: 'rotate(360deg)' } } }} />
-        <Typography sx={{ color: 'rgba(245,240,235,0.25)', fontSize: '.85rem' }}>Loading incident...</Typography>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#120e0c' }}>
+      <Sidebar
+        selected="Alerts"
+        onSelect={(item) => {
+          if (item === 'Alerts') return
+          if (item === 'Rule Creation') { navigate('/rules'); return }
+          navigate(`/dashboard?page=${encodeURIComponent(item)}`)
+        }}
+        open={sidebarOpen}
+        onToggle={toggleSidebar}
+        onSignOut={() => setSignOutOpen(true)}
+        userName={user?.name || 'Admin'}
+        userEmail={user?.email || ''}
+      />
+      <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${ACCENT}20`, borderTopColor: ACCENT, animation: 'sp 1s linear infinite', '@keyframes sp': { '100%': { transform: 'rotate(360deg)' } } }} />
+          <Typography sx={{ color: 'rgba(245,240,235,0.25)', fontSize: '.85rem' }}>Loading incident...</Typography>
+        </Box>
       </Box>
     </Box>
   )
 
   if (!incident) return (
-    <Box sx={{ minHeight: '100vh', background: '#120e0c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
-      <Typography sx={{ color: 'rgba(245,240,235,0.4)' }}>Incident not found</Typography>
-      <Button onClick={() => navigate('/dashboard')} sx={{ color: ACCENT }}>Back to Dashboard</Button>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#120e0c' }}>
+      <Sidebar
+        selected="Alerts"
+        onSelect={(item) => {
+          if (item === 'Alerts') return
+          if (item === 'Rule Creation') { navigate('/rules'); return }
+          navigate(`/dashboard?page=${encodeURIComponent(item)}`)
+        }}
+        open={sidebarOpen}
+        onToggle={toggleSidebar}
+        onSignOut={() => setSignOutOpen(true)}
+        userName={user?.name || 'Admin'}
+        userEmail={user?.email || ''}
+      />
+      <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
+        <Typography sx={{ color: 'rgba(245,240,235,0.4)' }}>Incident not found</Typography>
+        <Button onClick={() => navigate('/dashboard')} sx={{ color: ACCENT }}>Back to Dashboard</Button>
+      </Box>
     </Box>
   )
 
+  const violationText = humanizeViolation({ violation: incident.violation, person_id: incident.person_id, zone: incident.zone })
   const time = new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour12: false })
   const date = new Date(incident.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   const cameraLabel = `Camera ${incident.camera_id ?? 1} — ${titleCase(incident.zone || 'unknown')}`
   const personLabel = incident.person_id != null ? `ByteTrack #${incident.person_id}` : 'Object detection (no person)'
 
   return (
-    <Box sx={{ minHeight: '100vh', background: '#120e0c', fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#120e0c', fontFamily: '"Inter", system-ui, sans-serif' }}>
+      <Sidebar
+        selected="Alerts"
+        onSelect={(item) => {
+          if (item === 'Alerts') return
+          if (item === 'Rule Creation') { navigate('/rules'); return }
+          navigate(`/dashboard?page=${encodeURIComponent(item)}`)
+        }}
+        open={sidebarOpen}
+        onToggle={toggleSidebar}
+        onSignOut={() => setSignOutOpen(true)}
+        userName={user?.name || 'Admin'}
+        userEmail={user?.email || ''}
+      />
 
-      {/* TOP BAR */}
       <Box sx={{
-        px: 4, height: 64,
-        borderBottom: '1px solid rgba(255,200,170,0.08)',
-        display: 'flex', alignItems: 'center', gap: 2,
-        background: 'rgba(22,15,13,0.98)',
-        backdropFilter: 'blur(20px)',
-        position: 'sticky', top: 0, zIndex: 50,
-        boxShadow: `0 -1px 0 0 ${ACCENT}40 inset, 0 1px 0 rgba(255,200,170,0.04)`,
+        flex: 1, ml: `${drawerWidth}px`, display: 'flex', flexDirection: 'column',
+        transition: 'margin-left .25s cubic-bezier(.4,0,.2,1)', overflow: 'hidden', height: '100vh',
       }}>
-        <Box onClick={() => navigate(-1)} sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: .7, borderRadius: '8px', border: '1px solid rgba(255,200,170,0.08)', background: 'rgba(255,235,220,0.03)', transition: 'all .2s', '&:hover': { background: 'rgba(255,235,220,0.07)', borderColor: 'rgba(255,200,170,0.15)' } }}>
-          <ArrowBackIcon sx={{ fontSize: 14, color: 'rgba(245,240,235,0.5)' }} />
-          <Typography sx={{ color: 'rgba(245,240,235,0.5)', fontSize: '.78rem' }}>Dashboard</Typography>
-        </Box>
+        <PageHeader title="Alert Detail" description={violationText} />
 
-        <Box sx={{ width: '1px', height: 16, background: 'rgba(255,200,170,0.1)', flexShrink: 0 }} />
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: '7px', background: `linear-gradient(135deg, ${ACCENT}, ${ACCENT2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 16px ${ACCENT}50`, flexShrink: 0 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="white" strokeWidth="1.5"/>
-              <circle cx="12" cy="12" r="3.5" fill="white"/>
-              <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT}/>
-            </svg>
-          </Box>
-          <Typography sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '.92rem', letterSpacing: '-.2px' }}>ONVXP</Typography>
-          <Box sx={{ width: '1px', height: 16, background: 'rgba(255,200,170,0.1)', flexShrink: 0 }} />
-          <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.82rem' }}>Alert Detail</Typography>
-          <Box sx={{ width: '1px', height: 16, background: 'rgba(255,200,170,0.1)', flexShrink: 0 }} />
-          <Box sx={{ px: 1.2, py: '.25rem', borderRadius: '6px', background: 'rgba(255,235,220,0.04)', border: '1px solid rgba(255,200,170,0.08)' }}>
-            <Typography sx={{ color: 'rgba(245,240,235,0.35)', fontSize: '.68rem', fontFamily: 'monospace' }}>{incident.id}</Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
-          <NotificationBell />
-          <Typography sx={{ color: 'rgba(245,240,235,0.2)', fontSize: '.72rem', mr: 1 }}>
-            {currentIdx + 1} / {allIncidents.length}
-          </Typography>
-          <Tooltip title="Previous incident">
-            <Box
-              onClick={hasPrev ? () => navigate(`/alert/${allIncidents[currentIdx - 1].id}`) : undefined}
-              sx={{ width: 32, height: 32, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${hasPrev ? 'rgba(255,200,170,0.12)' : 'rgba(255,200,170,0.04)'}`, background: hasPrev ? 'rgba(255,235,220,0.04)' : 'transparent', cursor: hasPrev ? 'pointer' : 'default', transition: 'all .2s', '&:hover': hasPrev ? { background: 'rgba(255,235,220,0.08)', borderColor: 'rgba(255,200,170,0.2)' } : {} }}>
-              <ChevronLeftIcon sx={{ fontSize: 18, color: hasPrev ? 'rgba(245,240,235,0.5)' : 'rgba(245,240,235,0.15)' }} />
-            </Box>
-          </Tooltip>
-          <Tooltip title="Next incident">
-            <Box
-              onClick={hasNext ? () => navigate(`/alert/${allIncidents[currentIdx + 1].id}`) : undefined}
-              sx={{ width: 32, height: 32, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${hasNext ? `${ACCENT}50` : 'rgba(255,200,170,0.04)'}`, background: hasNext ? `${ACCENT}15` : 'transparent', cursor: hasNext ? 'pointer' : 'default', transition: 'all .2s', '&:hover': hasNext ? { background: `${ACCENT}25`, borderColor: `${ACCENT}70` } : {} }}>
-              <ChevronRightIcon sx={{ fontSize: 18, color: hasNext ? ACCENT : 'rgba(245,240,235,0.15)' }} />
-            </Box>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      {/* MAIN CONTENT */}
-      <Box sx={{ maxWidth: 1280, mx: 'auto', p: '36px 32px', display: 'flex', gap: 4 }}>
+        {/* MAIN CONTENT — two-panel layout, same structure as Rules page */}
+        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* LEFT COLUMN */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{
+          flex: 1, minWidth: 0, overflowY: 'auto', p: '24px 32px 40px',
+          '&::-webkit-scrollbar': { width: '4px' },
+          '&::-webkit-scrollbar-thumb': { background: `${ACCENT}35`, borderRadius: '4px' },
+        }}>
+
+          {/* Back — same pattern as Self-Learning's detail view: a plain
+          link at the top of the content, not a separate structural row. */}
+          <Box onClick={() => navigate(-1)} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.7, mb: 3, cursor: 'pointer', color: 'rgba(245,240,235,0.5)', '&:hover': { color: '#F5F0EB' } }}>
+            <ArrowBackIcon sx={{ fontSize: 15 }} />
+            <Typography sx={{ fontSize: '.82rem', fontWeight: 600 }}>All Alerts</Typography>
+          </Box>
 
           {/* Incident header card */}
           <Box sx={{
@@ -726,7 +770,7 @@ export default function AlertDetail() {
             </Box>
 
             <Typography sx={{ color: '#F5F0EB', fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-1.2px', lineHeight: 1.1, mb: 1.2 }}>
-              {humanizeViolation({ violation: incident.violation, person_id: incident.person_id, zone: incident.zone })}
+              {violationText}
             </Typography>
 
             {/* ── Attribution: the plain-English rule that fired this alert ── */}
@@ -858,25 +902,65 @@ export default function AlertDetail() {
           </Box>
         </Box>
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT COLUMN — collapsible accordion panel, same mechanics as
+        the Rules page: whole panel toggles as a unit, each section inside
+        is its own accordion, everything starts closed. */}
         <Box sx={{
-          width: 340, flexShrink: 0,
-          position: 'sticky', top: 64,
-          maxHeight: 'calc(100vh - 64px)',
-          overflowY: 'auto',
-          pr: '4px',
+          width: rightPanelOpen ? 380 : 68,
+          flexShrink: 0,
+          overflowY: rightPanelOpen ? 'auto' : 'hidden',
+          background: '#160f0d',
+          borderLeft: '1px solid rgba(255,200,170,0.08)',
+          transition: 'width .22s cubic-bezier(.4,0,.2,1)',
           '&::-webkit-scrollbar': { width: '4px' },
-          '&::-webkit-scrollbar-track': { background: 'transparent' },
           '&::-webkit-scrollbar-thumb': { background: `${ACCENT}35`, borderRadius: '4px' },
-          '&::-webkit-scrollbar-thumb:hover': { background: `${ACCENT}60` },
         }}>
+          {rightPanelOpen ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: '14px' }}>
+              <Typography sx={{ fontSize: '.7rem', fontWeight: 700, color: 'rgba(245,240,235,0.3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                Incident Info
+              </Typography>
+              <Tooltip title="Collapse panel">
+                <Box
+                  onClick={() => setRightPanelOpen(false)}
+                  sx={{
+                    width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '9px', background: `${ACCENT}18`, border: `1px solid ${ACCENT}45`,
+                    color: ACCENT, cursor: 'pointer', transition: 'all .2s',
+                    '&:hover': { background: `${ACCENT}28`, borderColor: `${ACCENT}65` },
+                  }}
+                >
+                  <ChevronRightIcon sx={{ fontSize: 20 }} />
+                </Box>
+              </Tooltip>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', pt: '20px' }}>
+              <Tooltip title="Show incident info" placement="left">
+                <Box
+                  onClick={() => setRightPanelOpen(true)}
+                  sx={{
+                    width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '9px', background: `${ACCENT}18`, border: `1px solid ${ACCENT}45`,
+                    color: ACCENT, cursor: 'pointer', transition: 'all .2s',
+                    '&:hover': { background: `${ACCENT}28`, borderColor: `${ACCENT}65` },
+                  }}
+                >
+                  <ChevronLeftIcon sx={{ fontSize: 20 }} />
+                </Box>
+              </Tooltip>
+            </Box>
+          )}
 
-          <DetailCard title="Alert Details" accentColor={ACCENT}>
+          {rightPanelOpen && (
+          <Box sx={{ p: '6px' }}>
+
+          <DetailCard title="Alert Details" accentColor={ACCENT} open={alertDetailsOpen} onToggle={() => setAlertDetailsOpen(o => !o)}>
             <DetailRow icon={<CameraAltIcon fontSize="small" />}    label="Camera"        value={cameraLabel} accentColor={CREAM} />
             {incident.rule_instruction && (
               <DetailRow icon={<GavelIcon fontSize="small" />}      label="Triggered by Rule" value={incident.rule_instruction} accentColor={CYAN} />
             )}
-            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Violation"     value={humanizeViolation({ violation: incident.violation, person_id: incident.person_id, zone: incident.zone })}           accentColor={AMBER} />
+            <DetailRow icon={<WarningAmberIcon fontSize="small" />} label="Violation"     value={violationText}           accentColor={AMBER} />
             <DetailRow icon={<AccessTimeIcon fontSize="small" />}   label="Timestamp"     value={`${time} · ${date}`}                                     accentColor={GREEN} />
             <DetailRow icon={<PersonIcon fontSize="small" />}       label="Person ID"     value={personLabel}                       accentColor={ACCENT} />
           </DetailCard>
@@ -885,6 +969,8 @@ export default function AlertDetail() {
             <DetailCard
               title="Site Map"
               accentColor={CYAN}
+              open={siteMapOpen}
+              onToggle={() => setSiteMapOpen(o => !o)}
               headerRight={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
                   <MapIcon sx={{ fontSize: 13, color: 'rgba(245,240,235,0.3)' }} />
@@ -912,6 +998,8 @@ export default function AlertDetail() {
             <DetailCard
               title="Incident Inspector"
               accentColor={CYAN}
+              open={inspectorOpen}
+              onToggle={() => setInspectorOpen(o => !o)}
               headerRight={
                 <Typography sx={{ color: 'rgba(245,240,235,0.3)', fontSize: '.68rem', fontFamily: 'monospace' }}>
                   {objects.length} detected
@@ -962,7 +1050,7 @@ export default function AlertDetail() {
             </DetailCard>
           )}
 
-          <DetailCard title="Detection Metrics" accentColor={GREEN}>
+          <DetailCard title="Detection Metrics" accentColor={GREEN} open={metricsOpen} onToggle={() => setMetricsOpen(o => !o)}>
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               {[
                 { label: 'Frame Number',     value: `#${incident.frame}`,                  color: AMBER, pct: null },
@@ -984,7 +1072,7 @@ export default function AlertDetail() {
             </Box>
           </DetailCard>
 
-          <DetailCard title="Bounding Box Coordinates" accentColor={ACCENT}>
+          <DetailCard title="Bounding Box Coordinates" accentColor={ACCENT} open={bboxOpen} onToggle={() => setBboxOpen(o => !o)}>
             <Box sx={{ p: 3 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                 {['x1', 'y1', 'x2', 'y2'].map((k, i) => (
@@ -999,17 +1087,7 @@ export default function AlertDetail() {
             </Box>
           </DetailCard>
 
-          <Box sx={{
-            borderRadius: '16px',
-            background: `linear-gradient(135deg, ${GREEN}08, ${ACCENT}04)`,
-            border: `1px solid ${GREEN}20`,
-            overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          }}>
-            <Box sx={{ px: 3, py: '16px', background: `linear-gradient(135deg, ${GREEN}12 0%, transparent 60%)`, borderBottom: `1px solid ${GREEN}20`, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 7, height: 7, borderRadius: '50%', background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: 'gpulse 2s ease-in-out infinite', '@keyframes gpulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: .4 } } }} />
-              <Typography sx={{ color: '#F5F0EB', fontSize: '.88rem', fontWeight: 700, letterSpacing: '-.2px' }}>Automated Actions</Typography>
-            </Box>
+          <DetailCard title="Automated Actions" accentColor={GREEN} open={actionsOpen} onToggle={() => setActionsOpen(o => !o)}>
             <Box sx={{ p: '12px 16px', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {[
                 { icon: <PhotoCameraIcon sx={{ fontSize: 14 }} />,   text: 'Screenshot captured & stored', done: true },
@@ -1031,9 +1109,36 @@ export default function AlertDetail() {
                 </Box>
               ))}
             </Box>
+          </DetailCard>
+
           </Box>
+          )}
+        </Box>
         </Box>
       </Box>
+
+      <Dialog
+        open={signOutOpen}
+        onClose={() => setSignOutOpen(false)}
+        sx={{ '& .MuiDialog-paper': { background: '#1a1412', border: '1px solid rgba(255,200,170,0.08)', borderRadius: '16px', minWidth: 360 } }}
+      >
+        <DialogTitle sx={{ color: '#F5F0EB', fontWeight: 700, fontSize: '1rem', pb: 1 }}>
+          Sign out of ONVXP?
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: 'rgba(245,240,235,0.62)', fontSize: '.88rem', lineHeight: 1.6 }}>
+            You'll be returned to the login screen.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setSignOutOpen(false)} sx={{ color: 'rgba(245,240,235,0.62)', borderRadius: '9px', textTransform: 'none', border: '1px solid rgba(255,200,170,0.08)', px: 2.5 }}>
+            Cancel
+          </Button>
+          <Button onClick={logout} variant="contained" sx={{ borderRadius: '9px', textTransform: 'none', background: 'linear-gradient(135deg, #ef4444, #dc2626)', px: 2.5 }}>
+            Sign Out
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

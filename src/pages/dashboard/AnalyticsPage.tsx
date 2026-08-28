@@ -9,7 +9,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Cell
 } from "recharts";
-import NotificationBell from "../../components/layout/NotificationBell";
+import PageHeader from "../../components/layout/PageHeader";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useAnalytics } from "../../hooks/queries";
@@ -81,42 +81,11 @@ export default function AnalyticsPage() {
   const isEmpty = totalIncidents === 0;
 
   return (
-    <Box sx={{ overflowY: "auto", height: "100vh" }}>
-      {/* Topbar */}
-      <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
-        <Box>
-          <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Analytics</Typography>
-          <Typography sx={{ color: t.textMuted, fontSize: ".78rem", mt: 0.2 }}>Historical safety monitoring insights</Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <NotificationBell />
-          {isAdmin && (
-            <Box sx={{ position: "relative" }}>
-              <Box
-                onClick={() => setShowExportMenu(o => !o)}
-                sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1, borderRadius: "10px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
-              >
-                <FileDownloadIcon sx={{ fontSize: 16, color: "#fff" }} />
-                <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>
-                  {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
-                </Typography>
-              </Box>
-              {showExportMenu && (
-                <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100, minWidth: 140 }}>
-                  {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
-                    <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
-        </Box>
-      </Box>
+    <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      <PageHeader title="Analytics" description="Historical safety monitoring insights" />
 
       <Box sx={{ p: 4 }}>
-        {/* Date controls */}
+        {/* Date controls + export */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4, flexWrap: "wrap" }}>
           <Box sx={{ display: "flex", gap: 1 }}>
             {(["today", "7d", "30d", "custom"] as const).map((p) => (
@@ -138,7 +107,7 @@ export default function AnalyticsPage() {
               <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ background: "transparent", border: `1px solid ${t.border}`, borderRadius: "8px", color: t.text, padding: "6px 10px", fontSize: "0.82rem", outline: "none" }} />
             </Box>
           )}
-          <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
+          <Box sx={{ display: "flex", gap: 1, ml: "auto", alignItems: "center" }}>
             {(["day", "week", "month"] as const).map(p => (
               <Box
                 key={p}
@@ -150,6 +119,28 @@ export default function AnalyticsPage() {
                 </Typography>
               </Box>
             ))}
+            {isAdmin && (
+              <Box sx={{ position: "relative" }}>
+                <Box
+                  onClick={() => setShowExportMenu(o => !o)}
+                  sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 0.9, borderRadius: "8px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
+                >
+                  <FileDownloadIcon sx={{ fontSize: 15, color: "#fff" }} />
+                  <Typography sx={{ color: "#fff", fontSize: ".76rem", fontWeight: 600 }}>
+                    {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
+                  </Typography>
+                </Box>
+                {showExportMenu && (
+                  <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100, minWidth: 140 }}>
+                    {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
+                      <Box key={opt.format} onClick={() => handleExport(opt.format)} sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { background: t.surfaceHover }, display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography sx={{ color: t.text, fontSize: ".82rem" }}>{opt.label}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            )}
           </Box>
         </Box>
 
@@ -158,7 +149,9 @@ export default function AnalyticsPage() {
           <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, background: `${ACCENT}15`, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${ACCENT}, #D4891A)` } }} />
         )}
 
-        {/* Summary cards */}
+        {/* Summary cards — genuine headline numbers for a charts page,
+        distinct from Alert Dashboard's case: no table row already shows
+        these at a glance here. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
           {[
             { val: String(totalIncidents), label: "Total Incidents", sub: `${fromDate} → ${toDate}`, c: "#E74C3C", icon: <WarningAmberIcon sx={{ fontSize: 20 }} /> },
@@ -303,4 +296,3 @@ export default function AnalyticsPage() {
     </Box>
   );
 }
-

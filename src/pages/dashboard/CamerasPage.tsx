@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Box, Typography, Tooltip } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import WifiIcon from "@mui/icons-material/Wifi";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import NotificationBell from "../../components/layout/NotificationBell";
+import PageHeader from "../../components/layout/PageHeader";
 import { useTheme } from "../../context/ThemeContext";
 import { useCameras, useLatestIncident } from "../../hooks/queries";
 import { ACCENT, GREEN, AMBER } from "../../lib/constants";
@@ -47,31 +47,19 @@ export default function CamerasPage() {
   const alertCount = displayCameras.reduce((a, c) => a + (mockMeta[c.id]?.alerts || 0), 0);
 
   return (
-    <Box>
-      {/* Topbar */}
-      <Box sx={{ px: 4, py: 2.5, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: t.topbarBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
-        <Box>
-          <Typography sx={{ color: t.text, fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-.3px" }}>Camera Management</Typography>
-          <Typography sx={{ color: apiError ? "#fca5a5" : t.textMuted, fontSize: ".78rem", mt: 0.2 }}>
-            {apiError ? "⚠️ API offline — showing mock data" : `${displayCameras.length} cameras configured · ${onlineCount} online · Site A`}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box sx={{ width: 7, height: 7, borderRadius: "50%", background: apiError ? "#ef4444" : "#22c55e", boxShadow: `0 0 8px ${apiError ? "rgba(239,68,68,0.6)" : "rgba(34,197,94,0.6)"}`, animation: "pg 2s infinite", "@keyframes pg": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } } }} />
-            <Typography sx={{ color: t.textMuted, fontSize: ".75rem" }}>{apiError ? "Offline" : "Live"}</Typography>
-          </Box>
-          <NotificationBell />
-          <Tooltip title="Coming in V2" arrow>
-            <Box sx={{ px: 2.5, py: 1, borderRadius: "10px", background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: "not-allowed", opacity: 0.5, boxShadow: `0 4px 14px ${ACCENT}25` }}>
-              <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 600 }}>+ Add Camera</Typography>
-            </Box>
-          </Tooltip>
-        </Box>
-      </Box>
+    <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      <PageHeader
+        title="Camera Management"
+        description={
+          apiError
+            ? "⚠️ API offline — showing mock data"
+            : "Live feeds and status for every camera on site"
+        }
+      />
 
       <Box sx={{ p: 4 }}>
-        {/* Stat cards */}
+        {/* Stat cards — these show real per-camera tallies not visible
+        anywhere else in the grid below, unlike Alert Dashboard's (removed). */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 4 }}>
           {[
             { val: String(displayCameras.length), label: "Total Cameras", sub: "Configured on site", c: "#E8D5B0", icon: <VideocamIcon sx={{ fontSize: 20 }} /> },
