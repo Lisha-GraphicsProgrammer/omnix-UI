@@ -405,7 +405,7 @@ export default function AnalyticsPage() {
                             onClick={() => setShowPicker(false)}
                             sx={{ position: "fixed", inset: 0, zIndex: 45, background: "rgba(0,0,0,0.45)" }}
                           />
-                          <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300, background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "14px", boxShadow: "0 12px 32px rgba(0,0,0,0.4)", zIndex: 50, p: 2 }}>
+                          <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 440, background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "14px", boxShadow: "0 12px 32px rgba(0,0,0,0.4)", zIndex: 50, p: 2.5 }}>
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
                               <Typography sx={{ fontSize: ".85rem", fontWeight: 700, color: t.text }}>Choose a chart type</Typography>
                               <CloseIcon onClick={() => setShowPicker(false)} sx={{ fontSize: 16, color: t.textMuted, cursor: "pointer" }} />
@@ -419,7 +419,7 @@ export default function AnalyticsPage() {
                                 style={{ background: "transparent", border: "none", outline: "none", color: t.text, fontSize: "0.78rem", width: "100%" }}
                               />
                             </Box>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, maxHeight: 260, overflowY: "auto", pr: "2px" }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.2, maxHeight: 340, overflowY: "auto", pr: "2px" }}>
                               {filteredPickerTypes.map((c) => (
                                 <Box
                                   key={c.id}
@@ -427,12 +427,17 @@ export default function AnalyticsPage() {
                                   sx={{
                                     border: `1px solid ${chartType === c.id ? ACCENT : t.border}`,
                                     background: chartType === c.id ? `${ACCENT}12` : "transparent",
-                                    borderRadius: "9px", p: "10px 6px", textAlign: "center",
+                                    borderRadius: "9px", p: "12px 8px", textAlign: "center",
                                     cursor: "pointer",
+                                    minHeight: 72,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
                                   }}
                                 >
                                   <Box sx={{ color: chartType === c.id ? ACCENT : t.textMuted, display: "flex", justifyContent: "center" }}>{c.icon}</Box>
-                                  <Typography sx={{ fontSize: ".68rem", color: chartType === c.id ? t.text : t.textMuted, mt: "4px" }}>{c.label}</Typography>
+                                  <Typography sx={{ fontSize: ".7rem", color: chartType === c.id ? t.text : t.textMuted, mt: "6px", lineHeight: 1.25 }}>{c.label}</Typography>
                                 </Box>
                               ))}
                               {filteredPickerTypes.length === 0 && (
