@@ -1,46 +1,106 @@
 import { useState, useEffect } from "react";
 import {
-  Box, Typography, Slider, Switch, TextField, Select, MenuItem,
-  FormControl, Snackbar, Alert, Tooltip, IconButton, LinearProgress,
+  Box, Typography, Switch, TextField, Select, MenuItem,
+  FormControl, Snackbar, Alert, Tooltip,
 } from "@mui/material";
-import TuneIcon from "@mui/icons-material/Tune";
+import LockIcon from "@mui/icons-material/Lock";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import PsychologyIcon from "@mui/icons-material/Psychology";
-import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
-import SpeedIcon from "@mui/icons-material/Speed";
+import PaletteIcon from "@mui/icons-material/Palette";
+import DevicesIcon from "@mui/icons-material/Devices";
+import TuneIcon from "@mui/icons-material/Tune";
 import SaveIcon from "@mui/icons-material/Save";
-import MemoryIcon from "@mui/icons-material/Memory";
-import RestoreIcon from "@mui/icons-material/Restore";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import SettingsIcon from "@mui/icons-material/Settings";
+import DesktopWindowsIcon from "@mui/icons-material/DesktopWindows";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
 import PageHeader from "../../components/layout/PageHeader";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 import { apiFetch } from "../../lib/api";
 import { ACCENT, GREEN, AMBER } from "../../lib/constants";
-import { MetricTile, SectionCard, SettingRow, ValuePill } from "../../components/common/Cards";
 import TeamMembersSection from "../../components/settings/TeamMembersSection";
+
+const PREFS_KEY = "onvxp_personal_prefs";
+type PersonalPrefs = { landingPage: string; defaultAnalyticsRange: string; alertSound: boolean; timezone: string };
+const DEFAULT_PREFS: PersonalPrefs = { landingPage: "alerts", defaultAnalyticsRange: "7d", alertSound: true, timezone: "browser" };
+
+function Card({ icon, title, subtitle, accentColor, children }: { icon: React.ReactNode; title: string; subtitle: string; accentColor: string; children: React.ReactNode }) {
+  const { t } = useTheme();
+  return (
+    <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "14px", overflow: "hidden" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.3, px: 2.2, py: 1.6, borderBottom: `1px solid ${t.border}` }}>
+        <Box sx={{ width: 32, height: 32, borderRadius: "9px", background: `${accentColor}18`, border: `1px solid ${accentColor}35`, display: "flex", alignItems: "center", justifyContent: "center", color: accentColor, flexShrink: 0 }}>
+          {icon}
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: ".88rem", fontWeight: 700, color: t.text }}>{title}</Typography>
+          <Typography sx={{ fontSize: ".7rem", color: t.textMuted }}>{subtitle}</Typography>
+        </Box>
+      </Box>
+      <Box sx={{ p: 2.2, display: "flex", flexDirection: "column", gap: 1.8 }}>{children}</Box>
+    </Box>
+  );
+}
+
+function Row({ label, description, tag, tooltip, children }: { label: string; description: string; tag?: string; tooltip?: string; children: React.ReactNode }) {
+  const { t } = useTheme();
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
+          <Typography sx={{ fontSize: ".82rem", color: t.text, fontWeight: 500 }}>{label}</Typography>
+          {tooltip && (
+            <Tooltip title={tooltip}><InfoOutlinedIcon sx={{ fontSize: 13, color: t.textMuted }} /></Tooltip>
+          )}
+          {tag && (
+            <Box sx={{ px: "6px", py: "1px", borderRadius: "999px", background: t.bgSecondary }}>
+              <Typography sx={{ fontSize: ".6rem", color: t.textMuted, fontWeight: 600 }}>{tag}</Typography>
+            </Box>
+          )}
+        </Box>
+        <Typography sx={{ fontSize: ".7rem", color: t.textMuted, mt: "1px" }}>{description}</Typography>
+      </Box>
+      <Box sx={{ flexShrink: 0 }}>{children}</Box>
+    </Box>
+  );
+}
 
 export default function SettingsPage() {
   const { t, mode, toggleMode } = useTheme();
+  const { user } = useAuth();
+
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [cooldown, setCooldown] = useState(150);
-  const [confidence, setConfidence] = useState(0.5);
-  const [bytetrackBuffer, setBytetrackBuffer] = useState(30);
-  const [persistenceFrames, setPersistenceFrames] = useState(5);
-  const [dedup, setDedup] = useState(true);
-  const [alertChannel, setAlertChannel] = useState("dashboard");
+  const mark = () => setDirty(true);
+
   const [emailAlerts, setEmailAlerts] = useState(false);
   const [emailSeverityThreshold, setEmailSeverityThreshold] = useState("high");
-  const [frameSampling, setFrameSampling] = useState("every");
-  const [modelPrecision, setModelPrecision] = useState("balanced");
-  const [siteName, setSiteName] = useState("Site A — Construction");
-  const [apiEndpoint, setApiEndpoint] = useState("http://localhost:8000");
-  const [llmModel, setLlmModel] = useState("claude-haiku");
-  const mark = () => setDirty(true);
+  const [prefs, setPrefs] = useState<PersonalPrefs>(DEFAULT_PREFS);
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const fallbackName = user?.email?.split("@")[0] || "User";
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState((user as any)?.name || fallbackName);
+  const [displayName, setDisplayName] = useState((user as any)?.name || fallbackName);
+
+  // ── Fix: `user` loads asynchronously from auth context, so the initial
+  // useState above can lock in "User" before the real value arrives. Sync
+  // whenever user actually changes, unless someone's mid-edit right now. ──
+  useEffect(() => {
+    if (editingName) return;
+    const resolved = (user as any)?.name || (user?.email ? user.email.split("@")[0] : "User");
+    setDisplayName(resolved);
+    setNameDraft(resolved);
+  }, [user, editingName]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -48,57 +108,83 @@ export default function SettingsPage() {
         const res = await apiFetch("/api/settings");
         if (!res.ok) return;
         const data = await res.json();
-        if (data.detection) { setCooldown(data.detection.alert_cooldown_frames ?? 150); setConfidence(data.detection.detection_confidence ?? 0.5); setBytetrackBuffer(data.detection.bytetrack_buffer ?? 30); setPersistenceFrames(data.detection.persistence_frames ?? 5); }
-        if (data.alerts) { setAlertChannel(data.alerts.channels ?? "dashboard"); setDedup(data.alerts.deduplication_enabled ?? true); setEmailAlerts(data.alerts.email_notifications_enabled ?? false); setEmailSeverityThreshold(data.alerts.email_severity_threshold ?? "high"); }
-        if (data.ai_model) { setFrameSampling(data.ai_model.frame_sampling ?? "every"); setModelPrecision(data.ai_model.model_precision ?? "balanced"); }
-        if (data.platform) { setLlmModel(data.platform.llm_model ?? "claude-haiku"); setSiteName(data.platform.site_name ?? "Site A — Construction"); setApiEndpoint(data.platform.api_endpoint ?? "http://localhost:8000"); }
+        if (data.alerts) {
+          setEmailAlerts(data.alerts.email_notifications_enabled ?? false);
+          setEmailSeverityThreshold(data.alerts.email_severity_threshold ?? "high");
+        }
       } catch {}
     };
     loadSettings();
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+    } catch {}
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ detection: { alert_cooldown_frames: cooldown, detection_confidence: confidence, bytetrack_buffer: bytetrackBuffer, persistence_frames: persistenceFrames }, alerts: { channels: alertChannel, deduplication_enabled: dedup, email_notifications_enabled: emailAlerts, email_severity_threshold: emailSeverityThreshold }, ai_model: { frame_sampling: frameSampling, model_precision: modelPrecision }, platform: { llm_model: llmModel, site_name: siteName, api_endpoint: apiEndpoint } }) });
-    } catch {} finally { setSaving(false); setDirty(false); setSaved(true); }
+      await apiFetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alerts: { email_notifications_enabled: emailAlerts, email_severity_threshold: emailSeverityThreshold },
+        }),
+      });
+    } catch {} finally {
+      setSaving(false);
+      setDirty(false);
+      setSaved(true);
+    }
   };
 
-  const handleReset = () => { setCooldown(150); setConfidence(0.5); setBytetrackBuffer(30); setPersistenceFrames(5); setDedup(true); setAlertChannel("dashboard"); setEmailAlerts(false); setEmailSeverityThreshold("high"); setFrameSampling("every"); setModelPrecision("balanced"); setSiteName("Site A — Construction"); setApiEndpoint("http://localhost:8000"); setLlmModel("claude-haiku"); setDirty(false); };
+  const saveNameEdit = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) { setNameDraft(displayName); setEditingName(false); return; }
+    setDisplayName(trimmed);
+    setEditingName(false);
+    try {
+      await apiFetch("/api/auth/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+    } catch {}
+  };
+
+  const updatePrefs = (patch: Partial<PersonalPrefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch {}
+  };
 
   const selectSx = {
-    minWidth: 160, fontSize: "0.82rem", background: t.surface,
+    minWidth: 140, fontSize: "0.8rem", background: t.surface,
     border: `1px solid ${t.border}`, borderRadius: "8px", color: t.text,
     "& fieldset": { border: "none" }, "& .MuiSvgIcon-root": { color: t.textMuted },
     "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: `${ACCENT}50` },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: ACCENT },
   };
 
+  const displayRole = (user?.role || "viewer").replace(/^\w/, (c: string) => c.toUpperCase());
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
-      <PageHeader title="Settings" description="Platform configuration" />
+      <PageHeader title="Settings" description="Your account and preferences" />
 
       <Box sx={{ p: "24px 36px 36px" }}>
-        {/* Action row — unsaved indicator, reset, save. Kept as their own
-        row since they don't reduce to PageHeader's single action slot
-        (three distinct pieces, and Save's look depends on dirty state). */}
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", mb: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", mb: 2.2 }}>
           {dirty && (
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mr: 1 }}>
               <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: AMBER, boxShadow: `0 0 8px ${AMBER}` }} />
               <Typography sx={{ fontSize: "0.75rem", color: AMBER }}>Unsaved changes</Typography>
             </Box>
           )}
-          <Tooltip title="Reset to defaults">
-            <IconButton onClick={handleReset} size="small" sx={{ border: `1px solid ${t.border}`, borderRadius: "10px", color: t.textMuted, "&:hover": { borderColor: `${ACCENT}50`, color: t.text } }}>
-              <RestoreIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
           <Box
             onClick={dirty && !saving ? handleSave : undefined}
             sx={{
               display: "flex", alignItems: "center", gap: "8px",
-              px: "20px", py: "10px", borderRadius: "10px",
+              px: "18px", py: "9px", borderRadius: "10px",
               background: dirty ? `linear-gradient(135deg, ${ACCENT}, #8B2E1F)` : t.surface,
               border: `1px solid ${dirty ? ACCENT + "80" : t.border}`,
               cursor: dirty && !saving ? "pointer" : "default",
@@ -106,73 +192,75 @@ export default function SettingsPage() {
               "&:hover": dirty && !saving ? { boxShadow: `0 0 20px ${ACCENT}40` } : {},
             }}
           >
-            <SaveIcon sx={{ fontSize: 16, color: dirty ? "#fff" : t.textMuted }} />
+            <SaveIcon sx={{ fontSize: 15, color: dirty ? "#fff" : t.textMuted }} />
             <Typography sx={{ fontSize: "0.82rem", fontWeight: 600, color: dirty ? "#fff" : t.textMuted }}>
-              {saving ? "Saving…" : "Save Changes"}
+              {saving ? "Saving..." : "Save Changes"}
             </Typography>
           </Box>
         </Box>
 
-        {saving && (
-          <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, background: `${ACCENT}15`, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${ACCENT}, #D4891A)` } }} />
-        )}
-
-        {/* Metric tiles */}
-        <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
-          <MetricTile icon={<RocketLaunchIcon sx={{ fontSize: 20 }} />} value="v0.1" label="Version" color="#E8D5B0" />
-          <MetricTile icon={<MemoryIcon sx={{ fontSize: 20 }} />} value="YOLOv8" label="Engine" color={ACCENT} />
-          <MetricTile icon={<SpeedIcon sx={{ fontSize: 20 }} />} value="79%" label="Vest mAP" color={AMBER} />
-          <MetricTile icon={<CheckCircleIcon sx={{ fontSize: 20 }} />} value="Online" label="Status" color={GREEN} pulse />
+        <Box sx={{ display: "flex", alignItems: "center", gap: "16px", p: "16px 20px", borderRadius: "14px", background: `${ACCENT}0A`, border: `1px solid ${ACCENT}30`, mb: 2.2 }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: "50%", background: `linear-gradient(135deg, ${ACCENT}, #6E1E13)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+            {displayName.charAt(0).toUpperCase()}
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {editingName ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <TextField
+                  autoFocus size="small" value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveNameEdit(); if (e.key === "Escape") { setNameDraft(displayName); setEditingName(false); } }}
+                  sx={{ "& .MuiOutlinedInput-root": { fontSize: "0.9rem", background: t.surface, borderRadius: "8px", height: 36 } }}
+                />
+                <Box onClick={saveNameEdit} sx={{ width: 30, height: 30, borderRadius: "8px", background: `${GREEN}18`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <CheckIcon sx={{ fontSize: 16, color: GREEN }} />
+                </Box>
+                <Box onClick={() => { setNameDraft(displayName); setEditingName(false); }} sx={{ width: 30, height: 30, borderRadius: "8px", background: t.bgSecondary, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <CloseIcon sx={{ fontSize: 16, color: t.textMuted }} />
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                <Typography sx={{ fontSize: "0.98rem", fontWeight: 700, color: t.text }}>{displayName}</Typography>
+                <Box onClick={() => setEditingName(true)} sx={{ width: 22, height: 22, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.textMuted, "&:hover": { color: ACCENT, background: `${ACCENT}12` } }}>
+                  <EditIcon sx={{ fontSize: 14 }} />
+                </Box>
+              </Box>
+            )}
+            <Typography sx={{ fontSize: "0.78rem", color: t.textMuted, mt: "2px" }}>{user?.email || "-"}</Typography>
+          </Box>
+          <Box sx={{ px: "10px", py: "4px", borderRadius: "999px", border: `1px solid ${ACCENT}40`, background: `${ACCENT}12`, flexShrink: 0 }}>
+            <Typography sx={{ fontSize: ".7rem", fontWeight: 700, color: ACCENT }}>{displayRole}</Typography>
+          </Box>
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
-          {/* Detection Engine */}
-          <SectionCard icon={<TuneIcon fontSize="small" />} title="Detection Engine" subtitle="Configure core CV pipeline parameters" accentColor="#E8D5B0">
-            <SettingRow label="Alert Cooldown" description="Minimum frames between alerts for same person ID" tag="ByteTrack" tooltip="Prevents alert flooding per person">
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
-                <Slider value={cooldown} min={30} max={500} step={10} onChange={(_, v) => { setCooldown(v as number); mark(); }} sx={{ color: ACCENT, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
-                <ValuePill value={`${cooldown} f`} highlight />
-              </Box>
-            </SettingRow>
-            <SettingRow label="Persistence Frames" description="Consecutive frames a violation must hold before an incident fires" tag="Anti-flicker" tooltip="Higher = fewer false positives from single-frame misdetections, but slower to catch real violations">
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
-                <Slider value={persistenceFrames} min={1} max={30} step={1} onChange={(_, v) => { setPersistenceFrames(v as number); mark(); }} sx={{ color: ACCENT, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
-                <ValuePill value={`${persistenceFrames} f`} highlight />
-              </Box>
-            </SettingRow>
-            <SettingRow label="Detection Confidence" description="Minimum YOLO confidence score (0–1)" tag="YOLOv8" tooltip="Lower = more detections but more false positives">
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
-                <Slider value={confidence} min={0.1} max={0.95} step={0.01} onChange={(_, v) => { setConfidence(v as number); mark(); }} sx={{ color: ACCENT, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
-                <ValuePill value={confidence.toFixed(2)} highlight />
-              </Box>
-            </SettingRow>
-            <SettingRow label="ByteTrack Buffer" description="Frames to retain lost track IDs" tag="Tracking" tooltip="How long to keep a person's ID alive after leaving frame">
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: 210 }}>
-                <Slider value={bytetrackBuffer} min={5} max={120} step={5} onChange={(_, v) => { setBytetrackBuffer(v as number); mark(); }} sx={{ color: AMBER, flex: 1, "& .MuiSlider-thumb": { width: 14, height: 14 }, "& .MuiSlider-rail": { opacity: 0.2 } }} />
-                <ValuePill value={`${bytetrackBuffer} f`} />
-              </Box>
-            </SettingRow>
-          </SectionCard>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2.2, mb: 2.2 }}>
+          <Card icon={<LockIcon sx={{ fontSize: 16 }} />} title="Security" subtitle="Password and two-factor authentication" accentColor={ACCENT}>
+            <Row label="Password" description="Change your account password">
+              {showPasswordForm ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8, width: 200 }}>
+                  <TextField type="password" size="small" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} sx={{ "& .MuiOutlinedInput-root": { fontSize: "0.76rem", background: t.surface, borderRadius: "7px", height: 34 } }} />
+                  <TextField type="password" size="small" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} sx={{ "& .MuiOutlinedInput-root": { fontSize: "0.76rem", background: t.surface, borderRadius: "7px", height: 34 } }} />
+                  <Box onClick={() => { setShowPasswordForm(false); setCurrentPassword(""); setNewPassword(""); }} sx={{ textAlign: "center", py: "5px", borderRadius: "7px", background: `${ACCENT}18`, color: ACCENT, fontSize: ".74rem", fontWeight: 600, cursor: "pointer" }}>
+                    Update password
+                  </Box>
+                </Box>
+              ) : (
+                <Box onClick={() => setShowPasswordForm(true)} sx={{ px: "12px", py: "5px", borderRadius: "7px", border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { borderColor: `${ACCENT}50` } }}>
+                  <Typography sx={{ fontSize: ".76rem", color: t.textSecondary }}>Change</Typography>
+                </Box>
+              )}
+            </Row>
+            <Row label="Two-factor authentication" description="Add an extra layer of security" tag="Coming soon">
+              <Switch checked={twoFactorEnabled} onChange={(e) => setTwoFactorEnabled(e.target.checked)} size="small" disabled />
+            </Row>
+          </Card>
 
-          {/* Alert System */}
-          <SectionCard icon={<NotificationsActiveIcon fontSize="small" />} title="Alert System" subtitle="Configure how and where alerts are dispatched" accentColor={AMBER}>
-            <SettingRow label="Alert Channels" description="Where to send violation notifications" tag="Active" tagColor={GREEN}>
-              <FormControl size="small">
-                <Select value={alertChannel} onChange={(e) => { setAlertChannel(e.target.value); mark(); }} sx={selectSx}>
-                  <MenuItem value="dashboard">Dashboard Only</MenuItem>
-                  <MenuItem value="email">Email</MenuItem>
-                  <MenuItem value="webhook">Webhook</MenuItem>
-                  <MenuItem value="all">All Channels</MenuItem>
-                </Select>
-              </FormControl>
-            </SettingRow>
-            <SettingRow label="Alert Deduplication" description="Prevent duplicate alerts for the same event" tag="ByteTrack" tooltip="Uses ByteTrack IDs to suppress repeated alerts">
-              <Switch checked={dedup} onChange={(e) => { setDedup(e.target.checked); mark(); }} size="small" sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: GREEN }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { background: GREEN } }} />
-            </SettingRow>
-            <SettingRow label="Email Notifications" description="Send alert emails to registered admin address" tag="Optional" tagColor="rgba(255,200,170,0.4)">
+          <Card icon={<NotificationsActiveIcon sx={{ fontSize: 16 }} />} title="Notifications" subtitle="How you're alerted to new incidents" accentColor={AMBER}>
+            <Row label="Email alerts" description="Get emailed when a new incident is detected">
               <Switch checked={emailAlerts} onChange={(e) => { setEmailAlerts(e.target.checked); mark(); }} size="small" sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: ACCENT }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { background: ACCENT } }} />
-            </SettingRow>
-            <SettingRow label="Email Severity Threshold" description="Minimum severity that triggers an email" tag="SMTP" tooltip="Only incidents at or above this severity will send an email, even when Email Notifications is on">
+            </Row>
+            <Row label="Minimum severity" description="Only notify above this level" tooltip="Applies to email alerts only">
               <FormControl size="small" disabled={!emailAlerts}>
                 <Select value={emailSeverityThreshold} onChange={(e) => { setEmailSeverityThreshold(e.target.value); mark(); }} sx={{ ...selectSx, opacity: emailAlerts ? 1 : 0.5 }}>
                   <MenuItem value="low">Low and above</MenuItem>
@@ -181,76 +269,106 @@ export default function SettingsPage() {
                   <MenuItem value="critical">Critical only</MenuItem>
                 </Select>
               </FormControl>
-            </SettingRow>
-          </SectionCard>
+            </Row>
+          </Card>
+        </Box>
 
-          {/* AI Model */}
-          <SectionCard icon={<PsychologyIcon fontSize="small" />} title="AI Model" subtitle="Computer vision model configuration" accentColor={ACCENT}>
-            <SettingRow label="Active Models" description="Currently loaded detection models" tag="Running" tagColor={GREEN}>
-              <ValuePill value="Helmet + Vest + Base YOLO" />
-            </SettingRow>
-            <SettingRow label="Vest Model" description="Trained on Roboflow safety vest dataset" tag="POC" tagColor={AMBER}>
-              <ValuePill value="79% mAP@50" highlight />
-            </SettingRow>
-            <SettingRow label="Frame Sampling" description="How frequently frames are processed" tag="Max Quality" tagColor="#E8D5B0" tooltip="Every frame = highest accuracy, higher GPU load">
-              <FormControl size="small">
-                <Select value={frameSampling} onChange={(e) => { setFrameSampling(e.target.value); mark(); }} sx={selectSx}>
-                  <MenuItem value="every">Every frame</MenuItem>
-                  <MenuItem value="2">Every 2nd frame</MenuItem>
-                  <MenuItem value="5">Every 5th frame</MenuItem>
-                  <MenuItem value="10">Every 10th frame</MenuItem>
-                </Select>
-              </FormControl>
-            </SettingRow>
-            <SettingRow label="Model Precision" description="Speed vs accuracy tradeoff">
-              <FormControl size="small">
-                <Select value={modelPrecision} onChange={(e) => { setModelPrecision(e.target.value); mark(); }} sx={selectSx}>
-                  <MenuItem value="fast">Fast (FP16)</MenuItem>
-                  <MenuItem value="balanced">Balanced (FP32)</MenuItem>
-                  <MenuItem value="accurate">Accurate (Full)</MenuItem>
-                </Select>
-              </FormControl>
-            </SettingRow>
-          </SectionCard>
-
-          {/* Platform */}
-          <SectionCard icon={<SettingsIcon fontSize="small" />} title="Platform" subtitle="General platform settings" accentColor="rgba(232,213,176,0.4)">
-            <SettingRow label="LLM Model" description="AI model for natural language rule parsing" tag="Ollama" tagColor={ACCENT}>
-              <FormControl size="small">
-                <Select value={llmModel} onChange={(e) => { setLlmModel(e.target.value); mark(); }} sx={{ ...selectSx, minWidth: 200 }}>
-                  <MenuItem value="claude-haiku">Claude Haiku (planned)</MenuItem>
-                  <MenuItem value="claude-sonnet">Claude Sonnet</MenuItem>
-                  <MenuItem value="ollama-local">Ollama (local)</MenuItem>
-                </Select>
-              </FormControl>
-            </SettingRow>
-            <SettingRow label="Site Name" description="Current monitoring site identifier" tag="Active" tagColor={GREEN}>
-              <TextField value={siteName} onChange={(e) => { setSiteName(e.target.value); mark(); }} size="small" sx={{ width: 220, "& .MuiOutlinedInput-root": { fontSize: "0.82rem", background: t.surface, borderRadius: "8px", color: t.text, "& fieldset": { borderColor: t.border }, "&:hover fieldset": { borderColor: `${ACCENT}50` }, "&.Mui-focused fieldset": { borderColor: ACCENT } } }} />
-            </SettingRow>
-            <SettingRow label="API Endpoint" description="Backend FastAPI server address" tag="Local" tagColor="rgba(232,213,176,0.5)">
-              <TextField value={apiEndpoint} onChange={(e) => { setApiEndpoint(e.target.value); mark(); }} size="small" sx={{ width: 220, "& .MuiOutlinedInput-root": { fontSize: "0.78rem", fontFamily: "monospace", background: t.surface, borderRadius: "8px", color: ACCENT, "& fieldset": { borderColor: t.border }, "&:hover fieldset": { borderColor: `${ACCENT}50` }, "&.Mui-focused fieldset": { borderColor: ACCENT } } }} />
-            </SettingRow>
-            <SettingRow label="Interface Theme" description="Switch between dark and light mode">
-              <Box onClick={toggleMode} sx={{ display: "flex", alignItems: "center", gap: 1, px: "14px", py: "6px", borderRadius: "8px", background: t.surface, border: `1px solid ${t.border}`, cursor: "pointer", transition: "all .2s", "&:hover": { borderColor: `${ACCENT}50`, background: `${ACCENT}08` } }}>
-                {mode === "dark" ? <LightModeIcon sx={{ fontSize: 15, color: AMBER }} /> : <DarkModeIcon sx={{ fontSize: 15, color: ACCENT }} />}
-                <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary }}>{mode === "dark" ? "Light Mode" : "Dark Mode"}</Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2.2, mb: 2.2 }}>
+          <Card icon={<PaletteIcon sx={{ fontSize: 16 }} />} title="Appearance" subtitle="How ONVXP looks on this device" accentColor="#7F77DD">
+            <Row label="Theme" description="Switch between dark and light mode">
+              <Box onClick={toggleMode} sx={{ display: "flex", alignItems: "center", gap: 1, px: "12px", py: "5px", borderRadius: "7px", background: t.surface, border: `1px solid ${t.border}`, cursor: "pointer", "&:hover": { borderColor: `${ACCENT}50` } }}>
+                {mode === "dark" ? <LightModeIcon sx={{ fontSize: 14, color: AMBER }} /> : <DarkModeIcon sx={{ fontSize: 14, color: ACCENT }} />}
+                <Typography sx={{ fontSize: "0.76rem", color: t.textSecondary }}>{mode === "dark" ? "Light Mode" : "Dark Mode"}</Typography>
               </Box>
-            </SettingRow>
-          </SectionCard>
+            </Row>
+          </Card>
+
+          <Card icon={<DevicesIcon sx={{ fontSize: 16 }} />} title="Active Sessions" subtitle="Where you're signed in" accentColor={GREEN}>
+            <Row label="This device" description="Current browser session">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <DesktopWindowsIcon sx={{ fontSize: 15, color: t.textMuted }} />
+                <Box sx={{ px: "9px", py: "3px", borderRadius: "999px", background: `${GREEN}18` }}>
+                  <Typography sx={{ fontSize: ".68rem", fontWeight: 700, color: GREEN }}>Active now</Typography>
+                </Box>
+              </Box>
+            </Row>
+          </Card>
+        </Box>
+
+        <Box sx={{ mb: 2.2 }}>
+          <Card icon={<TuneIcon sx={{ fontSize: 16 }} />} title="Personal Preferences" subtitle="Defaults for how you use ONVXP" accentColor={ACCENT}>
+            <Row label="Default landing page" description="Where you land right after signing in">
+              <FormControl size="small">
+                <Select value={prefs.landingPage} onChange={(e) => updatePrefs({ landingPage: e.target.value })} sx={selectSx}>
+                  <MenuItem value="alerts">Alerts</MenuItem>
+                  <MenuItem value="cameras">Camera Management</MenuItem>
+                  <MenuItem value="analytics">Analytics</MenuItem>
+                  <MenuItem value="rules">Rule Creation</MenuItem>
+                </Select>
+              </FormControl>
+            </Row>
+            <Row label="Default analytics range" description="Pre-selected whenever you open Analytics">
+              <FormControl size="small">
+                <Select value={prefs.defaultAnalyticsRange} onChange={(e) => updatePrefs({ defaultAnalyticsRange: e.target.value })} sx={selectSx}>
+                  <MenuItem value="today">Today</MenuItem>
+                  <MenuItem value="7d">Last 7 days</MenuItem>
+                  <MenuItem value="30d">Last 30 days</MenuItem>
+                </Select>
+              </FormControl>
+            </Row>
+            <Row label="Alert sound" description="Play a sound when a new incident comes in">
+              <Switch checked={prefs.alertSound} onChange={(e) => updatePrefs({ alertSound: e.target.checked })} size="small" sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: ACCENT }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { background: ACCENT } }} />
+            </Row>
+            {/* Saves for real to localStorage, same as the others above.
+            The value itself only affects display once other pages
+            (Alerts, Alert Detail, Analytics) are updated to read this same
+            key when formatting timestamps — that wiring is a separate
+            follow-up beyond this page. */}
+            <Row label="Timezone" description="Used to display timestamps across the app">
+              <FormControl size="small">
+                <Select value={prefs.timezone} onChange={(e) => updatePrefs({ timezone: e.target.value })} sx={{ ...selectSx, minWidth: 170 }}>
+                  <MenuItem value="browser">Use browser default</MenuItem>
+                  <MenuItem value="Asia/Kolkata">India (IST)</MenuItem>
+                  <MenuItem value="UTC">UTC</MenuItem>
+                  <MenuItem value="America/New_York">US Eastern</MenuItem>
+                  <MenuItem value="America/Los_Angeles">US Pacific</MenuItem>
+                </Select>
+              </FormControl>
+            </Row>
+          </Card>
+        </Box>
+
+        {/* Keyboard shortcuts — kept honest: these two are the only real
+        keyboard behavior in the app right now (the profile name edit we
+        just built above). No global navigation shortcuts exist yet —
+        adding those would be a separate feature across the whole app,
+        not something scoped to this page. */}
+        <Box sx={{ mb: 2.2 }}>
+          <Card icon={<KeyboardIcon sx={{ fontSize: 16 }} />} title="Keyboard Shortcuts" subtitle="What works today" accentColor="#3498DB">
+            <Row label="Save an inline edit" description="While editing your name above">
+              <Box sx={{ px: "8px", py: "3px", borderRadius: "6px", background: t.bgSecondary, border: `1px solid ${t.border}` }}>
+                <Typography sx={{ fontSize: ".72rem", color: t.textSecondary, fontFamily: "monospace" }}>Enter</Typography>
+              </Box>
+            </Row>
+            <Row label="Cancel an inline edit" description="While editing your name above">
+              <Box sx={{ px: "8px", py: "3px", borderRadius: "6px", background: t.bgSecondary, border: `1px solid ${t.border}` }}>
+                <Typography sx={{ fontSize: ".72rem", color: t.textSecondary, fontFamily: "monospace" }}>Esc</Typography>
+              </Box>
+            </Row>
+          </Card>
         </Box>
 
         <TeamMembersSection />
 
-        {/* Danger Zone */}
-        <Box sx={{ mt: 3, p: "20px 24px", borderRadius: "14px", border: "1px solid rgba(231,76,60,0.2)", background: "rgba(231,76,60,0.03)" }}>
+        <Box sx={{ mt: 2.2, p: "18px 22px", borderRadius: "14px", border: "1px solid rgba(231,76,60,0.2)", background: "rgba(231,76,60,0.03)" }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
-              <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: "#E74C3C" }}>Danger Zone</Typography>
-              <Typography sx={{ fontSize: "0.73rem", color: t.textMuted, mt: "2px" }}>Clear pipeline data, reset stored tracks, and flush the alert queue</Typography>
+              <Typography sx={{ fontSize: "0.86rem", fontWeight: 600, color: "#E74C3C" }}>Danger Zone</Typography>
+              <Typography sx={{ fontSize: "0.72rem", color: t.textMuted, mt: "2px" }}>Clear pipeline data, reset stored tracks, and flush the alert queue</Typography>
             </Box>
             <Box sx={{ display: "flex", gap: "10px" }}>
               {[{ label: "Flush Alert Queue", endpoint: "/api/danger/flush-alerts" }, { label: "Reset Track IDs", endpoint: "/api/danger/reset-tracks" }].map(({ label, endpoint }) => (
-                <Box key={label} onClick={async () => { if (!window.confirm(`${label} — are you sure?`)) return; try { await apiFetch(endpoint, { method: "POST" }); } catch {} }} sx={{ px: "16px", py: "7px", borderRadius: "8px", cursor: "pointer", border: "1px solid rgba(231,76,60,0.3)", color: "#E74C3C", fontSize: "0.8rem", fontWeight: 500, transition: "all .2s", "&:hover": { background: "rgba(231,76,60,0.08)", borderColor: "rgba(231,76,60,0.5)" } }}>
+                <Box key={label} onClick={async () => { if (!window.confirm(`${label} - are you sure?`)) return; try { await apiFetch(endpoint, { method: "POST" }); } catch {} }} sx={{ px: "15px", py: "6px", borderRadius: "8px", cursor: "pointer", border: "1px solid rgba(231,76,60,0.3)", color: "#E74C3C", fontSize: "0.78rem", fontWeight: 500, "&:hover": { background: "rgba(231,76,60,0.08)", borderColor: "rgba(231,76,60,0.5)" } }}>
                   {label}
                 </Box>
               ))}
