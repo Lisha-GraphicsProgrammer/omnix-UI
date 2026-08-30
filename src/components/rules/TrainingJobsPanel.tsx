@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, Typography, Tooltip, ClickAwayListener } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import PendingIcon from "@mui/icons-material/Pending";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
 import SearchIcon from "@mui/icons-material/Search";
@@ -25,9 +26,20 @@ import {
 // ── ONVXP accent palette — matches AlertDetail / Alerts / Rules pages ──
 const ACCENT = "#C0392B";
 const GREEN = "#27AE60";
+const LIGHT_GREEN = "#8BC34A";
 const AMBER = "#D4891A";
 const CYAN = "#3498DB";
 const RED = "#E74C3C";
+
+// ── mAP50 quality scale — matches standard object-detection accuracy
+// conventions: 0.90+ excellent, 0.70-0.90 good, 0.50-0.70 mediocre,
+// below 0.50 poor. ──
+function resultColor(score: number): string {
+  if (score >= 0.9) return GREEN;
+  if (score >= 0.7) return LIGHT_GREEN;
+  if (score >= 0.5) return AMBER;
+  return RED;
+}
 
 // Canonical pipeline order — stages the backend hasn't reached yet render as pending
 const PIPELINE_STAGES = [
@@ -122,7 +134,6 @@ function StatusPill({ statusKey, size = "md" }: { statusKey: string; size?: "sm"
 
 function JobRow({ job, onOpen }: { job: TrainingJob; onOpen: (id: number) => void }) {
   const { t } = useTheme();
-  const displayStatus = resolveDisplayStatus(job);
   const metrics = job.metrics;
 
   return (
@@ -130,7 +141,7 @@ function JobRow({ job, onOpen }: { job: TrainingJob; onOpen: (id: number) => voi
       onClick={() => onOpen(job.id)}
       sx={{
         display: "grid",
-        gridTemplateColumns: "1fr 180px 160px 140px 28px",
+        gridTemplateColumns: "60px 1fr 60px 160px 140px 28px",
         alignItems: "center",
         gap: 2,
         px: 3,
@@ -141,40 +152,43 @@ function JobRow({ job, onOpen }: { job: TrainingJob; onOpen: (id: number) => voi
         "&:hover": { background: t.surfaceHover || `${ACCENT}05` },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.3, minWidth: 0 }}>
-        <Box
-          sx={{
-            width: 30,
-            height: 30,
-            borderRadius: "8px",
-            background: `${STATUS_META[displayStatus]?.color || CYAN}15`,
-            border: `1px solid ${STATUS_META[displayStatus]?.color || CYAN}35`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <ModelTrainingIcon sx={{ fontSize: 15, color: STATUS_META[displayStatus]?.color || CYAN }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ color: t.text, fontSize: ".86rem", fontWeight: 700 }} noWrap>
-            {humanizeClassName(job.class_name)}
-          </Typography>
-          <Typography sx={{ color: t.textMuted, fontSize: ".68rem", mt: "1px" }}>
-            #{job.id} · {new Date(job.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
-          </Typography>
-        </Box>
+      <Typography sx={{ color: t.textMuted, fontSize: ".82rem" }}>
+        {job.id}
+      </Typography>
+
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ color: t.text, fontSize: ".86rem", fontWeight: 700 }} noWrap>
+          {humanizeClassName(job.class_name)}
+        </Typography>
       </Box>
 
-      <Box>
-        <StatusPill statusKey={displayStatus} size="sm" />
-      </Box>
+      {job.status === "approved" ? (
+        <Tooltip title="Active">
+          <CheckCircleIcon sx={{ fontSize: 19, color: GREEN }} />
+        </Tooltip>
+      ) : job.status === "failed" || job.status === "cancelled" ? (
+        <Tooltip title="Failed">
+          <CancelIcon sx={{ fontSize: 19, color: RED }} />
+        </Tooltip>
+      ) : (
+        <Tooltip title="In progress">
+          <PendingIcon
+            sx={{
+              fontSize: 19,
+              color: AMBER,
+              animation: "trainingSpin 1.6s linear infinite",
+              "@keyframes trainingSpin": {
+                "100%": { transform: "rotate(360deg)" },
+              },
+            }}
+          />
+        </Tooltip>
+      )}
 
       <Box sx={{ fontSize: ".76rem", color: t.textMuted }}>
         {metrics ? (
           <span>
-            mAP50 <b style={{ color: t.textSecondary }}>{metrics.map50?.toFixed(2)}</b>
+            mAP50 <b style={{ color: metrics.map50 != null ? resultColor(metrics.map50) : t.textSecondary }}>{metrics.map50?.toFixed(2)}</b>
           </span>
         ) : job.status === "failed" ? (
           <Tooltip title={job.error || ""}>
@@ -185,8 +199,13 @@ function JobRow({ job, onOpen }: { job: TrainingJob; onOpen: (id: number) => voi
         )}
       </Box>
 
-      <Box sx={{ fontSize: ".72rem", color: t.textMuted, fontFamily: "monospace" }}>
-        {new Date(job.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      <Box>
+        <Typography sx={{ color: t.text, fontSize: ".8rem" }}>
+          {new Date(job.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+        </Typography>
+        <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: "1px" }}>
+          {new Date(job.updated_at).toLocaleTimeString("en-GB", { hour12: false })}
+        </Typography>
       </Box>
 
       <ChevronRightIcon sx={{ fontSize: 18, color: t.textMuted }} />
@@ -264,8 +283,8 @@ function ListView({ onOpen }: { onOpen: (id: number) => void }) {
       </Box>
 
       <TableCard
-        columns={["Model", "Status", "Result", "Updated", ""]}
-        gridTemplateColumns="1fr 180px 160px 140px 28px"
+        columns={["ID", "Model", "Status", "Result", "Date & Time", ""]}
+        gridTemplateColumns="60px 1fr 60px 160px 140px 28px"
         isLoading={isLoading}
         isEmpty={jobs.length === 0}
         emptyIcon={<ModelTrainingIcon sx={{ fontSize: 28, color: t.textMuted, mb: 1 }} />}
