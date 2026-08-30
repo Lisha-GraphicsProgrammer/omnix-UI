@@ -2,9 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { Box, Typography, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import PageHeader from "../../components/layout/PageHeader";
 import { TableCard, TablePagination } from "../../components/common/DataTable";
 import { FilterDropdown } from "../../components/common/Dropdown";
@@ -12,7 +11,7 @@ import { humanizeViolation } from "../../lib/humanize";
 import { useTheme } from "../../context/ThemeContext";
 import { useStats } from "../../hooks/queries";
 import { apiGet } from "../../lib/api";
-import { GREEN, AMBER, ACCENT, severityConfig } from "../../lib/constants";
+import { GREEN, ACCENT } from "../../lib/constants";
 import { transformIncident } from "../../lib/format";
 import type { DashboardAlert } from "../../types";
 
@@ -21,6 +20,9 @@ type AlertRow = DashboardAlert & {
   violationRaw?: string;
   personId?: number | null;
   zoneRaw?: string | null;
+  cameraId?: number | null;
+  reviewStatus?: string | null;
+  timestampRaw?: string | null;
 };
 
 export default function AlertsPage({
@@ -33,7 +35,6 @@ export default function AlertsPage({
   // ── Filter bug fix: read initial filter state from the URL, so navigating
   // back from Alert Detail (via browser history) restores exactly what was applied ──
   const initParams = new URLSearchParams(window.location.search);
-  const [filter, setFilter] = useState(initParams.get("f_sev") || "All"); // severity chips
   const [page, setPage] = useState(Number(initParams.get("f_page")) || 1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -54,21 +55,10 @@ export default function AlertsPage({
     if (review) params.set("f_review", review); else params.delete("f_review");
     if (dateFrom) params.set("f_from", dateFrom); else params.delete("f_from");
     if (dateTo) params.set("f_to", dateTo); else params.delete("f_to");
-    if (filter !== "All") params.set("f_sev", filter); else params.delete("f_sev");
     if (page !== 1) params.set("f_page", String(page)); else params.delete("f_page");
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", newUrl);
-  }, [ruleId, cameraId, review, dateFrom, dateTo, filter, page]);
-
-  const resetFilters = () => {
-    setRuleId("");
-    setCameraId("");
-    setReview("");
-    setDateFrom("");
-    setDateTo("");
-    setFilter("All");
-    setPage(1);
-  };
+  }, [ruleId, cameraId, review, dateFrom, dateTo, page]);
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -76,7 +66,6 @@ export default function AlertsPage({
     p.set("offset", String((page - 1) * pageSize));
     if (ruleId) p.set("rule_id", ruleId);
     if (cameraId) p.set("camera_id", cameraId);
-    if (filter !== "All") p.set("severity", filter.toLowerCase());
     if (review) p.set("review", review);
     if (dateFrom) p.set("date_from", dateFrom);
     if (dateTo) p.set("date_to", dateTo);
@@ -86,7 +75,6 @@ export default function AlertsPage({
     pageSize,
     ruleId,
     cameraId,
-    filter,
     review,
     dateFrom,
     dateTo,
@@ -126,6 +114,9 @@ export default function AlertsPage({
     violationRaw: i.violation,
     personId: i.person_id,
     zoneRaw: i.zone,
+    cameraId: i.camera_id,
+    reviewStatus: i.review_status,
+    timestampRaw: i.timestamp,
   }));
   const apiError = incidentsError || statsError;
 
@@ -151,8 +142,7 @@ export default function AlertsPage({
     (cameraId ? 1 : 0) +
     (review ? 1 : 0) +
     (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0) +
-    (filter !== "All" ? 1 : 0);
+    (dateTo ? 1 : 0);
 
   // ── Human-readable rule labels for the filter dropdown ──
   const ruleLabel = (r: any) => {
@@ -251,24 +241,8 @@ export default function AlertsPage({
           />
 
           <FilterDropdown
-            value={filter}
-            placeholder="Severity"
-            minWidth={140}
-            onChange={(v) => {
-              setFilter(v);
-              setPage(1);
-            }}
-            options={[
-              { value: "All", label: "All" },
-              { value: "Critical", label: "Critical" },
-              { value: "High", label: "High" },
-              { value: "Medium", label: "Medium" },
-            ]}
-          />
-
-          <FilterDropdown
             value={review}
-            placeholder="Review: any"
+            placeholder="Status: any"
             minWidth={160}
             onChange={(v) => {
               setReview(v);
@@ -276,10 +250,8 @@ export default function AlertsPage({
             }}
             options={[
               { value: "", label: "Any status" },
-              { value: "unreviewed", label: "Unreviewed" },
-              { value: "reviewed", label: "Reviewed" },
+              { value: "active", label: "Active" },
               { value: "false_positive", label: "False positive" },
-              { value: "dismissed", label: "Dismissed" },
             ]}
           />
 
@@ -306,67 +278,11 @@ export default function AlertsPage({
               }}
             />
           </Box>
-
-          {activeFilterCount > 0 && (
-            <>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.6,
-                  px: 1.2,
-                  py: 0.35,
-                  borderRadius: "20px",
-                  background: `${AMBER}12`,
-                  border: `1px solid ${AMBER}30`,
-                  flexShrink: 0,
-                }}
-              >
-                <FilterAltIcon sx={{ fontSize: 12, color: AMBER }} />
-                <Typography
-                  sx={{ color: AMBER, fontSize: ".64rem", fontWeight: 700 }}
-                >
-                  {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
-                </Typography>
-              </Box>
-              <Tooltip title="Clear all filters">
-                <Box
-                  onClick={resetFilters}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    height: 42,
-                    px: 1.4,
-                    borderRadius: "10px",
-                    border: `1px solid ${t.border}`,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    "&:hover": {
-                      background: t.surfaceHover,
-                      borderColor: `${ACCENT}40`,
-                    },
-                  }}
-                >
-                  <RestartAltIcon sx={{ fontSize: 15, color: t.textMuted }} />
-                  <Typography
-                    sx={{
-                      color: t.textMuted,
-                      fontSize: ".76rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Clear
-                  </Typography>
-                </Box>
-              </Tooltip>
-            </>
-          )}
         </Box>
 
         <TableCard
-          columns={["Camera", "Violation / Rule", "Time", "Status", "Severity", "Action"]}
-          gridTemplateColumns="1.6fr 2fr 1fr 1fr 1fr 0.7fr"
+          columns={["Camera", "Violation / Rule", "Date & Time", "Status", ""]}
+          gridTemplateColumns="1.4fr 2fr 1.2fr 0.7fr 0.4fr"
           isLoading={loading}
           isEmpty={filtered.length === 0}
           emptyTitle={
@@ -378,14 +294,13 @@ export default function AlertsPage({
           }
         >
           {filtered.map((alert, idx) => {
-            const sev = severityConfig[alert.severity];
             return (
               <Box
                 key={alert.id}
                 onClick={() => navigate(`/alert/${alert.id}`)}
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "1.6fr 2fr 1fr 1fr 1fr 0.7fr",
+                  gridTemplateColumns: "1.4fr 2fr 1.2fr 0.7fr 0.4fr",
                   px: 3,
                   py: 2.5,
                   alignItems: "center",
@@ -423,17 +338,17 @@ export default function AlertsPage({
                       fontWeight: 500,
                     }}
                   >
-                    {alert.camera}
+                    Camera {alert.cameraId ?? 1}
                   </Typography>
                 </Box>
                 <Box sx={{ minWidth: 0, pr: 1 }}>
                   <Typography
-                    sx={{ color: t.textSecondary, fontSize: ".82rem" }}
+                    sx={{ color: t.text, fontSize: ".84rem", fontWeight: 500 }}
                   >
                     {humanizeViolation({
                       violation: alert.violationRaw,
                       person_id: alert.personId,
-                      zone: alert.zoneRaw,
+                      zone: "",
                     })}
                   </Typography>
                   {alert.rule_instruction && (
@@ -441,88 +356,43 @@ export default function AlertsPage({
                       <Typography
                         sx={{
                           color: t.textMuted,
-                          fontSize: ".68rem",
-                          fontStyle: "italic",
+                          fontSize: ".72rem",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
-                          mt: 0.3,
+                          mt: 0.6,
                         }}
                       >
-                        “{alert.rule_instruction}”
+                        {alert.rule_instruction}
                       </Typography>
                     </Tooltip>
                   )}
                 </Box>
-                <Typography
-                  sx={{
-                    color: t.textMuted,
-                    fontSize: ".8rem",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {alert.time}
-                </Typography>
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.7,
-                    px: 1.2,
-                    py: 0.5,
-                    borderRadius: "8px",
-                    background: `${ACCENT}10`,
-                    border: `1px solid ${ACCENT}25`,
-                    width: "fit-content",
-                  }}
-                >
-                  <WarningAmberIcon sx={{ fontSize: 11, color: ACCENT }} />
-                  <Typography
-                    sx={{
-                      color: ACCENT,
-                      fontSize: ".68rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Active
+                <Box>
+                  <Typography sx={{ color: t.text, fontSize: ".8rem" }}>
+                    {alert.timestampRaw
+                      ? new Date(alert.timestampRaw).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                        })
+                      : "—"}
+                  </Typography>
+                  <Typography sx={{ color: t.textMuted, fontSize: ".72rem", mt: "1px" }}>
+                    {alert.timestampRaw
+                      ? new Date(alert.timestampRaw).toLocaleTimeString("en-GB", { hour12: false })
+                      : ""}
                   </Typography>
                 </Box>
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: "8px",
-                    background: sev.bg,
-                    border: `1px solid ${sev.border}`,
-                    width: "fit-content",
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color: sev.color,
-                      fontSize: ".7rem",
-                      fontWeight: 700,
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {alert.severity}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: ".78rem",
-                      fontWeight: 600,
-                      color: ACCENT,
-                    }}
-                  >
-                    View
-                  </Typography>
-                  <ArrowForwardIcon sx={{ fontSize: 13, color: ACCENT }} />
-                </Box>
+                {alert.reviewStatus === "false_positive" ? (
+                  <Tooltip title="Marked as false positive">
+                    <CheckCircleIcon sx={{ fontSize: 19, color: GREEN }} />
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Active">
+                    <WarningAmberIcon sx={{ fontSize: 19, color: ACCENT }} />
+                  </Tooltip>
+                )}
+                <ChevronRightIcon sx={{ fontSize: 18, color: t.textMuted }} />
               </Box>
             );
           })}

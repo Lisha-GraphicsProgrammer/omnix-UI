@@ -1,15 +1,51 @@
 // src/components/layout/Sidebar.tsx
-import { Box, Typography, Tooltip, IconButton } from "@mui/material";
+import { Box, Typography, Tooltip } from "@mui/material";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import RuleIcon from "@mui/icons-material/Rule";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
 import { useTheme } from "../../context/ThemeContext";
 import { DRAWER_OPEN, ACCENT } from "../../lib/constants";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
+
+// ── A panel frame with the collapse/expand chevron drawn INSIDE the
+// narrow section, rather than a separate floating arrow glyph next to it —
+// MUI's classic icon set doesn't ship this combined shape ready-made, so
+// it's a small custom SVG instead of guessing at an icon name that might
+// not exist. Uses currentColor throughout, so it picks up whatever CSS
+// `color` its parent sets, same as any MUI icon would. ──
+function PanelToggleIcon({
+  direction,
+  arrowClassName,
+  showArrow,
+}: {
+  direction: "left" | "right";
+  arrowClassName?: string;
+  showArrow?: boolean;
+}) {
+  const dividerX = direction === "left" ? 9 : 15;
+  const arrowD =
+    direction === "left" ? "M7.5 9.5L5.5 12L7.5 14.5" : "M16.5 9.5L18.5 12L16.5 14.5";
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <line x1={dividerX} y1="5" x2={dividerX} y2="19" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        className={arrowClassName}
+        d={arrowD}
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={showArrow ? 1 : 0}
+        style={{ transition: "opacity .15s" }}
+      />
+    </svg>
+  );
+}
 
 export default function Sidebar({
   selected,
@@ -45,6 +81,18 @@ export default function Sidebar({
     { text: "Settings", icon: <SettingsIcon sx={{ fontSize: 18 }} /> },
   ];
 
+  // Both icons in each toggle are always mounted, stacked exactly on top of
+  // each other, and crossfade via CSS opacity on hover — no click delay,
+  // no re-render lag, and no layout shift since neither element ever
+  // actually leaves the DOM.
+  const centeredOverlay = {
+    position: "absolute" as const,
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    transition: "opacity .15s",
+  };
+
   return (
     <>
       <Box
@@ -64,39 +112,23 @@ export default function Sidebar({
           overflow: "hidden",
         }}
       >
-        {/* Logo */}
-        <Box
-          sx={{
-            px: open ? 3 : 0,
-            py: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: open ? "flex-start" : "center",
-            gap: 1.5,
-            minHeight: 72,
-          }}
-        >
-          <IconButton
-            size="small"
-            onClick={onToggle}
+        {/* Logo — no burger, no separator. Open: logo + wordmark on the
+        left, toggle button on the right (hover swaps its icon to a left
+        chevron, hinting which way it collapses). Collapsed: the logo mark
+        itself IS the button — hover crossfades it to a right chevron
+        hinting it'll expand, click either way toggles. */}
+        {open ? (
+          <Box
             sx={{
-              color: t.sidebarTextMuted,
-              flexShrink: 0,
-              "&:hover": { color: t.sidebarText },
+              px: 3,
+              py: 3,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              minHeight: 72,
             }}
           >
-            <MenuIcon fontSize="small" />
-          </IconButton>
-          {open && (
-            <>
-              <Box
-                sx={{
-                  width: "1px",
-                  height: 20,
-                  background: t.sidebarBorder,
-                  flexShrink: 0,
-                }}
-              />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
               <Box
                 sx={{
                   width: 30,
@@ -123,21 +155,110 @@ export default function Sidebar({
                   <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
                 </svg>
               </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
+              <Typography
+                sx={{
+                  color: t.sidebarText,
+                  fontWeight: 700,
+                  fontSize: ".95rem",
+                  letterSpacing: "-.2px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ONVXP
+              </Typography>
+            </Box>
+            <Tooltip title="Collapse sidebar">
+              <Box
+                onClick={onToggle}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  color: t.sidebarTextMuted,
+                  transition: "color .2s",
+                  "&:hover": { color: t.sidebarText },
+                  "&:hover .toggle-arrow": { opacity: 1 },
+                }}
+              >
+                <PanelToggleIcon direction="left" arrowClassName="toggle-arrow" />
+              </Box>
+            </Tooltip>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              py: 3,
+              display: "flex",
+              justifyContent: "center",
+              minHeight: 72,
+            }}
+          >            <Tooltip title="Expand sidebar" placement="right">
+              <Box
+                onClick={onToggle}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  "&:hover .collapsed-logo": { opacity: 0 },
+                  "&:hover .collapsed-chevron": { opacity: 1 },
+                }}
+              >
+                <Box
+                  className="collapsed-logo"
                   sx={{
-                    color: t.sidebarText,
-                    fontWeight: 700,
-                    fontSize: ".95rem",
-                    letterSpacing: "-.2px",
+                    ...centeredOverlay,
+                    width: 30,
+                    height: 30,
+                    borderRadius: "8px",
+                    background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: `0 0 16px ${ACCENT}50`,
+                    opacity: 1,
                   }}
                 >
-                  ONVXP
-                </Typography>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <ellipse
+                      cx="12"
+                      cy="12"
+                      rx="10"
+                      ry="6.5"
+                      stroke="white"
+                      strokeWidth="1.5"
+                    />
+                    <circle cx="12" cy="12" r="3.5" fill="white" />
+                    <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
+                  </svg>
+                </Box>
+                <Box
+                  className="collapsed-chevron"
+                  sx={{
+                    ...centeredOverlay,
+                    width: 32,
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: t.sidebarTextMuted,
+                    opacity: 0,
+                  }}
+                >
+                  <PanelToggleIcon direction="right" showArrow />
+                </Box>
               </Box>
-            </>
-          )}
-        </Box>
+            </Tooltip>
+          </Box>
+        )}
 
         {/* Nav items */}
         <Box sx={{ flex: 1, py: 2, overflowX: "hidden" }}>
