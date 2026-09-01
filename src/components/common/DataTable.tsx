@@ -8,7 +8,6 @@ import { useState } from "react";
 import { Box, Typography, ClickAwayListener } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTheme } from "../../context/ThemeContext";
-import { ACCENT } from "../../lib/constants";
 
 // ============================================================
 // TableCard — the bordered card, column header row, and empty/loading state.
@@ -34,7 +33,7 @@ export function TableCard({
   emptyTitle?: string;
   emptySubtitle?: string;
 }) {
-  const { t, mode } = useTheme();
+  const { t } = useTheme();
 
   return (
     <Box
@@ -54,10 +53,7 @@ export function TableCard({
           px: 3,
           py: "12px",
           borderBottom: `1px solid ${t.border}`,
-          // Locked to this exact color in dark mode (the app's default and
-          // primary mode) rather than deriving it, so every table's header
-          // is guaranteed pixel-identical regardless of any theme drift.
-          background: mode === "dark" ? "#1A1412" : t.bgSecondary,
+          background: t.bgSecondary,
         }}
       >
         {columns.map((h, i) => (
@@ -126,7 +122,7 @@ function PageSizeDropdown({
             height: 34,
             borderRadius: "8px",
             background: t.surface,
-            border: `1px solid ${open ? ACCENT + "60" : t.border}`,
+            border: `1px solid ${open ? t.accent + "60" : t.border}`,
             cursor: "pointer",
             userSelect: "none",
           }}
@@ -169,16 +165,16 @@ function PageSizeDropdown({
                   px: "14px",
                   py: "9px",
                   cursor: "pointer",
-                  background: n === value ? `${ACCENT}14` : "transparent",
+                  background: n === value ? `${t.accent}14` : "transparent",
                   "&:hover": {
-                    background: n === value ? `${ACCENT}20` : t.surfaceHover || `${ACCENT}08`,
+                    background: n === value ? `${t.accent}20` : t.surfaceHover,
                   },
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: ".8rem",
-                    color: n === value ? ACCENT : t.textSecondary,
+                    color: n === value ? t.accent : t.textSecondary,
                     fontWeight: n === value ? 700 : 500,
                   }}
                 >

@@ -11,7 +11,7 @@ import { humanizeViolation } from "../../lib/humanize";
 import { useTheme } from "../../context/ThemeContext";
 import { useStats } from "../../hooks/queries";
 import { apiGet } from "../../lib/api";
-import { GREEN, ACCENT } from "../../lib/constants";
+import { GREEN, AMBER } from "../../lib/constants";
 import { transformIncident } from "../../lib/format";
 import type { DashboardAlert } from "../../types";
 
@@ -321,9 +321,9 @@ export default function AlertsPage({
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: ACCENT,
+                      background: t.accent,
                       flexShrink: 0,
-                      boxShadow: `0 0 6px ${ACCENT}`,
+                      boxShadow: `0 0 6px ${t.accent}`,
                       animation: "blink 1s infinite",
                       "@keyframes blink": {
                         "0%,100%": { opacity: 1 },
@@ -389,7 +389,7 @@ export default function AlertsPage({
                   </Tooltip>
                 ) : (
                   <Tooltip title="Active">
-                    <WarningAmberIcon sx={{ fontSize: 19, color: ACCENT }} />
+                    <WarningAmberIcon sx={{ fontSize: 19, color: AMBER }} />
                   </Tooltip>
                 )}
                 <ChevronRightIcon sx={{ fontSize: 18, color: t.textMuted }} />

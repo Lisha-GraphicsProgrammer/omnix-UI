@@ -1,5 +1,20 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "../../context/ThemeContext";
+import { ACCENT, GOLD, GOLD_MUTED } from "../../lib/constants";
+
+// Converts a "#rrggbb" hex string to an "r,g,b" string for use inside an
+// rgba(...) canvas fill — done once here instead of hardcoding raw RGB
+// triples, so this file automatically follows the real palette instead of
+// silently freezing whatever colors existed when it was last written.
+function hexToRgb(hex: string): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `${r},${g},${b}`;
+}
+
+const NAVY_RGB = hexToRgb(ACCENT);
 
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,12 +36,18 @@ export default function AnimatedBackground() {
     resize();
     window.addEventListener("resize", resize);
 
+    // ── Locked navy + gold palette. Four navy orbs carry the ambient
+    // mood; exactly one gold orb gives a real, visible gold touchpoint —
+    // matching "gold sparingly, one deliberate spot" rather than nowhere
+    // at all. Gold itself swaps between the punchy light-mode shade and
+    // the muted dark-mode shade, same as everywhere else gold appears. ──
+    const goldRgb = hexToRgb(mode === "dark" ? GOLD_MUTED : GOLD);
     const orbs = [
-      { xFactor: 0.2,  yFactor: 0.3,  r: 400, speed: 0.0008, phase: 0,    color: mode === "dark" ? "192,57,43" : "192,57,43" },
-      { xFactor: 0.8,  yFactor: 0.7,  r: 350, speed: 0.0012, phase: 2.0,  color: mode === "dark" ? "139,46,31"  : "139,46,31" },
-      { xFactor: 0.5,  yFactor: 0.15, r: 300, speed: 0.0010, phase: 4.0,  color: mode === "dark" ? "212,137,26" : "160,80,20" },
-      { xFactor: 0.15, yFactor: 0.85, r: 280, speed: 0.0007, phase: 1.0,  color: mode === "dark" ? "192,57,43"  : "192,57,43" },
-      { xFactor: 0.85, yFactor: 0.2,  r: 320, speed: 0.0009, phase: 3.0,  color: mode === "dark" ? "139,46,31"  : "139,46,31" },
+      { xFactor: 0.2,  yFactor: 0.3,  r: 400, speed: 0.0008, phase: 0,   color: NAVY_RGB },
+      { xFactor: 0.8,  yFactor: 0.7,  r: 350, speed: 0.0012, phase: 2.0, color: NAVY_RGB },
+      { xFactor: 0.5,  yFactor: 0.15, r: 300, speed: 0.0010, phase: 4.0, color: goldRgb },
+      { xFactor: 0.15, yFactor: 0.85, r: 280, speed: 0.0007, phase: 1.0, color: NAVY_RGB },
+      { xFactor: 0.85, yFactor: 0.2,  r: 320, speed: 0.0009, phase: 3.0, color: NAVY_RGB },
     ];
 
     const draw = () => {
@@ -46,7 +67,7 @@ export default function AnimatedBackground() {
 
         // Opacity breathe
         const breathe = Math.sin(time * orb.speed * 3 + orb.phase) * 0.3 + 0.7;
-        const maxAlpha = mode === "dark" ? 0.10 : 0.18;
+        const maxAlpha = mode === "dark" ? 0.10 : 0.11;
         const alpha = maxAlpha * breathe;
 
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);

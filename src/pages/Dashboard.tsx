@@ -7,7 +7,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
 } from "@mui/material";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +14,7 @@ import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
 import { useSidebarOpen } from "../lib/sidebarState";
 import Sidebar from "../components/layout/Sidebar";
 import AnimatedBackground from "../components/layout/AnimatedBackground";
+import AppButton from "../components/common/Button";
 import AlertsPage from "./dashboard/AlertsPage";
 import CamerasPage from "./dashboard/CamerasPage";
 import AnalyticsPage from "./dashboard/AnalyticsPage";
@@ -57,7 +57,7 @@ export default function Dashboard() {
         display: "flex",
         minHeight: "100vh",
         background: t.bg,
-        fontFamily: '"Inter", system-ui, sans-serif',
+        fontFamily: "'Google Sans', 'Google Sans Text', Roboto, system-ui, sans-serif",
         position: "relative",
       }}
     >
@@ -115,37 +115,12 @@ export default function Dashboard() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button
-            onClick={() => setSignOutOpen(false)}
-            sx={{
-              color: t.textSecondary,
-              borderRadius: "9px",
-              textTransform: "none",
-              border: `1px solid ${t.border}`,
-              px: 2.5,
-              "&:hover": { background: t.surfaceHover },
-            }}
-          >
+          <AppButton variant="secondary" onClick={() => setSignOutOpen(false)}>
             Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              logout();
-            }}
-            variant="contained"
-            sx={{
-              borderRadius: "9px",
-              textTransform: "none",
-              background: "linear-gradient(135deg, #ef4444, #dc2626)",
-              boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
-              px: 2.5,
-              "&:hover": {
-                background: "linear-gradient(135deg, #dc2626, #b91c1c)",
-              },
-            }}
-          >
+          </AppButton>
+          <AppButton variant="danger" onClick={() => logout()}>
             Sign Out
-          </Button>
+          </AppButton>
         </DialogActions>
       </Dialog>
     </Box>

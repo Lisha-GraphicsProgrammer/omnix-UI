@@ -14,9 +14,10 @@ import { humanizeViolation } from '../lib/humanize'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useSidebarOpen } from '../lib/sidebarState'
-import { DRAWER_OPEN, DRAWER_CLOSED, ACCENT, GREEN } from '../lib/constants'
+import { DRAWER_OPEN, DRAWER_CLOSED, GREEN } from '../lib/constants'
 import Sidebar from '../components/layout/Sidebar'
 import PageHeader from '../components/layout/PageHeader'
+import AppButton from '../components/common/Button'
 
 // Semantic danger color — not part of the shared theme palette (which is
 // light/dark-aware), since "this is an error/violation" should read the
@@ -238,7 +239,7 @@ export default function AlertDetail() {
       />
       <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${ACCENT}20`, borderTopColor: ACCENT, animation: 'sp 1s linear infinite', '@keyframes sp': { '100%': { transform: 'rotate(360deg)' } } }} />
+          <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${t.accent}20`, borderTopColor: t.accent, animation: 'sp 1s linear infinite', '@keyframes sp': { '100%': { transform: 'rotate(360deg)' } } }} />
           <Typography sx={{ color: t.textMuted, fontSize: '.85rem' }}>Loading incident...</Typography>
         </Box>
       </Box>
@@ -262,7 +263,7 @@ export default function AlertDetail() {
       />
       <Box sx={{ flex: 1, ml: `${drawerWidth}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
         <Typography sx={{ color: t.textMuted }}>Incident not found</Typography>
-        <Button onClick={() => navigate('/dashboard')} sx={{ color: ACCENT }}>Back to Dashboard</Button>
+        <Button onClick={() => navigate('/dashboard')} sx={{ color: t.accent }}>Back to Dashboard</Button>
       </Box>
     </Box>
   )
@@ -274,7 +275,7 @@ export default function AlertDetail() {
   const personLabel = incident.person_id != null ? 'Person detected' : 'Object detected'
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', background: t.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: t.bg, fontFamily: "'Google Sans', 'Google Sans Text', Roboto, system-ui, sans-serif" }}>
       <Sidebar
         selected="Alerts"
         onSelect={(item) => {
@@ -302,7 +303,7 @@ export default function AlertDetail() {
         <Box sx={{
           flex: 1, minWidth: 0, overflowY: 'auto', p: '24px 32px 40px',
           '&::-webkit-scrollbar': { width: '4px' },
-          '&::-webkit-scrollbar-thumb': { background: `${ACCENT}35`, borderRadius: '4px' },
+          '&::-webkit-scrollbar-thumb': { background: `${t.accent}35`, borderRadius: '4px' },
         }}>
 
           {/* Back — same pattern as Self-Learning's detail view: a plain
@@ -387,7 +388,7 @@ export default function AlertDetail() {
               </Box>
 
               <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, px: 2.5, py: 2, display: 'flex', gap: 1.5, alignItems: 'center', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)' }}>
-                <Box sx={{ px: 1.5, py: .7, background: `${ACCENT}30`, border: `1px solid ${ACCENT}60`, borderRadius: '8px' }}>
+                <Box sx={{ px: 1.5, py: .7, background: `${t.accent}30`, border: `1px solid ${t.accent}60`, borderRadius: '8px' }}>
                   <Typography sx={{ color: '#fff', fontSize: '.7rem', fontWeight: 600 }}>{personLabel}</Typography>
                 </Box>
                 <Box sx={{ px: 1.5, py: .7, background: `${GREEN}18`, border: `1px solid ${GREEN}40`, borderRadius: '8px' }}>
@@ -432,12 +433,12 @@ export default function AlertDetail() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setSignOutOpen(false)} sx={{ color: t.textSecondary, borderRadius: '9px', textTransform: 'none', border: `1px solid ${t.border}`, px: 2.5 }}>
+          <AppButton variant="secondary" onClick={() => setSignOutOpen(false)}>
             Cancel
-          </Button>
-          <Button onClick={logout} variant="contained" sx={{ borderRadius: '9px', textTransform: 'none', background: 'linear-gradient(135deg, #ef4444, #dc2626)', px: 2.5 }}>
+          </AppButton>
+          <AppButton variant="danger" onClick={logout}>
             Sign Out
-          </Button>
+          </AppButton>
         </DialogActions>
       </Dialog>
     </Box>
