@@ -90,7 +90,7 @@ export default function PageHeader({
               px: "14px",
               py: "8px",
               borderRadius: "10px",
-              background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`,
+              background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
               color: "#fff",
               fontSize: ".82rem",
               fontWeight: 600,

@@ -33,7 +33,7 @@ import { apiGet, apiPost, API_BASE } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/layout/Sidebar";
 import PageHeader from "../components/layout/PageHeader";
-import { DRAWER_OPEN, DRAWER_CLOSED, ACCENT, GREEN, AMBER } from "../lib/constants";
+import { DRAWER_OPEN, DRAWER_CLOSED, ACCENT, GREEN, AMBER, CREAM } from "../lib/constants";
 import { useSidebarOpen } from "../lib/sidebarState";
 const DRAFT_KEY = "omnix_rule_draft";
 const CHAT_HISTORY_KEY = "omnix_chat_history";
@@ -1711,8 +1711,8 @@ export default function Rules() {
           inset: "-14px",
           borderRadius: "36px",
           background: isRecording
-            ? `linear-gradient(135deg, ${AMBER}, ${ACCENT}, ${AMBER})`
-            : `linear-gradient(135deg, ${ACCENT}, ${AMBER}, ${ACCENT})`,
+            ? `linear-gradient(135deg, ${CREAM}, ${ACCENT}, ${CREAM})`
+            : `linear-gradient(135deg, ${ACCENT}, ${CREAM}, ${ACCENT})`,
           backgroundSize: "200% 200%",
           animation: "geminiGradientFlow 6s ease infinite",
           "@keyframes geminiGradientFlow": {
@@ -1877,7 +1877,7 @@ export default function Rules() {
                 fontSize: "0.95rem",
                 lineHeight: 1.6,
                 padding: "18px 20px 6px",
-                fontFamily: '"Inter", system-ui, sans-serif',
+                fontFamily: '"Google Sans Flex", "Inter", system-ui, sans-serif',
                 opacity: processing ? 0.5 : 1,
                 minHeight: 28,
                 maxHeight: TEXTAREA_MAX_HEIGHT,
@@ -1945,7 +1945,7 @@ export default function Rules() {
         height: "100vh",
         display: "flex",
         background: t.bg,
-        fontFamily: '"Inter", system-ui, sans-serif',
+        fontFamily: '"Google Sans Flex", "Inter", system-ui, sans-serif',
         overflow: "hidden",
       }}
     >
@@ -2012,7 +2012,7 @@ export default function Rules() {
                       fontWeight: 700,
                       letterSpacing: "-.5px",
                       mb: 4,
-                      background: `linear-gradient(135deg, ${ACCENT}, ${AMBER})`,
+                      background: `linear-gradient(135deg, ${ACCENT}, ${CREAM})`,
                       backgroundClip: "text",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
@@ -2935,7 +2935,7 @@ export default function Rules() {
         <DialogTitle
           sx={{ color: t.text, fontWeight: 700, fontSize: "1rem", pb: 1 }}
         >
-          Sign out of OMNIX?
+          Sign out of ONVXP?
         </DialogTitle>
         <DialogContent>
           <Typography

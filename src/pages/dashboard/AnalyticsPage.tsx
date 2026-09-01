@@ -272,7 +272,7 @@ export default function AnalyticsPage() {
               <Box sx={{ position: "relative" }}>
                 <Box
                   onClick={() => setShowExportMenu(o => !o)}
-                  sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 0.9, borderRadius: "8px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
+                  sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 0.9, borderRadius: "8px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #17252A)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
                 >
                   <FileDownloadIcon sx={{ fontSize: 15, color: "#fff" }} />
                   <Typography sx={{ color: "#fff", fontSize: ".76rem", fontWeight: 600 }}>

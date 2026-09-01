@@ -24,7 +24,7 @@ import {
 } from "../../api/trainingJobs";
 
 // ── ONVXP accent palette — matches AlertDetail / Alerts / Rules pages ──
-const ACCENT = "#C0392B";
+const ACCENT = "#2B7A78";
 const GREEN = "#27AE60";
 const LIGHT_GREEN = "#8BC34A";
 const AMBER = "#D4891A";
@@ -477,7 +477,7 @@ function DetailView({ jobId, onBack }: { jobId: number; onBack: () => void }) {
                 width: 40,
                 height: 40,
                 borderRadius: "11px",
-                background: `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`,
+                background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

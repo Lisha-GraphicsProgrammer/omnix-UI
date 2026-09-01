@@ -14,7 +14,6 @@ import { useAuth } from "../context/AuthContext";
 import { DRAWER_OPEN, DRAWER_CLOSED } from "../lib/constants";
 import { useSidebarOpen } from "../lib/sidebarState";
 import Sidebar from "../components/layout/Sidebar";
-import AnimatedBackground from "../components/layout/AnimatedBackground";
 import AlertsPage from "./dashboard/AlertsPage";
 import CamerasPage from "./dashboard/CamerasPage";
 import AnalyticsPage from "./dashboard/AnalyticsPage";
@@ -57,11 +56,11 @@ export default function Dashboard() {
         display: "flex",
         minHeight: "100vh",
         background: t.bg,
-        fontFamily: '"Inter", system-ui, sans-serif',
+        fontFamily: '"Google Sans Flex", "Inter", system-ui, sans-serif',
         position: "relative",
       }}
     >
-      <AnimatedBackground />
+      
       <Sidebar
         selected={selected}
         onSelect={handleSelect}
