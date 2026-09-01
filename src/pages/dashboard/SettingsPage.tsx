@@ -339,7 +339,7 @@ export default function SettingsPage() {
               py: "9px",
               borderRadius: "10px",
               background: dirty
-                ? `linear-gradient(135deg, ${ACCENT}, #8B2E1F)`
+                ? `linear-gradient(135deg, ${ACCENT}, #17252A)`
                 : t.surface,
               border: `1px solid ${dirty ? ACCENT + "80" : t.border}`,
               cursor: dirty && !saving ? "pointer" : "default",

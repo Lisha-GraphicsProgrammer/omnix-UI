@@ -274,7 +274,7 @@ export default function AlertDetail() {
   const personLabel = incident.person_id != null ? 'Person detected' : 'Object detected'
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', background: t.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: t.bg, fontFamily: '"Google Sans Flex", "Inter", system-ui, sans-serif' }}>
       <Sidebar
         selected="Alerts"
         onSelect={(item) => {

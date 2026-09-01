@@ -7,13 +7,12 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useAuth } from '../context/AuthContext'
 import { loginRequest } from '../api/auth'
-import AnimatedBackground from '../components/layout/AnimatedBackground'
 
-const ACCENT  = '#C0392B'
-const ACCENT2 = '#8B2E1F'
-const GREEN   = '#27AE60'
-const AMBER   = '#D4891A'
-const CREAM   = '#E8D5B0'
+const ACCENT  = '#2B7A78'  // Primary brand teal-green
+const ACCENT2 = '#17252A'  // Near-black dark teal, for gradient depth
+const GREEN   = '#27AE60'  // Unchanged — semantic
+const AMBER   = '#D4891A'  // Unchanged — semantic
+const CREAM   = '#DEF2F1'  // Pale mint highlight
 
 function VisionMetaphor() {
   const [step, setStep] = useState(0)
@@ -251,7 +250,6 @@ export default function Login() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', background: '#120e0c', position: 'relative' }}>
-      <AnimatedBackground />
 
       {/* LEFT */}
       <Box sx={{
@@ -405,7 +403,7 @@ export default function Login() {
                   background: loading ? `${ACCENT}20` : `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT2} 100%)`,
                   boxShadow: loading ? 'none' : `0 4px 20px ${ACCENT}30, inset 0 1px 0 rgba(255,255,255,0.12)`,
                   border: `1px solid ${ACCENT}40`, transition: 'all .2s ease',
-                  '&:hover': { background: `linear-gradient(135deg, #A93226 0%, ${ACCENT2} 100%)`, boxShadow: `0 8px 28px ${ACCENT}45`, transform: 'translateY(-1px)' },
+                  '&:hover': { background: `linear-gradient(135deg, #3AAFA9 0%, ${ACCENT2} 100%)`, boxShadow: `0 8px 28px ${ACCENT}45`, transform: 'translateY(-1px)' },
                   '&:active': { transform: 'none' },
                   '&.Mui-disabled': { background: 'rgba(255,235,220,0.04)', color: 'rgba(245,240,235,0.15)', border: '1px solid rgba(255,200,170,0.06)', boxShadow: 'none' }
                 }}>
