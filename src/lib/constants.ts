@@ -3,35 +3,28 @@
 export const DRAWER_OPEN = 220;
 export const DRAWER_CLOSED = 56;
 
-// ── Brand palette — locked navy + gold theme ──
-// ACCENT is the single source of truth for the brand's primary color.
-// It stays constant across light/dark mode for simple cases (charts,
-// badges, static config) where a mode-aware variant isn't practical.
-// For real interactive UI (buttons, links) that needs proper contrast
-// in both modes, use t.accent from ThemeContext instead — it's lighter
-// in dark mode, since this navy is too dark to read well on near-black.
-export const ACCENT = "#173e76";
-export const GOLD = "#F2B705";        // Punchy gold — light mode, sparing use only
-export const GOLD_MUTED = "#D9A544";  // Muted gold — dark mode, sparing use only
-export const GREEN = "#27AE60";       // Unchanged — success / active
-export const AMBER = "#D4891A";       // Unchanged — warning / in-progress
-export const RED = "#E74C3C";         // Unchanged — danger / critical
+// ── Teal-green + white brand palette — final direction, confirmed. ──
+export const CYAN = "#2B7A78";       // Primary brand teal-green
+export const PURPLE = "#17252A";     // Near-black dark teal, gradient partner
+export const GREEN = "#27AE60";      // Unchanged — semantic success/active
+export const AMBER = "#D4891A";      // Unchanged — semantic warning
+export const CREAM = "#DEF2F1";      // Pale mint, for text/highlights on dark teal
+export const RED = "#E74C3C";        // Unchanged — semantic critical alerts
 
-// ── Deprecated aliases — kept only so any file still importing these old
-// names (from the previous burgundy/terracotta palette) automatically
-// picks up the new palette instead of showing a stray leftover color. Any
-// NEW code should use ACCENT / GOLD / GOLD_MUTED directly, not these. ──
-export const CYAN = ACCENT;
-export const PURPLE = ACCENT;
-export const CREAM = GOLD_MUTED;
-export const ACCENT_LIGHT = GOLD_MUTED;
+// Sidebar/accent color
+export const ACCENT = "#2B7A78";     // Primary brand teal-green
+export const ACCENT_LIGHT = "#FEFFFF"; // Near-white, for text on teal
 
-// Zones no longer carry a color of their own (removed in the zone/camera
-// restructure) — kept only in case something unseen still imports this.
-export const ZONE_COLORS = [ACCENT, GREEN, AMBER, GOLD, RED, GOLD_MUTED];
+export const YELLOW = "#DEF2F1";     // Repurposed to pale mint — no longer a yellow highlight
+
+// Zone colors updated to teal-green + white palette
+export const ZONE_COLORS = [
+  "#2B7A78", "#27AE60", "#D4891A", "#17252A",
+  "#E74C3C", "#DEF2F1", "#3AAFA9", "#FEFFFF"
+];
 
 export const severityConfig = {
-  critical: { color: RED, bg: `${RED}1F`, border: `${RED}4D` },
-  high: { color: AMBER, bg: `${AMBER}1F`, border: `${AMBER}4D` },
-  medium: { color: GOLD_MUTED, bg: `${GOLD_MUTED}1A`, border: `${GOLD_MUTED}40` },
+  critical: { color: "#E74C3C", bg: "rgba(231,76,60,0.12)", border: "rgba(231,76,60,0.30)" },
+  high:     { color: "#D4891A", bg: "rgba(212,137,26,0.12)", border: "rgba(212,137,26,0.30)" },
+  medium:   { color: "#DEF2F1", bg: "rgba(222,242,241,0.10)", border: "rgba(222,242,241,0.25)" },
 };

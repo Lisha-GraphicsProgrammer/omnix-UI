@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Box, Typography, ClickAwayListener } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTheme } from "../../context/ThemeContext";
+import { ACCENT } from "../../lib/constants";
 
 export interface DropdownOption {
   value: string;
@@ -52,7 +53,7 @@ export function FilterDropdown({
             height: 42,
             borderRadius: "10px",
             background: t.surface,
-            border: `1px solid ${open ? t.accent + "60" : t.border}`,
+            border: `1px solid ${open ? ACCENT + "60" : t.border}`,
             cursor: "pointer",
             userSelect: "none",
             transition: "border-color .15s",
@@ -108,17 +109,17 @@ export function FilterDropdown({
                   px: "14px",
                   py: "10px",
                   cursor: "pointer",
-                  background: o.value === value ? `${t.accent}14` : "transparent",
+                  background: o.value === value ? `${ACCENT}14` : "transparent",
                   transition: "background .12s",
                   "&:hover": {
-                    background: o.value === value ? `${t.accent}20` : t.surfaceHover,
+                    background: o.value === value ? `${ACCENT}20` : t.surfaceHover || `${ACCENT}08`,
                   },
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: ".8rem",
-                    color: o.value === value ? t.accent : t.textSecondary,
+                    color: o.value === value ? ACCENT : t.textSecondary,
                     fontWeight: o.value === value ? 700 : 500,
                   }}
                 >

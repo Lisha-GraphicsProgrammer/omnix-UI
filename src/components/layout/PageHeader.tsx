@@ -15,6 +15,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import AddIcon from "@mui/icons-material/Add";
 import { useTheme } from "../../context/ThemeContext";
+import { ACCENT } from "../../lib/constants";
 import NotificationBell from "./NotificationBell";
 
 export interface PageHeaderAction {
@@ -89,15 +90,15 @@ export default function PageHeader({
               px: "14px",
               py: "8px",
               borderRadius: "10px",
-              background: t.accent,
+              background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
               color: "#fff",
               fontSize: ".82rem",
               fontWeight: 600,
               cursor: "pointer",
               whiteSpace: "nowrap",
-              boxShadow: `0 4px 14px ${t.accent}45`,
-              transition: "transform .15s, background .15s",
-              "&:hover": { transform: "translateY(-1px)", background: t.accentHover },
+              boxShadow: `0 4px 14px ${ACCENT}45`,
+              transition: "transform .15s",
+              "&:hover": { transform: "translateY(-1px)" },
             }}
           >
             {action.icon || <AddIcon sx={{ fontSize: 16 }} />}

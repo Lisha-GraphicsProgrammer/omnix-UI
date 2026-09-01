@@ -7,7 +7,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import PageHeader from "../../components/layout/PageHeader";
 import { useTheme } from "../../context/ThemeContext";
 import { useCameras, useLatestIncident } from "../../hooks/queries";
-import { GREEN, RED } from "../../lib/constants";
+import { ACCENT, GREEN } from "../../lib/constants";
 import type { ApiCamera } from "../../types";
 
 // A camera from the API may not yet have zone_id/zone_name in its declared
@@ -32,7 +32,7 @@ export default function CamerasPage() {
   const statCards = [
     { val: String(cameras.length), label: "Total cameras", color: t.textMuted, icon: <VideocamIcon sx={{ fontSize: 19 }} /> },
     { val: String(onlineCount), label: "Online", color: GREEN, icon: <CheckCircleIcon sx={{ fontSize: 19 }} /> },
-    { val: String(offlineCount), label: "Offline", color: RED, icon: <VideocamOffIcon sx={{ fontSize: 19 }} /> },
+    { val: String(offlineCount), label: "Offline", color: "#E74C3C", icon: <VideocamOffIcon sx={{ fontSize: 19 }} /> },
   ];
 
   return (
@@ -124,7 +124,7 @@ export default function CamerasPage() {
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-                  <Box sx={{ width: 7, height: 7, borderRadius: "50%", background: t.accent }} />
+                  <Box sx={{ width: 7, height: 7, borderRadius: "50%", background: ACCENT }} />
                   <Typography sx={{ color: t.text, fontWeight: 600, fontSize: ".9rem" }}>
                     {selectedCam.name}
                   </Typography>
@@ -209,7 +209,7 @@ export default function CamerasPage() {
                     border: `1px solid ${t.border}`,
                     cursor: isOnline ? "pointer" : "default",
                     transition: "border-color .2s",
-                    "&:hover": isOnline ? { borderColor: `${t.accent}45` } : {},
+                    "&:hover": isOnline ? { borderColor: `${ACCENT}45` } : {},
                   }}
                 >
                   <Box

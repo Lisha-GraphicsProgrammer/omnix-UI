@@ -7,7 +7,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useTheme } from "../../context/ThemeContext";
-import { DRAWER_OPEN } from "../../lib/constants";
+import { DRAWER_OPEN, ACCENT } from "../../lib/constants";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
 
 // ── A panel frame with the collapse/expand chevron drawn INSIDE the
@@ -134,11 +134,11 @@ export default function Sidebar({
                   width: 30,
                   height: 30,
                   borderRadius: "8px",
-                  background: `linear-gradient(135deg, ${t.accent}, ${t.accentHover})`,
+                  background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: `0 0 16px ${t.accent}50`,
+                  boxShadow: `0 0 16px ${ACCENT}50`,
                   flexShrink: 0,
                 }}
               >
@@ -152,7 +152,7 @@ export default function Sidebar({
                     strokeWidth="1.5"
                   />
                   <circle cx="12" cy="12" r="3.5" fill="white" />
-                  <circle cx="13.5" cy="10.5" r="1.4" fill={t.accent} />
+                  <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
                 </svg>
               </Box>
               <Typography
@@ -219,11 +219,11 @@ export default function Sidebar({
                     width: 30,
                     height: 30,
                     borderRadius: "8px",
-                    background: `linear-gradient(135deg, ${t.accent}, ${t.accentHover})`,
+                    background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: `0 0 16px ${t.accent}50`,
+                    boxShadow: `0 0 16px ${ACCENT}50`,
                     opacity: 1,
                   }}
                 >
@@ -237,7 +237,7 @@ export default function Sidebar({
                       strokeWidth="1.5"
                     />
                     <circle cx="12" cy="12" r="3.5" fill="white" />
-                    <circle cx="13.5" cy="10.5" r="1.4" fill={t.accent} />
+                    <circle cx="13.5" cy="10.5" r="1.4" fill={ACCENT} />
                   </svg>
                 </Box>
                 <Box
@@ -299,13 +299,13 @@ export default function Sidebar({
                     borderRadius: "10px",
                     cursor: "pointer",
                     position: "relative",
-                    background: isSel ? `${t.accent}30` : "transparent",
+                    background: isSel ? `${ACCENT}30` : "transparent",
                     border: isSel
-                      ? `1px solid ${t.accent}55`
+                      ? `1px solid ${ACCENT}55`
                       : "1px solid transparent",
                     transition: "all .2s",
                     "&:hover": {
-                      background: isSel ? `${t.accent}30` : sidebarHover,
+                      background: isSel ? `${ACCENT}30` : sidebarHover,
                     },
                   }}
                 >
@@ -318,14 +318,14 @@ export default function Sidebar({
                         bottom: "25%",
                         width: 3,
                         borderRadius: "0 3px 3px 0",
-                        background: t.accent,
-                        boxShadow: `0 0 8px ${t.accent}`,
+                        background: ACCENT,
+                        boxShadow: `0 0 8px ${ACCENT}`,
                       }}
                     />
                   )}
                   <Box
                     sx={{
-                      color: isSel ? t.accent : t.sidebarTextMuted,
+                      color: isSel ? ACCENT : t.sidebarTextMuted,
                       display: "flex",
                       transition: "color .2s",
                       flexShrink: 0,
@@ -373,7 +373,7 @@ export default function Sidebar({
                     width: 28,
                     height: 28,
                     borderRadius: "50%",
-                    background: `linear-gradient(135deg, ${t.accent}, ${t.accentHover})`,
+                    background: `linear-gradient(135deg, ${ACCENT}, #17252A)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
