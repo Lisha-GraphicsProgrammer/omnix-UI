@@ -68,7 +68,7 @@ export default function TeamMembersSection() {
           <Box sx={{ mb: 3 }}>
             {members.map((m) => (
               <Box key={m.id} sx={{ display: "flex", alignItems: "center", gap: 2, py: "12px", borderBottom: `1px solid ${t.border}`, "&:last-child": { borderBottom: "none" } }}>
-                <Box sx={{ width: 36, height: 36, borderRadius: "50%", background: m.role === "admin" ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : `linear-gradient(135deg, ${CYAN}80, ${CYAN})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Box sx={{ width: 36, height: 36, borderRadius: "50%", background: m.role === "admin" ? "linear-gradient(135deg, #2B7A78, #17252A)" : `linear-gradient(135deg, ${CYAN}80, ${CYAN})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Typography sx={{ color: "#fff", fontSize: ".78rem", fontWeight: 700 }}>{(m.name || m.email).charAt(0).toUpperCase()}</Typography>
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -78,8 +78,8 @@ export default function TeamMembersSection() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   {m.role === "admin" ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1.2, py: 0.4, borderRadius: "6px", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)" }}>
-                      <AdminPanelSettingsIcon sx={{ fontSize: 13, color: "#818cf8" }} />
-                      <Typography sx={{ color: "#818cf8", fontSize: ".68rem", fontWeight: 700 }}>Admin</Typography>
+                      <AdminPanelSettingsIcon sx={{ fontSize: 13, color: "#2B7A78" }} />
+                      <Typography sx={{ color: "#2B7A78", fontSize: ".68rem", fontWeight: 700 }}>Admin</Typography>
                     </Box>
                   ) : (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1.2, py: 0.4, borderRadius: "6px", background: `${CYAN}10`, border: `1px solid ${CYAN}25` }}>
