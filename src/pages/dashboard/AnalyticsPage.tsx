@@ -31,9 +31,9 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useAnalytics } from "../../hooks/queries";
 import { exportIncidents, fetchAnalytics } from "../../api/analytics";
-import { ACCENT, GREEN, AMBER, severityConfig } from "../../lib/constants";
-
-const RED = "#E24B4A";
+import { ACCENT, GREEN, AMBER, RED, severityConfig } from "../../lib/constants";
+import Button from "../../components/common/Button";
+import Loader from "../../components/common/Loader";
 
 function shiftRangeBack(fromDate: string, toDate: string) {
   const msRange = new Date(toDate).getTime() - new Date(fromDate).getTime();
@@ -49,12 +49,6 @@ function shiftRangeBack(fromDate: string, toDate: string) {
 const humanizeRule = (v: string) =>
   v.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-// ── Every chart type in the picker actually renders — but each pulls from
-// whichever real dataset genuinely fits its shape. A 30-slice pie of daily
-// counts would be unreadable, so Pie/Donut/Radar plot the real rule
-// breakdown instead, and Scatter plots real hour-vs-count pairs. Nothing
-// here is fabricated — it's the same fetched data, matched to a shape it
-// actually represents well. ──
 const CHART_TYPES: { id: "bar" | "line" | "area" | "pie" | "donut" | "heatmap" | "radar" | "scatter" | "hbar" | "treemap" | "radialbar" | "composed"; label: string; icon: React.ReactNode }[] = [
   { id: "bar", label: "Bar", icon: <BarChartIcon sx={{ fontSize: 18 }} /> },
   { id: "line", label: "Line", icon: <ShowChartIcon sx={{ fontSize: 18 }} /> },
@@ -82,7 +76,6 @@ export default function AnalyticsPage() {
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  // ── Main time-series chart type + its picker popup ──
   const [chartType, setChartType] = useState<"bar" | "line" | "area" | "pie" | "donut" | "heatmap" | "radar" | "scatter" | "hbar" | "treemap" | "radialbar" | "composed">("bar");
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
@@ -150,13 +143,9 @@ export default function AnalyticsPage() {
   const worstHourFactor = avgPerHour > 0 && worstHour.count > 0 ? (worstHour.count / avgPerHour) : 0;
   const showInsight = totalIncidents > 0 && topRule && worstHour.count > 0;
 
-  // ── Real sparkline data — last up-to-8 buckets of the actual series
-  // already fetched. Not shown for KPIs that have no underlying per-day
-  // breakdown (unique rule count, peak hour) so nothing is fabricated. ──
   const sparkPoints = overTime.slice(-8);
   const sparkMax = Math.max(1, ...sparkPoints.map(d => d.count));
 
-  // ── Full 0–23 hour grid for the heatmap, defaulting missing hours to 0 ──
   const hourMap = new Map(byHour.map(h => [h.hour, h.count]));
   const fullHours = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: hourMap.get(h) ?? 0 }));
   const maxHourCount = Math.max(1, ...fullHours.map(h => h.count));
@@ -164,9 +153,7 @@ export default function AnalyticsPage() {
   const topHours = [...byHour].sort((a, b) => b.count - a.count).slice(0, 3);
   const topHoursMax = Math.max(1, ...topHours.map(h => h.count));
 
-  // ── Donut segments — top 4 rules by count, remainder folded into "Other"
-  // rather than an ever-growing pie of tiny slices. ──
-  const DONUT_COLORS = [ACCENT, AMBER, GREEN, "#7F77DD", t.textMuted];
+  const DONUT_COLORS = [ACCENT, AMBER, GREEN, t.accent, t.textMuted];
   const sortedRules = [...byRule].sort((a, b) => b.count - a.count);
   const topDonutRules = sortedRules.slice(0, 4);
   const otherCount = sortedRules.slice(4).reduce((s, r) => s + r.count, 0);
@@ -179,10 +166,6 @@ export default function AnalyticsPage() {
     return seg;
   });
 
-  // ── Severity breakdown — real data already fetched (byRule includes a
-  // severity per rule) but never surfaced anywhere. Fills the donut card's
-  // extra space with a genuinely useful companion metric instead of
-  // leaving it empty: not just which rule fires most, but how severe. ──
   const severityTotals = byRule.reduce((acc, r) => {
     const key = (r.severity || "unknown").toLowerCase();
     acc[key] = (acc[key] || 0) + r.count;
@@ -190,24 +173,13 @@ export default function AnalyticsPage() {
   }, {} as Record<string, number>);
   const severityEntries = Object.entries(severityTotals).sort((a, b) => b[1] - a[1]);
 
-  // ── Overall reliability summary + per-rule confidence. A 0% false
-  // positive rate built on 3 samples means far less than one built on 91 —
-  // showing sample size alongside the rate keeps the rings from implying
-  // more certainty than the data actually supports. ──
   const totalTP = fpRate.reduce((s, r) => s + r.tp_count, 0);
   const totalFP = fpRate.reduce((s, r) => s + r.fp_count, 0);
   const overallTotal = totalTP + totalFP;
   const overallFpRate = overallTotal > 0 ? Math.round((totalFP / overallTotal) * 100) : 0;
   const confidenceLabel = (total: number) => total >= 50 ? "High confidence" : total >= 15 ? "Building confidence" : "Early data";
-  // ── Review coverage — real data already fetched (fpRate's counts vs the
-  // overall incident total) but never surfaced: what share of incidents
-  // have actually been reviewed for true/false positive, vs sitting
-  // unreviewed. A genuinely useful additional metric, not a new endpoint. ──
   const reviewCoveragePct = totalIncidents > 0 ? Math.round((overallTotal / totalIncidents) * 100) : 0;
 
-  // ── 3-day rolling average — a real derived stat from overTime (not a
-  // second dataset), used by the "Bar + trend" composed chart to show the
-  // underlying trend alongside the noisy daily counts. ──
   const overTimeWithAvg = overTime.map((d, i) => {
     const window = overTime.slice(Math.max(0, i - 2), i + 1);
     const avg = window.reduce((s, x) => s + x.count, 0) / window.length;
@@ -234,16 +206,15 @@ export default function AnalyticsPage() {
       <PageHeader title="Analytics" description="Historical safety monitoring insights" />
 
       <Box sx={{ p: 3 }}>
-        {/* Date controls + export */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5, flexWrap: "wrap" }}>
           <Box sx={{ display: "flex", gap: 1 }}>
             {(["today", "7d", "30d", "custom"] as const).map((p) => (
               <Box
                 key={p}
                 onClick={() => applyPreset(p)}
-                sx={{ px: 2, py: 0.8, borderRadius: "8px", background: preset === p ? `${ACCENT}18` : t.surface, border: `1px solid ${preset === p ? ACCENT + "50" : t.border}`, cursor: "pointer", transition: "all .15s" }}
+                sx={{ px: 2, py: 0.8, borderRadius: "8px", background: preset === p ? `${t.accent}18` : t.surface, border: `1px solid ${preset === p ? t.accent + "50" : t.border}`, cursor: "pointer", transition: "all .15s" }}
               >
-                <Typography sx={{ color: preset === p ? ACCENT : t.textMuted, fontSize: ".78rem", fontWeight: preset === p ? 700 : 400 }}>
+                <Typography sx={{ color: preset === p ? t.accent : t.textMuted, fontSize: ".78rem", fontWeight: preset === p ? 700 : 400 }}>
                   {p === "today" ? "Today" : p === "7d" ? "Last 7 days" : p === "30d" ? "Last 30 days" : "Custom"}
                 </Typography>
               </Box>
@@ -261,24 +232,24 @@ export default function AnalyticsPage() {
               <Box
                 key={p}
                 onClick={() => setPeriod(p)}
-                sx={{ px: 1.5, py: 0.6, borderRadius: "7px", background: period === p ? `${ACCENT}15` : "transparent", border: `1px solid ${period === p ? ACCENT + "40" : t.border}`, cursor: "pointer" }}
+                sx={{ px: 1.5, py: 0.6, borderRadius: "7px", background: period === p ? `${t.accent}15` : "transparent", border: `1px solid ${period === p ? t.accent + "40" : t.border}`, cursor: "pointer" }}
               >
-                <Typography sx={{ color: period === p ? ACCENT : t.textMuted, fontSize: ".72rem", fontWeight: period === p ? 700 : 400 }}>
+                <Typography sx={{ color: period === p ? t.accent : t.textMuted, fontSize: ".72rem", fontWeight: period === p ? 700 : 400 }}>
                   {p.charAt(0).toUpperCase() + p.slice(1)}
                 </Typography>
               </Box>
             ))}
             {isAdmin && (
               <Box sx={{ position: "relative" }}>
-                <Box
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!!exporting}
+                  startIcon={<FileDownloadIcon sx={{ fontSize: 15 }} />}
                   onClick={() => setShowExportMenu(o => !o)}
-                  sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 0.9, borderRadius: "8px", background: exporting ? t.surface : `linear-gradient(135deg, ${ACCENT}, #17252A)`, border: `1px solid ${ACCENT}50`, cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.7 : 1, transition: "all .2s", "&:hover": !exporting ? { boxShadow: `0 4px 16px ${ACCENT}30` } : {} }}
                 >
-                  <FileDownloadIcon sx={{ fontSize: 15, color: "#fff" }} />
-                  <Typography sx={{ color: "#fff", fontSize: ".76rem", fontWeight: 600 }}>
-                    {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export ▾"}
-                  </Typography>
-                </Box>
+                  {exporting ? `Generating ${exporting.toUpperCase()}...` : "Export"}
+                </Button>
                 {showExportMenu && (
                   <Box sx={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100, minWidth: 140 }}>
                     {[{ label: "Download CSV", format: "csv" as const }, { label: "Download PDF", format: "pdf" as const }].map(opt => (
@@ -293,15 +264,10 @@ export default function AnalyticsPage() {
           </Box>
         </Box>
 
-        {loading && (
-          <LinearProgress sx={{ mb: 3, borderRadius: 2, height: 2, background: `${ACCENT}15`, "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${ACCENT}, #D4891A)` } }} />
-        )}
+        {loading && <Loader sx={{ mb: 3 }} />}
 
-        {/* KPI cards — real sparkline + delta only where a genuine per-day
-        breakdown exists (Total Incidents, Avg per Day). The other two show
-        a plain, honest subtitle instead of a fabricated trend. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.5, mb: 2 }}>
-          <Box sx={{ p: "10px 14px", borderRadius: "12px", background: `${ACCENT}10`, border: `1px solid ${ACCENT}30` }}>
+          <Box sx={{ p: "10px 14px", borderRadius: "12px", background: `${t.accent}10`, border: `1px solid ${t.accent}30` }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <Typography sx={{ fontSize: ".66rem", color: t.textMuted }}>Total Incidents</Typography>
               {hasDelta && (
@@ -319,7 +285,7 @@ export default function AnalyticsPage() {
                   const x = i * (120 / sparkPoints.length);
                   const h = Math.max(2, (d.count / sparkMax) * 16);
                   const isPeak = d.count === sparkMax && d.count > 0;
-                  return <rect key={i} x={x} y={18 - h} width={w} height={h} rx={1.5} fill={isPeak ? RED : ACCENT} fillOpacity={isPeak ? 1 : 0.25} />;
+                  return <rect key={i} x={x} y={18 - h} width={w} height={h} rx={1.5} fill={isPeak ? RED : t.accent} fillOpacity={isPeak ? 1 : 0.25} />;
                 })}
               </svg>
             )}
@@ -353,15 +319,15 @@ export default function AnalyticsPage() {
         </Box>
 
         {showInsight && (
-          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: "9px 14px", borderRadius: "10px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}22`, mb: 2 }}>
-            <InsightsIcon sx={{ fontSize: 15, color: ACCENT, mt: "1px", flexShrink: 0 }} />
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: "9px 14px", borderRadius: "10px", background: `${t.accent}08`, border: `1px solid ${t.accent}22`, mb: 2 }}>
+            <InsightsIcon sx={{ fontSize: 15, color: t.accent, mt: "1px", flexShrink: 0 }} />
             <Typography sx={{ color: t.textSecondary, fontSize: ".76rem", lineHeight: 1.4 }}>
               <Box component="span" sx={{ color: t.text, fontWeight: 700 }}>{worstHour.hour}:00</Box> is the peak hour
               {worstHourFactor > 1.2 && (
                 <> — about <Box component="span" sx={{ color: AMBER, fontWeight: 700 }}>{worstHourFactor.toFixed(1)}×</Box> the hourly average</>
               )}
               {topRule && (
-                <>, and <Box component="span" sx={{ color: t.text, fontWeight: 700 }}>"{humanizeRule(topRule.rule_name)}"</Box> accounts for <Box component="span" sx={{ color: ACCENT, fontWeight: 700 }}>{topRulePct}%</Box> of all triggers this period.</>
+                <>, and <Box component="span" sx={{ color: t.text, fontWeight: 700 }}>"{humanizeRule(topRule.rule_name)}"</Box> accounts for <Box component="span" sx={{ color: t.accent, fontWeight: 700 }}>{topRulePct}%</Box> of all triggers this period.</>
               )}
             </Typography>
           </Box>
@@ -375,10 +341,6 @@ export default function AnalyticsPage() {
           </Box>
         ) : (
           <>
-            {/* Main time-series chart (left half) paired with the top-rules
-            donut (right half) — a full-width trend chart followed by an
-            unrelated full-width heatmap read as two separate stops; pairing
-            each with a related breakdown lets both be read side by side. */}
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mb: 2 }}>
               <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px" }}>
                 <Box sx={{ px: 2.5, py: 1.4, borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -390,7 +352,7 @@ export default function AnalyticsPage() {
                     <Box sx={{ position: "relative" }}>
                       <Box sx={{ display: "flex", gap: "3px", background: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: "8px", p: "3px" }}>
                         {(["bar", "line", "area"] as const).map((ct) => (
-                          <Box key={ct} onClick={() => setChartType(ct)} sx={{ width: 30, height: 26, borderRadius: "5px", background: chartType === ct ? ACCENT : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: chartType === ct ? "#fff" : t.textMuted }}>
+                          <Box key={ct} onClick={() => setChartType(ct)} sx={{ width: 30, height: 26, borderRadius: "5px", background: chartType === ct ? t.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: chartType === ct ? "#fff" : t.textMuted }}>
                             {ct === "bar" ? <BarChartIcon sx={{ fontSize: 16 }} /> : ct === "line" ? <ShowChartIcon sx={{ fontSize: 16 }} /> : <StackedLineChartIcon sx={{ fontSize: 16 }} />}
                           </Box>
                         ))}
@@ -425,8 +387,8 @@ export default function AnalyticsPage() {
                                   key={c.id}
                                   onClick={() => handlePickChartType(c.id)}
                                   sx={{
-                                    border: `1px solid ${chartType === c.id ? ACCENT : t.border}`,
-                                    background: chartType === c.id ? `${ACCENT}12` : "transparent",
+                                    border: `1px solid ${chartType === c.id ? t.accent : t.border}`,
+                                    background: chartType === c.id ? `${t.accent}12` : "transparent",
                                     borderRadius: "9px", p: "12px 8px", textAlign: "center",
                                     cursor: "pointer",
                                     minHeight: 72,
@@ -436,7 +398,7 @@ export default function AnalyticsPage() {
                                     justifyContent: "center",
                                   }}
                                 >
-                                  <Box sx={{ color: chartType === c.id ? ACCENT : t.textMuted, display: "flex", justifyContent: "center" }}>{c.icon}</Box>
+                                  <Box sx={{ color: chartType === c.id ? t.accent : t.textMuted, display: "flex", justifyContent: "center" }}>{c.icon}</Box>
                                   <Typography sx={{ fontSize: ".7rem", color: chartType === c.id ? t.text : t.textMuted, mt: "6px", lineHeight: 1.25 }}>{c.label}</Typography>
                                 </Box>
                               ))}
@@ -479,7 +441,7 @@ export default function AnalyticsPage() {
                             <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
                             <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                              {overTime.map((entry, i) => <Cell key={i} fill={entry.count === Math.max(...overTime.map(d => d.count)) && entry.count > 0 ? "#E74C3C" : ACCENT} fillOpacity={0.85} />)}
+                              {overTime.map((entry, i) => <Cell key={i} fill={entry.count === Math.max(...overTime.map(d => d.count)) && entry.count > 0 ? RED : t.accent} fillOpacity={0.85} />)}
                             </Bar>
                           </BarChart>
                         ) : chartType === "line" ? (
@@ -488,21 +450,21 @@ export default function AnalyticsPage() {
                             <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => v.length > 7 ? v.slice(5) : v} />
                             <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
-                            <Line type="monotone" dataKey="count" stroke={ACCENT} strokeWidth={2} dot={{ fill: ACCENT, r: 3 }} activeDot={{ r: 5 }} />
+                            <Line type="monotone" dataKey="count" stroke={t.accent} strokeWidth={2} dot={{ fill: t.accent, r: 3 }} activeDot={{ r: 5 }} />
                           </LineChart>
                         ) : chartType === "area" ? (
                           <AreaChart data={overTime} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                             <defs>
                               <linearGradient id="incidentsOverTimeFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={ACCENT} stopOpacity={0.35} />
-                                <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+                                <stop offset="0%" stopColor={t.accent} stopOpacity={0.35} />
+                                <stop offset="100%" stopColor={t.accent} stopOpacity={0} />
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                             <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => v.length > 7 ? v.slice(5) : v} />
                             <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
-                            <Area type="monotone" dataKey="count" stroke={ACCENT} strokeWidth={2} fill="url(#incidentsOverTimeFill)" dot={{ fill: ACCENT, r: 3 }} activeDot={{ r: 5 }} />
+                            <Area type="monotone" dataKey="count" stroke={t.accent} strokeWidth={2} fill="url(#incidentsOverTimeFill)" dot={{ fill: t.accent, r: 3 }} activeDot={{ r: 5 }} />
                           </AreaChart>
                         ) : chartType === "composed" ? (
                           <ComposedChart data={overTimeWithAvg} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -510,8 +472,8 @@ export default function AnalyticsPage() {
                             <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => v.length > 7 ? v.slice(5) : v} />
                             <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
-                            <Bar dataKey="count" radius={[3, 3, 0, 0]} fill={ACCENT} fillOpacity={0.5} />
-                            <Line type="monotone" dataKey="avg" stroke="#D4891A" strokeWidth={2} dot={false} />
+                            <Bar dataKey="count" radius={[3, 3, 0, 0]} fill={t.accent} fillOpacity={0.5} />
+                            <Line type="monotone" dataKey="avg" stroke={AMBER} strokeWidth={2} dot={false} />
                           </ComposedChart>
                         ) : (chartType === "pie" || chartType === "donut") ? (
                           <PieChart>
@@ -536,7 +498,7 @@ export default function AnalyticsPage() {
                             </Bar>
                           </BarChart>
                         ) : chartType === "treemap" ? (
-                          <Treemap data={byRule.map((r, i) => ({ name: humanizeRule(r.rule_name), size: r.count, fill: DONUT_COLORS[i % DONUT_COLORS.length] }))} dataKey="size" stroke={t.bgSecondary} fill={ACCENT}>
+                          <Treemap data={byRule.map((r, i) => ({ name: humanizeRule(r.rule_name), size: r.count, fill: DONUT_COLORS[i % DONUT_COLORS.length] }))} dataKey="size" stroke={t.bgSecondary} fill={t.accent}>
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
                           </Treemap>
                         ) : chartType === "radialbar" ? (
@@ -550,7 +512,7 @@ export default function AnalyticsPage() {
                             <PolarAngleAxis dataKey="rule" tick={{ fill: textColor, fontSize: 9 }} />
                             <PolarRadiusAxis tick={{ fill: textColor, fontSize: 9 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
-                            <Radar dataKey="count" stroke={ACCENT} fill={ACCENT} fillOpacity={0.35} />
+                            <Radar dataKey="count" stroke={t.accent} fill={t.accent} fillOpacity={0.35} />
                           </RadarChart>
                         ) : chartType === "scatter" ? (
                           <ScatterChart margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -558,7 +520,7 @@ export default function AnalyticsPage() {
                             <XAxis type="number" dataKey="hour" name="Hour" tick={{ fill: textColor, fontSize: 10 }} tickFormatter={v => `${v}h`} domain={[0, 23]} />
                             <YAxis type="number" dataKey="count" name="Incidents" tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} cursor={{ strokeDasharray: "3 3" }} />
-                            <Scatter data={byHour} fill={ACCENT} />
+                            <Scatter data={byHour} fill={t.accent} />
                           </ScatterChart>
                         ) : (
                           <BarChart data={overTime} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -567,7 +529,7 @@ export default function AnalyticsPage() {
                             <YAxis tick={{ fill: textColor, fontSize: 10 }} allowDecimals={false} />
                             <RechartsTooltip contentStyle={CustomTooltipStyle} />
                             <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                              {overTime.map((entry, i) => <Cell key={i} fill={entry.count === Math.max(...overTime.map(d => d.count)) && entry.count > 0 ? "#E74C3C" : ACCENT} fillOpacity={0.85} />)}
+                              {overTime.map((entry, i) => <Cell key={i} fill={entry.count === Math.max(...overTime.map(d => d.count)) && entry.count > 0 ? RED : t.accent} fillOpacity={0.85} />)}
                             </Bar>
                           </BarChart>
                         )}
@@ -580,7 +542,7 @@ export default function AnalyticsPage() {
                               const isPeak = d.count === maxC && d.count > 0;
                               const intensity = d.count / maxC;
                               return (
-                                <Box key={i} title={`${d.date} — ${d.count} incidents`} sx={{ height: 28, borderRadius: "3px", background: isPeak ? "#E74C3C" : `${ACCENT}${Math.round(8 + intensity * 60).toString(16).padStart(2, "0")}` }} />
+                                <Box key={i} title={`${d.date} — ${d.count} incidents`} sx={{ height: 28, borderRadius: "3px", background: isPeak ? RED : `${t.accent}${Math.round(8 + intensity * 60).toString(16).padStart(2, "0")}` }} />
                               );
                             })}
                           </Box>
@@ -592,8 +554,6 @@ export default function AnalyticsPage() {
                 </Box>
               </Box>
 
-              {/* Top rules donut — paired next to the trend chart since
-              "what's driving the trend" is the natural next question. */}
               <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden" }}>
                 <Box sx={{ px: 2.5, py: 1.4, borderBottom: `1px solid ${t.border}` }}>
                   <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".92rem" }}>Top Rules by Share</Typography>
@@ -650,10 +610,6 @@ export default function AnalyticsPage() {
               </Box>
             </Box>
 
-            {/* Hour heatmap (left half) paired with the top-hours ranked
-            list (right half) — same underlying byHour data, two readings
-            of it side by side instead of stacked as separate full-width
-            stops. */}
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mb: 2 }}>
               <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", p: 2.2 }}>
                 <Typography sx={{ color: t.text, fontWeight: 700, fontSize: ".88rem", mb: 0.2 }}>When Incidents Happen</Typography>
@@ -666,7 +622,7 @@ export default function AnalyticsPage() {
                       <Box
                         key={h.hour}
                         title={`${h.hour}:00 — ${h.count} incidents`}
-                        sx={{ aspectRatio: "1", borderRadius: "3px", background: isPeak ? "#E74C3C" : `${ACCENT}${Math.round(8 + intensity * 60).toString(16).padStart(2, "0")}` }}
+                        sx={{ aspectRatio: "1", borderRadius: "3px", background: isPeak ? RED : `${t.accent}${Math.round(8 + intensity * 60).toString(16).padStart(2, "0")}` }}
                       />
                     );
                   })}
@@ -703,10 +659,6 @@ export default function AnalyticsPage() {
               </Box>
             </Box>
 
-            {/* Rule reliability — horizontal bars instead of small fixed-
-            width rings. Bars stretch to fill the card's full width no
-            matter how many rules there are, which fixes the empty-space
-            problem structurally rather than by tweaking spacing. */}
             <Box sx={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: "16px", p: 2.2 }}>
               <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 1.6 }}>
                 <Box>
@@ -732,7 +684,7 @@ export default function AnalyticsPage() {
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1.3 }}>
                   {fpRate.map((row, i) => {
                     const healthyPct = Math.max(2, 100 - row.rate);
-                    const barColor = row.rate > 50 ? "#E74C3C" : row.rate > 20 ? AMBER : GREEN;
+                    const barColor = row.rate > 50 ? RED : row.rate > 20 ? AMBER : GREEN;
                     return (
                       <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                         <Box sx={{ width: 160, flexShrink: 0 }}>

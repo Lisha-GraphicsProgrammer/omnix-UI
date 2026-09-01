@@ -94,10 +94,6 @@ interface ChatMessage {
   config?: any;
   instruction?: string;
   time: string;
-  // ── unknown-model visibility: when the LLM's response mentions a class
-  // ONVXP hasn't been trained on yet, the generate call already kicks off
-  // training in the background — these fields let the chat message show
-  // that clearly instead of hiding it, with a direct link to watch it. ──
   unknownClasses?: string[];
   trainingJobs?: TrainingJobRef[];
 }
@@ -170,8 +166,6 @@ function SummaryText({ text, color }: { text: string; color: string }) {
   );
 }
 
-// ── Humanize a snake_case class name ("ear_protection" -> "Ear Protection")
-// same convention as the Self-Learning page, kept in sync deliberately. ──
 function humanizeClassName(name: string): string {
   return name
     .split(/[_-]+/)
@@ -180,12 +174,6 @@ function humanizeClassName(name: string): string {
     .join(" ");
 }
 
-// ── Three tiny bouncing dots, like a normal chat's "typing…" indicator —
-// replaces the old skeleton-card loader, which imitated a whole fake
-// response instead of just saying "thinking". ──
-// ── Same custom icon as the left sidebar's toggle — a panel frame with
-// the chevron drawn inside the narrow section, rather than a separate
-// floating arrow. Kept in sync deliberately with Sidebar.tsx's copy. ──
 function PanelToggleIcon({
   direction,
   arrowClassName,
@@ -217,9 +205,6 @@ function PanelToggleIcon({
   );
 }
 
-// ── One reusable toast for every kind of notification — success, error,
-// warning, info — instead of several bespoke Snackbar blocks each doing
-// almost the same thing with slightly different colors. Always top-right. ──
 function AlertToast({
   open,
   severity,
@@ -322,10 +307,6 @@ function TypingDots() {
   );
 }
 
-// ── Rotating status text with a shimmer sweep — grey base, a band of
-// white light passing over it on a loop, no box/background around it.
-// Self-contained so it can sit right beside the typing dots rather than
-// stacked below them. ──
 function ShimmerText({ messages }: { messages: string[] }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
@@ -354,11 +335,6 @@ function ShimmerText({ messages }: { messages: string[] }) {
   );
 }
 
-// ── New: shown directly under the normal understanding-card whenever the
-// LLM's response mentions a class ONVXP hasn't been trained on yet. Training
-// already started automatically in the backend — this card exists so the
-// person actually SEES that, instead of it happening silently and only
-// being discoverable by clicking into Self-Learning on their own. ──
 function MissingModelCard({
   classes,
   jobs,
@@ -368,6 +344,7 @@ function MissingModelCard({
   jobs: TrainingJobRef[];
   onView: (jobId: number) => void;
 }) {
+  const { t } = useTheme();
   const primaryJob = jobs[0];
   return (
     <Box
@@ -396,10 +373,10 @@ function MissingModelCard({
           <ModelTrainingIcon sx={{ fontSize: 14, color: AMBER }} />
         </Box>
         <Box>
-          <Typography sx={{ fontSize: ".82rem", fontWeight: 700, color: "#fff" }}>
+          <Typography sx={{ fontSize: ".82rem", fontWeight: 700, color: t.text }}>
             ONVXP is learning something new
           </Typography>
-          <Typography sx={{ fontSize: ".68rem", color: "rgba(255,255,255,0.5)" }}>
+          <Typography sx={{ fontSize: ".68rem", color: t.textMuted }}>
             Training started automatically — no action needed
           </Typography>
         </Box>
@@ -409,10 +386,10 @@ function MissingModelCard({
           {classes.map((cls) => (
             <Box key={cls} sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
               <Box sx={{ width: 6, height: 6, borderRadius: "50%", background: AMBER, boxShadow: `0 0 6px ${AMBER}` }} />
-              <Typography sx={{ fontSize: ".8rem", fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>
+              <Typography sx={{ fontSize: ".8rem", fontWeight: 600, color: t.text }}>
                 {humanizeClassName(cls)}
               </Typography>
-              <Typography sx={{ fontSize: ".68rem", color: "rgba(255,255,255,0.4)" }}>
+              <Typography sx={{ fontSize: ".68rem", color: t.textMuted }}>
                 not recognized yet
               </Typography>
             </Box>
@@ -446,8 +423,6 @@ function MissingModelCard({
   );
 }
 
-// ── Friendly bucket for the distance row — the actual pixel number is an
-// implementation detail nobody using this form should have to think in. ──
 const DISTANCE_OPTIONS = [
   { value: 60, label: "Very close (~1m)" },
   { value: 120, label: "Close (~2m)" },
@@ -455,10 +430,6 @@ const DISTANCE_OPTIONS = [
   { value: 380, label: "Wide area (~8m)" },
 ];
 
-// ── Multiselect input — looks like a text field, selected items show as
-// removable chips inside it, clicking anywhere else opens a dropdown of
-// remaining options. Used for both zones and cameras in the picker, so
-// there's one selection pattern instead of a plain checkbox list. ──
 function MultiSelectInput({
   t,
   options,
@@ -623,12 +594,6 @@ function MultiSelectInput({
   );
 }
 
-// ── One shared tappable-chip renderer for every picker step (zone, camera,
-// sensitivity, distance) — plain text, no icons, ACCENT-highlighted when
-// selected, same visual language as the site's own FilterDropdown. ──
-// ── Compact single-line dropdown for the distance row — same visual
-// convention as the site's own FilterDropdown (accent border on open,
-// plain text options, no icons). ──
 function CompactDropdown({
   t,
   value,
@@ -757,11 +722,6 @@ export default function Rules() {
   const [ruleSearch, setRuleSearch] = useState("");
   const [ruleToggleErrors, setRuleToggleErrors] = useState<Record<number, string>>({});
   const [orderedRuleIds, setOrderedRuleIds] = useState<number[]>([]);
-  // ── Single rectangular block, not a multi-step tap-through flow. Once
-  // the LLM understands a rule, one block appears with every camera listed
-  // (its zone shown inline, since a camera only ever belongs to one zone —
-  // no separate zone-picking step needed) plus the alert distance, and one
-  // Apply button submits everything at once. ──
   const [showPicker, setShowPicker] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem(PICKER_STATE_KEY) || "null");
@@ -798,24 +758,10 @@ export default function Rules() {
       return 120;
     }
   });
-  // ── Confirmation modal shown when the LLM understood the rule but it
-  // depends on a detection class ONVXP doesn't have a model for yet —
-  // training only starts if the person explicitly says yes. ──
   const [trainConfirmOpen, setTrainConfirmOpen] = useState(false);
   const [pendingUnknownClasses, setPendingUnknownClasses] = useState<string[]>([]);
-  // ── Right-panel accordions — closed by default, per request ──
-  // Whole right panel (Active Rules / Camera Zones / How It Works column) —
-  // independent of each section's own open/closed state.
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [snapTs] = useState(() => Date.now());
-  // ── The rule currently being configured through the picker flow — set
-  // once when the LLM responds, read by every flow step, cleared once
-  // applied/abandoned. Deliberately NOT derived from chatHistory's last
-  // message: every zone/camera/sensitivity pick gets recorded as its own
-  // chat bubble so the conversation reads naturally, which means "the last
-  // message" keeps shifting away from the actual rule config as the person
-  // taps through the flow. Tracking it separately keeps it stable
-  // throughout the whole flow regardless of what's been said since. ──
   const [activeRuleConfig, setActiveRuleConfig] = useState<any>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(PICKER_STATE_KEY) || "null");
@@ -840,10 +786,6 @@ export default function Rules() {
     const fallback = { cameras: [], persistence: 5, proximity: 120 };
     try {
       const parsed = JSON.parse(localStorage.getItem(CONTEXT_KEY) || "null");
-      // Old sessions (before this rewrite) stored { camera, zone } instead
-      // of { cameras: [...] } — only trust what's cached if it actually
-      // matches today's shape, otherwise fall back cleanly instead of
-      // crashing later on ruleContext.cameras.length.
       return parsed && Array.isArray(parsed.cameras) ? parsed : fallback;
     } catch {
       return fallback;
@@ -856,13 +798,6 @@ export default function Rules() {
   const navigate = useNavigate();
   const { t, mode } = useTheme();
 
-  // ── Voice input: getUserMedia + AnalyserNode drive a real scrolling
-  // waveform (actual mic amplitude, not a fake animation) — new samples
-  // enter on the left and drift right as more come in, like a live
-  // waveform. The Web Speech API separately provides live transcription,
-  // shown directly in the input area as it comes in (in italics, appended
-  // after anything already typed) rather than hidden behind a separate
-  // recording-only screen. Both run client-side — no backend changes. ──
   const speechSupported =
     typeof window !== "undefined" &&
     !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
@@ -904,8 +839,6 @@ export default function Rules() {
     setIsRecording(false);
   };
 
-  // Tick (accept) — keeps the transcript, appended after whatever was
-  // already typed.
   const acceptRecording = () => {
     const combined = preRecordingText
       ? `${preRecordingText} ${voiceTranscript}`.trim()
@@ -916,8 +849,6 @@ export default function Rules() {
     stopRecordingInternals();
   };
 
-  // X (cancel) — discards the transcript, restores exactly what was typed
-  // before recording started.
   const cancelRecording = () => {
     setInstruction(preRecordingText);
     setVoiceTranscript("");
@@ -942,10 +873,6 @@ export default function Rules() {
       source.connect(analyser);
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-      // One aggregate loudness value per frame (smoothed against the
-      // previous frame so it doesn't flicker), pushed onto the left of a
-      // rolling buffer — new samples enter on the left and drift toward
-      // the right as more come in, like a real scrolling waveform.
       const tick = () => {
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
@@ -988,14 +915,11 @@ export default function Rules() {
     }
   };
 
-  // Stop any active recording if the page is left mid-recording.
   useEffect(() => {
     return () => stopRecordingInternals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-grow the textarea with typed content, up to a capped height —
-  // beyond that it scrolls internally instead of growing indefinitely.
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
@@ -1008,9 +932,6 @@ export default function Rules() {
   const drawerWidth = sidebarOpen ? DRAWER_OPEN : DRAWER_CLOSED;
   const hasPending = !!activeRuleConfig;
 
-  // ── Navigate straight into the Self-Learning detail view for one job,
-  // same URL convention (?page=Self-Learning&job=<id>) TrainingJobsPanel
-  // reads on its own — no new routes needed. ──
   const goToTrainingJob = (jobId: number) => {
     navigate(`/dashboard?page=Self-Learning&job=${jobId}`);
   };
@@ -1046,7 +967,6 @@ export default function Rules() {
     } catch {}
   }, [ruleContext]);
 
-  // ── Flow fix: one helper that fully clears the per-rule context ──
   const resetRuleContext = () => {
     setRuleContext({ cameras: [], persistence: 5, proximity: 120 });
     try {
@@ -1054,24 +974,11 @@ export default function Rules() {
     } catch {}
   };
 
-  // Load camera + zone options once on mount — cameras already carry
-  // their own zone name for display, but zones are fetched separately
-  // now since zone selection is its own step in the picker.
   useEffect(() => {
     apiGet("/api/cameras").then((c: any[]) => setCameraOptions(c)).catch(() => {});
     apiGet("/api/zones").then((z: any[]) => setZoneOptions(z)).catch(() => {});
   }, []);
 
-  // ── Best-effort cross-page training notification. There's no global
-  // notification system in this app (no shared layout/context wraps the
-  // routes — just bare pages), so this checks localStorage for a job
-  // stashed right before redirecting to Self-Learning, then polls that
-  // job's status every 10s for as long as the person stays on this page —
-  // catching the moment it finishes even if they're just sitting here,
-  // not only "the next time they happen to land on Rules". It does NOT
-  // catch the outcome while they're on some other page entirely with this
-  // one unmounted — that would need an app-wide notification system,
-  // which doesn't exist yet. ──
   useEffect(() => {
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -1082,7 +989,6 @@ export default function Rules() {
         raw = localStorage.getItem(PENDING_TRAINING_KEY);
       } catch {}
       if (!raw) {
-        console.log("[training-check] nothing stashed in localStorage — stopping poll");
         if (intervalId) clearInterval(intervalId);
         return;
       }
@@ -1090,18 +996,14 @@ export default function Rules() {
       try {
         pending = JSON.parse(raw);
       } catch {
-        console.log("[training-check] stashed value wasn't valid JSON, clearing it:", raw);
         try { localStorage.removeItem(PENDING_TRAINING_KEY); } catch {}
         if (intervalId) clearInterval(intervalId);
         return;
       }
-      console.log("[training-check] checking job", pending.jobId, "for instruction:", pending.instruction);
       try {
         const job = await apiGet(`/api/training-jobs/${pending.jobId}`);
         if (cancelled) return;
-        console.log("[training-check] job", pending.jobId, "status is:", job.status);
         if (job.status === "approved") {
-          console.log("[training-check] approved — showing success toast");
           setTrainingOutcome({
             success: true,
             message: `Training finished — "${pending.instruction}" is now live.`,
@@ -1109,7 +1011,6 @@ export default function Rules() {
           try { localStorage.removeItem(PENDING_TRAINING_KEY); } catch {}
           if (intervalId) clearInterval(intervalId);
         } else if (job.status === "failed" || job.status === "cancelled") {
-          console.log("[training-check]", job.status, "— showing failure toast");
           setTrainingOutcome({
             success: false,
             message:
@@ -1119,12 +1020,8 @@ export default function Rules() {
           });
           try { localStorage.removeItem(PENDING_TRAINING_KEY); } catch {}
           if (intervalId) clearInterval(intervalId);
-        } else {
-          console.log("[training-check] still in progress (stage:", job.current_stage, ") — will check again in 10s");
         }
-      } catch (e) {
-        console.log("[training-check] apiGet threw — job id may be wrong, or a network/auth issue:", e);
-      }
+      } catch (e) {}
     };
 
     checkOnce();
@@ -1135,7 +1032,6 @@ export default function Rules() {
     };
   }, []);
 
-  // Load active rules from DB on mount
   useEffect(() => {
     apiGet("/api/rules?all=true")
       .then((rules: any[]) => {
@@ -1208,19 +1104,11 @@ export default function Rules() {
         instruction: llmInstruction,
       });
 
-      // ── If the person hit stop while this was in flight, discard
-      // whatever came back rather than acting on a response they already
-      // dismissed — even though the underlying request may have still
-      // completed on the server. ──
       if (stopRequestedRef.current) {
         stopRequestedRef.current = false;
         return;
       }
 
-      // ── The LLM call can "succeed" (no thrown error) while still
-      // returning no usable config — e.g. the instruction wasn't a rule
-      // at all, or was too vague/unsupported. Whenever this happens, clear
-      // the whole conversation, not just the one message that failed. ──
       if (!data.config) {
         setChatHistory([]);
         try {
@@ -1243,17 +1131,10 @@ export default function Rules() {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        // ── carry through which classes are new + their training job ids,
-        // so the render below can show the "learning something new" card ──
         unknownClasses: data.unknown_classes || [],
         trainingJobs: data.training_jobs || [],
       };
       setChatHistory((prev) => [...prev, assistantMsg]);
-      // ── The picker flow starts immediately — no "type yes" step. Once
-      // ONVXP understands the rule, the very next thing is one block with
-      // every camera + the alert distance, and one Apply button. If the
-      // rule depends on a class with no model yet, ask permission to train
-      // it first — this used to start automatically with no confirmation. ──
       setActiveRuleConfig(data.config);
       setActiveRuleInstruction(displayInstruction);
       setPickerZoneIds([]);
@@ -1267,9 +1148,6 @@ export default function Rules() {
       }
     } catch (e: any) {
       setError(e.message || "Failed to generate rule");
-      // ── Failed generate: remove the just-sent user bubble from history,
-      // restore the text to the input box, and release camera/zone/sensitivity
-      // so the next attempt selects fresh. ──
       setChatHistory((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === "user" ? prev.slice(0, -1) : prev;
@@ -1292,7 +1170,6 @@ export default function Rules() {
   ) => {
     setProcessing(true);
     try {
-      // ── Per-rule sensitivity: stamp the flow's choices into every rule ──
       if (config?.rules?.length) {
         config = {
           ...config,
@@ -1312,15 +1189,9 @@ export default function Rules() {
       });
 
       if (data.status === "pending_training") {
-        // Not active, not inactive — this rule doesn't exist in the Rules
-        // list at all yet. It'll appear automatically, already active,
-        // once every model it depends on is approved.
         const jobs: TrainingJobRef[] = data.training_jobs || [];
         const primaryJob = jobs[0];
-        console.log("[apply] pending_training — training_jobs from server:", jobs);
 
-        // Show it landing in the panel — with the training indicator —
-        // right before redirecting, not just silently on the next visit.
         const pendingRule: RuleHistoryItem = {
           id: data.rule_id,
           instruction,
@@ -1343,24 +1214,13 @@ export default function Rules() {
         setExpandedTechIds(new Set());
         resetRuleContext();
         if (primaryJob) {
-          // Best-effort cross-page notice: tracked regardless of whether
-          // we navigate anywhere — if training finishes while the person
-          // is elsewhere, the poll in the mount effect still catches it.
           try {
             localStorage.setItem(
               PENDING_TRAINING_KEY,
               JSON.stringify({ jobId: primaryJob.id, instruction, startedAt: Date.now() }),
             );
-            console.log("[apply] stashed pending job", primaryJob.id, "— visible in the right panel, click it to view training");
-          } catch (e) {
-            console.log("[apply] localStorage.setItem threw:", e);
-          }
+          } catch (e) {}
         } else {
-          // This shouldn't happen — the server said training is needed
-          // but didn't say which job. Surfacing this rather than silently
-          // doing nothing, which would look identical to the whole
-          // feature being broken with zero clues why.
-          console.log("[apply] pending_training but no training_jobs in response — this is a backend inconsistency");
           setError(
             "Saved, but couldn't find the training job to redirect you to. Check Self-Learning manually.",
           );
@@ -1400,12 +1260,6 @@ export default function Rules() {
     }
   };
 
-  // ── Stops waiting on the in-flight generation. The message is treated
-  // as never sent: its chat bubble is removed and its text goes back into
-  // the input box to edit or resend, exactly like it hadn't gone out yet.
-  // If the request is still running server-side, its eventual response is
-  // discarded by the check in callLLM rather than silently applied after
-  // the fact. ──
   const handleStopGeneration = () => {
     stopRequestedRef.current = true;
     setProcessing(false);
@@ -1439,9 +1293,6 @@ export default function Rules() {
       return;
     }
 
-    // ── A brand-new, unrelated rule while one's still being set up —
-    // discard the old one (including any in-progress picker step) and
-    // start fresh with this one instead. ──
     if (intent === "fresh" && hasPending) {
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
       resetRuleContext();
@@ -1466,9 +1317,6 @@ export default function Rules() {
     }
 
     if (hasPending) {
-      // Anything else typed while a rule is being set up is a refinement
-      // to the understanding itself — cameras and distance are chosen in
-      // the block below, never by typing.
       const combined = `${activeRuleInstruction}, ${userMsg}`;
       setChatHistory((prev) => [...markPendingAsDiscarded(prev), userChatMsg]);
       setShowPicker(false);
@@ -1486,7 +1334,6 @@ export default function Rules() {
     await callLLM(userMsg, userMsg);
   };
 
-  // ── Single-block picker handlers ──
   const recordPickedAsUserMessage = (text: string) => {
     setChatHistory((prev) => [
       ...prev,
@@ -1516,10 +1363,6 @@ export default function Rules() {
     setPickerCameraIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  // ── Training confirmation modal — cameras are still required either
-  // way (a pending-training rule still needs to know which camera(s) it'll
-  // watch once the model's ready), so "yes" just proceeds to the normal
-  // picker rather than skipping straight to applying. ──
   const handleConfirmTraining = () => {
     setTrainConfirmOpen(false);
     setShowPicker(true);
@@ -1533,8 +1376,6 @@ export default function Rules() {
     resetRuleContext();
   };
 
-  // Fixed hold-duration default — sensitivity isn't part of this block,
-  // matching the system's existing default (5 frames, ~briefly).
   const DEFAULT_SENSITIVITY = 5;
 
   const handleApplyPicker = async () => {
@@ -1568,12 +1409,6 @@ export default function Rules() {
     }
   };
 
-  // ── Enable All — there's no bulk-activate endpoint, so this calls the
-  // same per-rule /activate endpoint the individual toggle already uses,
-  // once per currently-inactive rule. Same optimistic-update-then-roll-
-  // back-on-failure pattern as the single toggle: a rule whose model isn't
-  // ready yet will correctly fail and revert, with its own inline error,
-  // rather than silently appearing to succeed. ──
   const handleEnableAllRules = async () => {
     const inactiveRules = history.filter((r) => r.status === "inactive");
     if (inactiveRules.length === 0) return;
@@ -1598,23 +1433,17 @@ export default function Rules() {
     }
   };
 
-  // ── Per-rule activate/deactivate — flips just one rule's status via the
-  // dedicated backend endpoints, rather than the all-or-nothing Reset. ──
   const handleToggleRule = async (rule: RuleHistoryItem) => {
     if (togglingRuleIds.has(rule.id)) return;
     const goingActive = rule.status !== "active";
     const previousStatus = rule.status;
 
-    // Clear any previous inline error for this rule the moment they try again.
     setRuleToggleErrors((prev) => {
       const next = { ...prev };
       delete next[rule.id];
       return next;
     });
 
-    // Optimistic — flip it the instant you click, don't wait on the
-    // network for the switch to move. Only rolled back below if the
-    // request actually fails.
     setHistory((prev) =>
       prev.map((r) =>
         r.id === rule.id ? { ...r, status: goingActive ? "active" : "inactive" } : r,
@@ -1631,9 +1460,6 @@ export default function Rules() {
       setHistory((prev) =>
         prev.map((r) => (r.id === rule.id ? { ...r, status: previousStatus } : r)),
       );
-      // Shown right on this rule's own row, not as a page-level banner —
-      // the reason (e.g. a model still training) is specific to this one
-      // rule, so the feedback should be too.
       setRuleToggleErrors((prev) => ({
         ...prev,
         [rule.id]: e.message || "Couldn't update this rule's status.",
@@ -1666,14 +1492,6 @@ export default function Rules() {
         ? `0 0 0 4px ${ACCENT}10`
         : "none";
 
-  // ── Active-first order is computed exactly once, the moment rules first
-  // load on this page visit — never recomputed again afterward, no matter
-  // how many times a rule gets toggled. A rule stays right where it is
-  // when you activate/deactivate it; the list only re-sorts itself the
-  // next time you land on this page fresh (this component remounting on
-  // navigation naturally resets orderedRuleIds to empty, which is what
-  // triggers this to run again). Repositioning happens purely via CSS
-  // `order`, so the underlying DOM order never changes either way. ──
   useEffect(() => {
     if (orderedRuleIds.length > 0) return;
     if (history.length === 0) return;
@@ -1698,13 +1516,8 @@ export default function Rules() {
       ? "Continue refining, or start a new rule..."
       : "e.g. Alert me when a worker without a helmet enters the loading zone...";
 
-  // ── Shared input box — same component whether it's centered on the
-  // empty page or pinned in the footer once a conversation has started. ──
   const renderInputBox = () => (
     <Box sx={{ position: "relative" }}>
-      {/* Glow — sits behind the input and extends beyond its edges, not a
-      border. The input itself stays a normal opaque surface with a
-      regular subtle border; this layer is purely a soft halo around it. */}
       <Box
         sx={{
           position: "absolute",
@@ -1739,9 +1552,6 @@ export default function Rules() {
       >
         {isRecording ? (
           <>
-            {/* Live transcript — same position/padding as the textarea it
-            replaces. Empty input shows "Listening...", existing text stays
-            put with the new voice text appended in italics after it. */}
             <Box sx={{ padding: "18px 20px 6px", minHeight: 28 }}>
               <Typography sx={{ fontSize: "0.95rem", lineHeight: 1.6 }}>
                 {!preRecordingText && !voiceTranscript ? (
@@ -1789,9 +1599,6 @@ export default function Rules() {
               </Typography>
             </Box>
 
-            {/* Scrolling waveform + accept/cancel — same position as the
-            mic/send toolbar it replaces. New samples enter on the left and
-            drift right, height reacting to real mic amplitude. */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, pb: 1.4, pt: 0.5 }}>
               <Box sx={{ flex: 1, height: 32, display: "flex", alignItems: "center", gap: "3px", overflow: "hidden" }}>
                 {voiceBuffer.map((lvl, i) => (
@@ -1949,7 +1756,6 @@ export default function Rules() {
         overflow: "hidden",
       }}
     >
-      {/* SIDEBAR (shared component) */}
       <Sidebar
         selected="Rule Creation"
         onSelect={(item) => {
@@ -1971,7 +1777,6 @@ export default function Rules() {
         userEmail={user?.email || ""}
       />
 
-      {/* MAIN */}
       <Box
         sx={{
           flex: 1,
@@ -1989,10 +1794,6 @@ export default function Rules() {
         />
 
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* LEFT panel — Gemini-style chat. Empty state centers just the
-          input; once a conversation starts, messages scroll in their own
-          contained region while the input stays pinned at the bottom —
-          the page itself never scrolls. */}
           <Box
             sx={{
               flex: 1,
@@ -2180,9 +1981,6 @@ export default function Rules() {
                     </Box>
                   ))}
 
-                  {/* ── Single block — every camera listed with its zone
-                  inline, the alert distance, and one Apply button. Appears
-                  once, right after ONVXP's understood-rule message. ── */}
                   {!processing && showPicker && (
                     <Box
                       sx={{
@@ -2205,7 +2003,6 @@ export default function Rules() {
                         </Typography>
                       </Box>
 
-                      {/* Zones */}
                       <Box sx={{ px: 2.4, py: 1.8, borderBottom: `1px solid ${t.border}` }}>
                         <Typography
                           sx={{
@@ -2228,9 +2025,6 @@ export default function Rules() {
                         />
                       </Box>
 
-                      {/* Cameras — filtered to the selected zone(s); each row still
-                      shows its own zone name too, so a multi-zone selection never
-                      reads ambiguously about which camera belongs to which zone. */}
                       <Box sx={{ px: 2.4, py: 1.8 }}>
                         <Typography
                           sx={{
@@ -2262,7 +2056,6 @@ export default function Rules() {
 
                       <Box sx={{ height: "1px", background: t.border, mx: 2.4 }} />
 
-                      {/* Alert distance */}
                       <Box sx={{ px: 2.4, py: 1.8 }}>
                         <Typography
                           sx={{
@@ -2284,7 +2077,6 @@ export default function Rules() {
                         />
                       </Box>
 
-                      {/* Apply */}
                       <Box sx={{ px: 2.4, py: 1.8, background: t.bgSecondary, borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px" }}>
                         <Button
                           fullWidth
@@ -2318,8 +2110,6 @@ export default function Rules() {
                 </Box>
                 </Box>
 
-                {/* Pinned footer — never scrolls away, matching Gemini's
-                layout once a conversation is underway. */}
                 <Box sx={{ flexShrink: 0, p: "12px 48px 28px" }}>
                   <Box sx={{ maxWidth: 760, mx: "auto" }}>
 
@@ -2362,10 +2152,6 @@ export default function Rules() {
             )}
           </Box>
 
-          {/* RIGHT panel — collapsible as a whole, independent of each
-          accordion's own open/closed state. Starts closed; the toggle is
-          a properly visible colored tab, not a barely-there outline, so
-          it's obvious there's something to open. */}
           <Box
             sx={{
               width: rightPanelOpen ? 380 : 68,
@@ -2383,8 +2169,6 @@ export default function Rules() {
             }}
           >
             {rightPanelOpen ? (
-              // Header — separated from the accordion content below by the
-              // first accordion's own border (kept to exactly one line).
               <Box
                 sx={{
                   display: "flex",
@@ -2426,9 +2210,6 @@ export default function Rules() {
                 </Tooltip>
               </Box>
             ) : (
-              // Collapsed — mirrored direction from the left sidebar: this
-              // panel expands leftward (pulling content in from the right
-              // edge).
               <Box sx={{ display: "flex", justifyContent: "center", pt: "20px" }}>
                 <Tooltip title="Show rule info & active rules" placement="left">
                   <Box
@@ -2453,11 +2234,6 @@ export default function Rules() {
             )}
             {rightPanelOpen && (
             <Box sx={{ p: "6px" }}>
-              {/* Rules — the whole panel is this list now, no accordion
-              wrapper around it. Each row has its own activate/deactivate
-              toggle, calling the dedicated per-rule endpoints rather than
-              the all-or-nothing Reset. Camera Zones intentionally removed
-              from this panel per request. */}
               <Box
                 sx={{
                   borderRadius: "6px",
@@ -2911,7 +2687,7 @@ export default function Rules() {
             sx={{
               borderRadius: "9px",
               textTransform: "none",
-              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              background: "#E74C3C",
               px: 2.5,
             }}
           >
@@ -2963,7 +2739,7 @@ export default function Rules() {
             sx={{
               borderRadius: "9px",
               textTransform: "none",
-              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              background: "#E74C3C",
               px: 2.5,
             }}
           >
