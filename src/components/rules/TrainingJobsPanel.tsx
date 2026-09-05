@@ -458,7 +458,7 @@ function DetailView({ jobId, onBack }: { jobId: number; onBack: () => void }) {
       );
     } catch {}
 
-    navigate("/dashboard?page=Rules");
+    navigate("/rules");
   };
 
   const handleReject = async () => {
